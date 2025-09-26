@@ -1,0 +1,145 @@
+﻿"use server";
+
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { deriveProjectStatus, PROJECT_STATUS_VALUES } from "@/lib/project-status";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+/** Hilfsfunktionen */
+const toDate = (s?: string | null) => (s && s.trim() ? new Date(s) : null);
+const toMinutesFromHours = (s?: string | null) => {
+  if (!s) return null;
+  const normalized = s.replace(",", ".").trim();
+  if (!normalized) return null;
+  const hours = Number(normalized);
+  if (!Number.isFinite(hours)) return null;
+  return Math.round(hours * 60);
+};
+const triState = z.enum(["unknown", "yes", "no"]).transform((v) =>
+  v === "unknown" ? null : v === "yes"
+);
+
+const ProjectStatus = z.enum(PROJECT_STATUS_VALUES);
+const WebsitePriority = z.enum(["LOW", "NORMAL", "HIGH", "CRITICAL"]);
+const CMS = z.enum(["SHOPWARE", "WORDPRESS", "TYPO3", "JOOMLA", "WEBFLOW", "WIX", "CUSTOM", "OTHER"]);
+const ProductionStatus = z.enum(["NONE", "TODO", "IN_PROGRESS", "WITH_CUSTOMER", "BLOCKED", "READY_FOR_LAUNCH", "DONE"]);
+const SEOStatus = z.enum(["NONE", "QUESTIONNAIRE", "ANALYSIS", "DONE"]);
+const TextitStatus = z.enum(["NONE", "SENT_OUT", "DONE"]);
+
+const FormSchema = z.object({
+  projectId: z.string().min(1),
+  title: z.string().min(1, "Titel fehlt"),
+  status: ProjectStatus,
+  agentId: z.string().optional().transform((v) => (v ? v : null)),
+
+  domain: z.string().optional().transform((v) => v?.trim() || null),
+  priority: WebsitePriority,
+  cms: CMS,
+  cmsOther: z.string().optional().transform((v) => v?.trim() || null),
+  pStatus: ProductionStatus,
+
+  webDate: z.string().optional().transform(toDate),
+  demoDate: z.string().optional().transform(toDate),
+  onlineDate: z.string().optional().transform(toDate),
+  lastMaterialAt: z.string().optional().transform(toDate),
+
+  effortBuildMin: z.string().optional().transform(toMinutesFromHours),
+  effortDemoMin: z.string().optional().transform(toMinutesFromHours),
+
+  materialAvailable: triState,
+  seo: SEOStatus,
+  textit: TextitStatus,
+  accessible: triState,
+
+  note: z.string().optional().transform((v) => v?.trim() || null),
+  demoLink: z.string().optional().transform((v) => v?.trim() || null),
+});
+
+export async function updateWebsite(formData: FormData) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || !["ADMIN", "AGENT"].includes(session.user.role || "")) {
+    throw new Error("FORBIDDEN");
+  }
+
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = FormSchema.safeParse(raw);
+  if (!parsed.success) {
+    const msg = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+    throw new Error(`Validation failed: ${msg}`);
+  }
+  const data = parsed.data;
+
+  const nextStatus = deriveProjectStatus({
+    pStatus: data.pStatus,
+    webDate: data.webDate,
+    demoDate: data.demoDate,
+    onlineDate: data.onlineDate,
+  });
+
+  // cmsOther nur speichern, wenn cms OTHER oder CUSTOM ist
+  const cmsOther = ["OTHER", "CUSTOM"].includes(data.cms) ? data.cmsOther : null;
+
+  // 1) Project (Titel/Status/Agent)
+  await prisma.project.update({
+    where: { id: data.projectId },
+    data: {
+      title: data.title,
+      status: nextStatus,
+      agentId: data.agentId,
+    },
+  });
+
+  // 2) Website-Details (1:1 upsert)
+  await prisma.projectWebsite.upsert({
+    where: { projectId: data.projectId },
+    update: {
+      domain: data.domain,
+      priority: data.priority,
+      cms: data.cms,
+      cmsOther,
+      pStatus: data.pStatus,
+      webDate: data.webDate,
+      demoDate: data.demoDate,
+      onlineDate: data.onlineDate,
+      lastMaterialAt: data.lastMaterialAt,
+      effortBuildMin: data.effortBuildMin,
+      effortDemoMin: data.effortDemoMin,
+      materialAvailable: data.materialAvailable,
+      seo: data.seo,
+      textit: data.textit,
+      accessible: data.accessible,
+      note: data.note,
+      demoLink: data.demoLink,
+    },
+    create: {
+      projectId: data.projectId,
+      domain: data.domain,
+      priority: data.priority,
+      cms: data.cms,
+      cmsOther,
+      pStatus: data.pStatus,
+      webDate: data.webDate,
+      demoDate: data.demoDate,
+      onlineDate: data.onlineDate,
+      lastMaterialAt: data.lastMaterialAt,
+      effortBuildMin: data.effortBuildMin,
+      effortDemoMin: data.effortDemoMin,
+      materialAvailable: data.materialAvailable,
+      seo: data.seo,
+      textit: data.textit,
+      accessible: data.accessible,
+      note: data.note,
+      demoLink: data.demoLink,
+    },
+  });
+
+  revalidatePath(`/projects/${data.projectId}`);
+  redirect(`/projects/${data.projectId}`);
+}
+
+
+
+
