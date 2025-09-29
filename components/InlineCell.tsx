@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { CSSProperties, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateInlineField } from "@/app/projects/inline-actions";
 
@@ -11,12 +11,25 @@ type Props = {
   name: string;           // Feldname (whitelisted)
   type: "text" | "number" | "date" | "select" | "tri";
   display: string;        // Anzeige im Read-Mode
-  value?: string | number | boolean | null; // Startwert fÃ¼r Edit
-  options?: Option[];     // fÃ¼r select/tri
+  value?: string | number | boolean | null; // Startwert für Edit
+  options?: Option[];     // für select/tri
   canEdit: boolean;
+  displayClassName?: string;
+  displayStyle?: CSSProperties;
 };
 
-export default function InlineCell({ target, id, name, type, display, value, options, canEdit }: Props) {
+export default function InlineCell({
+  target,
+  id,
+  name,
+  type,
+  display,
+  value,
+  options,
+  canEdit,
+  displayClassName,
+  displayStyle,
+}: Props) {
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -30,7 +43,15 @@ export default function InlineCell({ target, id, name, type, display, value, opt
     }
   }, [editing]);
 
-  if (!canEdit) return <span>{display || "â€”"}</span>;
+  const fallbackDisplay = display && display.trim() !== "" ? display : "—";
+
+  if (!canEdit) {
+    return (
+      <span className={displayClassName} style={displayStyle}>
+        {fallbackDisplay}
+      </span>
+    );
+  }
 
   const enterEdit = () => setEditing(true);
   const cancel = () => setEditing(false);
@@ -46,8 +67,13 @@ export default function InlineCell({ target, id, name, type, display, value, opt
   // READ MODE
   if (!editing) {
     return (
-      <span onDoubleClick={enterEdit} title="Doppelklick zum Bearbeiten" className="cursor-text">
-        {display || "â€”"}
+      <span
+        onDoubleClick={enterEdit}
+        title="Doppelklick zum Bearbeiten"
+        className={displayClassName ? `${displayClassName} cursor-text` : "cursor-text"}
+        style={displayStyle}
+      >
+        {fallbackDisplay}
       </span>
     );
   }
@@ -89,7 +115,7 @@ export default function InlineCell({ target, id, name, type, display, value, opt
           }}
         >
           {(options ?? [
-            { value: "unknown", label: "â€” unbekannt â€”" },
+            { value: "unknown", label: "(nicht gesetzt)" },
             { value: "yes", label: "Ja" },
             { value: "no", label: "Nein" },
           ]).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -101,7 +127,6 @@ export default function InlineCell({ target, id, name, type, display, value, opt
           name="value" type="number" defaultValue={vStr}
           step={0.5} min={0} inputMode="decimal"
           ref={(el: HTMLInputElement | null) => { inputRef.current = el; }}
-
           className="w-24 p-1 border rounded"
           onBlur={() => formRef.current?.requestSubmit()}
           onKeyDown={(e) => {
@@ -115,7 +140,6 @@ export default function InlineCell({ target, id, name, type, display, value, opt
         <input
           name="value" type="date" defaultValue={vStr}
           ref={(el: HTMLInputElement | null) => { inputRef.current = el; }}
-
           className="p-1 border rounded"
           onBlur={() => formRef.current?.requestSubmit()}
           onKeyDown={(e) => {
@@ -129,7 +153,6 @@ export default function InlineCell({ target, id, name, type, display, value, opt
         <input
           name="value" type="text" defaultValue={vStr}
           ref={(el: HTMLInputElement | null) => { inputRef.current = el; }}
-
           className="p-1 border rounded"
           onBlur={() => formRef.current?.requestSubmit()}
           onKeyDown={(e) => {
@@ -145,16 +168,12 @@ export default function InlineCell({ target, id, name, type, display, value, opt
 }
 
 function vToString(v: Props["value"], type: Props["type"]) {
-  if (v === null || v === undefined) return type === "number" ? "" : "";
+  if (v === null || v === undefined) return "";
   if (type === "date") {
     const d = new Date(String(v));
     if (Number.isNaN(d.getTime())) return "";
-    return d.toISOString().slice(0,10);
+    return d.toISOString().slice(0, 10);
   }
   if (type === "tri") return v === true ? "yes" : v === false ? "no" : "unknown";
   return String(v);
 }
-
-
-
-

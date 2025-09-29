@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { deriveProjectStatus, PROJECT_STATUS_VALUES } from "@/lib/project-status";
+import { deriveProjectStatus } from "@/lib/project-status";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { revalidatePath } from "next/cache";
@@ -21,13 +21,13 @@ const toMinutesFromHours = (s?: string | null) => {
 const triState = z.enum(["unknown", "yes", "no"]).transform((v) =>
   v === "unknown" ? null : v === "yes"
 );
+const MaterialStatus = z.enum(["ANGEFORDERT","TEILWEISE","VOLLSTAENDIG","NV"]);
 
-const ProjectStatus = z.enum(PROJECT_STATUS_VALUES);
-const WebsitePriority = z.enum(["LOW","NORMAL","HIGH","CRITICAL"]);
-const CMS = z.enum(["SHOPWARE","WORDPRESS","TYPO3","JOOMLA","WEBFLOW","WIX","CUSTOM","OTHER"]);
-const ProductionStatus = z.enum(["NONE","TODO","IN_PROGRESS","WITH_CUSTOMER","BLOCKED","READY_FOR_LAUNCH","DONE"]);
-const SEOStatus = z.enum(["NONE","QUESTIONNAIRE","ANALYSIS","DONE"]);
-const TextitStatus = z.enum(["NONE","SENT_OUT","DONE"]);
+const WebsitePriority = z.enum(["NONE","PRIO_1","PRIO_2","PRIO_3"]);
+const CMS = z.enum(["SHOPWARE","WORDPRESS","JOOMLA","LOGO","PRINT","CUSTOM","OTHER"]);
+const ProductionStatus = z.enum(["NONE","BEENDET","MMW","VOLLST_A_K"]);
+const SEOStatus = z.enum(["NEIN","NEIN_NEIN","JA_NEIN","JA_JA"]);
+const TextitStatus = z.enum(["NEIN","NEIN_NEIN","JA_NEIN","JA_JA"]);
 
 function getPrismaErrorCode(error: unknown): string | undefined {
   if (typeof error === "object" && error !== null && "code" in error) {
@@ -82,12 +82,11 @@ export async function createClient(formData: FormData) {
 /* ---------- Projekt anlegen (Website) ---------- */
 const ProjectFormSchema = z.object({
   title: z.string().min(1, "Titel fehlt"),
-  status: ProjectStatus.default("WEBTERMIN"),
   clientId: z.string().min(1, "Kunde fehlt"),
   agentId: z.string().optional().transform((v) => (v ? v : null)),
 
   domain: z.string().optional().transform((v) => v?.trim() || null),
-  priority: WebsitePriority.default("NORMAL"),
+  priority: WebsitePriority.default("NONE"),
   cms: CMS.default("SHOPWARE"),
   cmsOther: z.string().optional().transform((v) => v?.trim() || null),
   pStatus: ProductionStatus.default("NONE"),
@@ -100,9 +99,9 @@ const ProjectFormSchema = z.object({
   effortBuildMin: z.string().optional().transform(toMinutesFromHours),
   effortDemoMin: z.string().optional().transform(toMinutesFromHours),
 
-  materialAvailable: triState.default("unknown"),
-  seo: SEOStatus.default("NONE"),
-  textit: TextitStatus.default("NONE"),
+  materialStatus: MaterialStatus.default("ANGEFORDERT"),
+  seo: SEOStatus.default("NEIN"),
+  textit: TextitStatus.default("NEIN"),
   accessible: triState.default("unknown"),
 
   note: z.string().optional().transform((v) => v?.trim() || null),
@@ -128,6 +127,7 @@ export async function createProject(formData: FormData) {
     webDate: data.webDate,
     demoDate: data.demoDate,
     onlineDate: data.onlineDate,
+    materialStatus: data.materialStatus,
   });
 
   // cmsOther nur bei OTHER/CUSTOM
@@ -135,7 +135,7 @@ export async function createProject(formData: FormData) {
 
   // existiert der Kunde?
   const client = await prisma.client.findUnique({ where: { id: data.clientId } });
-  if (!client) redirect(`/projects/new?projectError=${encodeURIComponent("AusgewÃ¤hlter Kunde existiert nicht.")}`);
+  if (!client) redirect(`/projects/new?projectError=${encodeURIComponent("Ausgewählter Kunde existiert nicht.")}`);
 
   const project = await prisma.project.create({
     data: {
@@ -157,7 +157,7 @@ export async function createProject(formData: FormData) {
           lastMaterialAt: data.lastMaterialAt,
           effortBuildMin: data.effortBuildMin,
           effortDemoMin: data.effortDemoMin,
-          materialAvailable: data.materialAvailable,
+          materialStatus: data.materialStatus,
           seo: data.seo,
           textit: data.textit,
           accessible: data.accessible,
@@ -172,6 +172,9 @@ export async function createProject(formData: FormData) {
   revalidatePath(`/projects/${project.id}`);
   redirect(`/projects/${project.id}`);
 }
+
+
+
 
 
 

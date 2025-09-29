@@ -26,10 +26,33 @@ function getPrismaErrorCode(error: unknown): string | undefined {
 }
 
 /* ---------- Agent anlegen ---------- */
+const hexColorPattern = /^#([0-9a-fA-F]{6})$/;
+
+const ColorField = z
+  .union([z.literal(""), z.string().regex(hexColorPattern, "Ungueltige Farbe")])
+  .optional()
+  .transform((value) => {
+    if (!value || value === "") return null;
+    return value.toUpperCase();
+  });
+
+const EmailField = z
+  .string()
+  .optional()
+  .transform((value) => (value ?? "").trim())
+  .superRefine((value, ctx) => {
+    if (value === "") return;
+    if (!z.string().email("Ungueltige E-Mail").safeParse(value).success) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ungueltige E-Mail" });
+    }
+  })
+  .transform((value) => (value === "" ? null : value.toLowerCase()));
+
 const CreateAgentSchema = z.object({
   name: z.string().optional().transform(v => v?.trim() || null),
-  email: z.string().email("Ungueltige E-Mail").transform(v => v.toLowerCase()),
+  email: EmailField,
   password: z.string().min(8, "Mind. 8 Zeichen"),
+  color: ColorField,
 });
 
 export async function createAgent(formData: FormData) {
@@ -42,14 +65,15 @@ export async function createAgent(formData: FormData) {
     redirect(`/admin/agents?agentError=${encodeURIComponent(msg)}`);
   }
 
-  const { name, email, password } = parsed.data;
+  const { name, email, password, color } = parsed.data;
   try {
     await prisma.user.create({
       data: {
         name,
-        email,
+        email: email ?? undefined,
         password: bcrypt.hashSync(password, 10),
         role: "AGENT",
+        color,
       },
     });
   } catch (error: unknown) {
@@ -63,7 +87,6 @@ export async function createAgent(formData: FormData) {
   revalidatePath("/admin/agents");
   redirect(`/admin/agents?agentOk=1`);
 }
-
 /* ---------- Agenten-Passwort zuruecksetzen ---------- */
 const ResetPwdSchema = z.object({
   userId: z.string().min(1),
@@ -109,6 +132,33 @@ export async function updateAgentName(formData: FormData) {
   });
 
   revalidatePath("/admin/agents");
+  revalidatePath("/projects");
+  redirect(`/admin/agents`);
+}
+
+const UpdateAgentColorSchema = z.object({
+  userId: z.string().min(1),
+  color: ColorField,
+  mode: z.enum(["save", "clear"]).default("save"),
+});
+
+export async function updateAgentColor(formData: FormData) {
+  await requireAdmin();
+
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = UpdateAgentColorSchema.safeParse(raw);
+  if (!parsed.success) redirect(`/admin/agents`);
+
+  const { userId, color, mode } = parsed.data;
+  const nextColor = mode === "clear" ? null : color;
+
+  await prisma.user.update({
+    where: { id: userId, role: "AGENT" },
+    data: { color: nextColor },
+  });
+
+  revalidatePath("/admin/agents");
+  revalidatePath("/projects");
   redirect(`/admin/agents`);
 }
 
@@ -140,6 +190,12 @@ export async function toggleAgentActive(formData: FormData) {
   revalidatePath("/admin/agents");
   redirect("/admin/agents");
 }
+
+
+
+
+
+
 
 
 

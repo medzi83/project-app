@@ -1,5 +1,6 @@
 ﻿import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { labelForProjectStatus } from "@/lib/project-status";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect, notFound } from "next/navigation";
@@ -32,7 +33,7 @@ export default async function EditProjectPage({ params }: Props) {
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-semibold">Projekt bearbeiten</h1>
       <p className="opacity-70">
-        {project.client?.name} {project.client?.customerNo ? `Â· ${project.client.customerNo}` : ""} â€” {project.title}
+        {project.client?.name} {project.client?.customerNo ? ` ${project.client.customerNo}` : ""}  {project.title}
       </p>
 
       <form action={updateWebsite} className="space-y-6">
@@ -45,16 +46,14 @@ export default async function EditProjectPage({ params }: Props) {
           </Field>
 
           <Field label="Status">
-            <select name="status" defaultValue={project.status} className="w-full p-2 border rounded">
-              {["NEW","BRIEFING","IN_PROGRESS","ON_HOLD","REVIEW","DONE"].map((v)=>(
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
+            <div className="w-full p-2 border rounded bg-gray-100 text-sm">
+              {labelForProjectStatus(project.status, { pStatus: w?.pStatus })}
+            </div>
           </Field>
 
           <Field label="Umsetzer (Agent)">
             <select name="agentId" defaultValue={project.agentId ?? ""} className="w-full p-2 border rounded">
-              <option value="">â€” keiner â€”</option>
+              <option value=""> keiner </option>
               {agents.map(a=> <option key={a.id} value={a.id}>{a.name ?? a.email}</option>)}
             </select>
           </Field>
@@ -67,14 +66,14 @@ export default async function EditProjectPage({ params }: Props) {
           </Field>
 
           <Field label="Prio">
-            <select name="priority" defaultValue={w?.priority ?? "NORMAL"} className="w-full p-2 border rounded">
-              {["LOW","NORMAL","HIGH","CRITICAL"].map(v=> <option key={v} value={v}>{v}</option>)}
+            <select name="priority" defaultValue={w?.priority ?? "NONE"} className="w-full p-2 border rounded">
+              {["NONE","PRIO_1","PRIO_2","PRIO_3"].map(v=> <option key={v} value={v}>{v}</option>)}
             </select>
           </Field>
 
           <Field label="CMS">
             <select name="cms" defaultValue={w?.cms ?? "SHOPWARE"} className="w-full p-2 border rounded">
-              {["SHOPWARE","WORDPRESS","TYPO3","JOOMLA","WEBFLOW","WIX","CUSTOM","OTHER"].map(v=> <option key={v} value={v}>{v}</option>)}
+              {["SHOPWARE","WORDPRESS","JOOMLA","LOGO","PRINT","CUSTOM","OTHER"].map(v=> <option key={v} value={v}>{v}</option>)}
             </select>
           </Field>
 
@@ -84,7 +83,7 @@ export default async function EditProjectPage({ params }: Props) {
 
           <Field label="P-Status">
             <select name="pStatus" defaultValue={w?.pStatus ?? "NONE"} className="w-full p-2 border rounded">
-              {["NONE","TODO","IN_PROGRESS","WITH_CUSTOMER","BLOCKED","READY_FOR_LAUNCH","DONE"].map(v=> <option key={v} value={v}>{v}</option>)}
+              {["NONE","BEENDET","MMW","VOLLST_A_K"].map(v=> <option key={v} value={v}>{v}</option>)}
             </select>
           </Field>
 
@@ -116,29 +115,30 @@ export default async function EditProjectPage({ params }: Props) {
             <input type="number" name="effortDemoMin" min={0} step={0.5} inputMode="decimal" defaultValue={w?.effortDemoMin != null ? (w.effortDemoMin / 60).toString() : ""} className="w-full p-2 border rounded" />
           </Field>
 
-          <Field label="Material vorhanden?">
-            <select name="materialAvailable" defaultValue={w?.materialAvailable === null || w?.materialAvailable === undefined ? "unknown" : w?.materialAvailable ? "yes" : "no"} className="w-full p-2 border rounded">
-              <option value="unknown">â€” unbekannt â€”</option>
-              <option value="yes">Ja</option>
-              <option value="no">Nein</option>
+          <Field label="Material">
+            <select name="materialStatus" defaultValue={w?.materialStatus ?? "ANGEFORDERT"} className="w-full p-2 border rounded">
+              <option value="ANGEFORDERT">angefordert</option>
+              <option value="TEILWEISE">teilweise</option>
+              <option value="VOLLSTAENDIG">vollständig</option>
+              <option value="NV">N.V.</option>
             </select>
           </Field>
 
           <Field label="SEO (Fragebogen/Analyse)">
-            <select name="seo" defaultValue={w?.seo ?? "NONE"} className="w-full p-2 border rounded">
-              {["NONE","QUESTIONNAIRE","ANALYSIS","DONE"].map(v=> <option key={v} value={v}>{v}</option>)}
+            <select name="seo" defaultValue={w?.seo ?? "NEIN"} className="w-full p-2 border rounded">
+              {["NEIN","NEIN_NEIN","JA_NEIN","JA_JA"].map(v=> <option key={v} value={v}>{v}</option>)}
             </select>
           </Field>
 
           <Field label="Textit">
-            <select name="textit" defaultValue={w?.textit ?? "NONE"} className="w-full p-2 border rounded">
-              {["NONE","SENT_OUT","DONE"].map(v=> <option key={v} value={v}>{v}</option>)}
+            <select name="textit" defaultValue={w?.textit ?? "NEIN"} className="w-full p-2 border rounded">
+              {["NEIN","NEIN_NEIN","JA_NEIN","JA_JA"].map(v=> <option key={v} value={v}>{v}</option>)}
             </select>
           </Field>
 
-          <Field label="Barrierefrei â™¿">
+          <Field label="Barrierefrei">
             <select name="accessible" defaultValue={w?.accessible === null || w?.accessible === undefined ? "unknown" : w?.accessible ? "yes" : "no"} className="w-full p-2 border rounded">
-              <option value="unknown">â€” unbekannt â€”</option>
+              <option value="unknown">(nicht gesetzt)</option>
               <option value="yes">Ja</option>
               <option value="no">Nein</option>
             </select>
@@ -168,5 +168,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
+
+
 
 

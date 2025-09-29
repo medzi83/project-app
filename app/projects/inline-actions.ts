@@ -8,12 +8,12 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-const ProjectKey = z.enum(["status", "agentId"]); // bei Bedarf erweitern (z.B. "title")
+const ProjectKey = z.enum(["agentId"]); // bei Bedarf erweitern (z.B. "title")
 const WebsiteKey = z.enum([
   "domain","priority","pStatus","cms",
   "webDate","demoDate","onlineDate","lastMaterialAt",
   "effortBuildMin","effortDemoMin",
-  "materialAvailable","seo","textit","accessible",
+  "materialStatus","seo","textit","accessible",
 ]);
 
 const FormSchema = z.object({
@@ -25,8 +25,8 @@ const FormSchema = z.object({
 
 const dateKeys = new Set(["webDate","demoDate","onlineDate","lastMaterialAt"]);
 const hourKeys  = new Set(["effortBuildMin","effortDemoMin"]);
-const triKeys  = new Set(["materialAvailable","accessible"]);
-const statusRelevantWebsiteKeys = new Set(["pStatus","webDate","demoDate","onlineDate"]);
+const triKeys  = new Set(["accessible"]);
+const statusRelevantWebsiteKeys = new Set(["pStatus","webDate","demoDate","onlineDate","materialStatus"]);
 
 function coerce(key: string, v: string | undefined) {
   if (v === undefined) return null;
@@ -55,12 +55,8 @@ export async function updateInlineField(formData: FormData) {
 
   if (target === "project") {
     const projectKey = ProjectKey.parse(key);
-    if (projectKey === "status") {
-      const nextStatus = value as Prisma.ProjectStatus | undefined;
-      if (!nextStatus) throw new Error("Bad request");
-      await prisma.project.update({ where: { id }, data: { status: nextStatus } });
-    } else {
-      const nextAgentId = value && value !== "" ? value : null;
+    const nextAgentId = value && value !== "" ? value : null;
+    if (projectKey === "agentId") {
       await prisma.project.update({ where: { id }, data: { agentId: nextAgentId } });
     }
   } else {
@@ -77,7 +73,7 @@ export async function updateInlineField(formData: FormData) {
         break;
       }
       case "priority": {
-        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NORMAL") as Prisma.$Enums.WebsitePriority;
+        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NONE") as Prisma.$Enums.WebsitePriority;
         updateData.priority = nextValue;
         createData.priority = nextValue;
         break;
@@ -130,20 +126,20 @@ export async function updateInlineField(formData: FormData) {
         createData.effortDemoMin = nextValue;
         break;
       }
-      case "materialAvailable": {
-        const nextValue = typeof parsedValue === "boolean" ? parsedValue : null;
-        updateData.materialAvailable = nextValue;
-        createData.materialAvailable = nextValue;
+      case "materialStatus": {
+        const nextValue = (typeof parsedValue === "string" ? parsedValue : "ANGEFORDERT") as Prisma.$Enums.MaterialStatus;
+        updateData.materialStatus = nextValue;
+        createData.materialStatus = nextValue;
         break;
       }
       case "seo": {
-        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NONE") as Prisma.$Enums.SEOStatus;
+        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NEIN") as Prisma.$Enums.SEOStatus;
         updateData.seo = nextValue;
         createData.seo = nextValue;
         break;
       }
       case "textit": {
-        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NONE") as Prisma.$Enums.TextitStatus;
+        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NEIN") as Prisma.$Enums.TextitStatus;
         updateData.textit = nextValue;
         createData.textit = nextValue;
         break;
@@ -172,6 +168,7 @@ export async function updateInlineField(formData: FormData) {
               webDate: true,
               demoDate: true,
               onlineDate: true,
+              materialStatus: true,
             },
           },
         },
@@ -182,6 +179,7 @@ export async function updateInlineField(formData: FormData) {
           webDate: project.website?.webDate,
           demoDate: project.website?.demoDate,
           onlineDate: project.website?.onlineDate,
+          materialStatus: project.website?.materialStatus,
         });
         if (project.status !== nextStatus) {
           await prisma.project.update({ where: { id }, data: { status: nextStatus } });
@@ -192,6 +190,11 @@ export async function updateInlineField(formData: FormData) {
 
   revalidatePath("/projects");
 }
+
+
+
+
+
 
 
 

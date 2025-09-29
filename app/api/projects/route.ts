@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     data: {
       title: body.title,
       type: body.type ?? "WEBSITE",
-      status: "NEW",
+      status: "WEBTERMIN",
       clientId: body.clientId,
       agentId: body.agentId ?? null,
       important: body.important ?? null,

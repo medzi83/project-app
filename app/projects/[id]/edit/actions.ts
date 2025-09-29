@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { deriveProjectStatus, PROJECT_STATUS_VALUES } from "@/lib/project-status";
+import { deriveProjectStatus } from "@/lib/project-status";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { revalidatePath } from "next/cache";
@@ -22,17 +22,17 @@ const triState = z.enum(["unknown", "yes", "no"]).transform((v) =>
   v === "unknown" ? null : v === "yes"
 );
 
-const ProjectStatus = z.enum(PROJECT_STATUS_VALUES);
-const WebsitePriority = z.enum(["LOW", "NORMAL", "HIGH", "CRITICAL"]);
-const CMS = z.enum(["SHOPWARE", "WORDPRESS", "TYPO3", "JOOMLA", "WEBFLOW", "WIX", "CUSTOM", "OTHER"]);
-const ProductionStatus = z.enum(["NONE", "TODO", "IN_PROGRESS", "WITH_CUSTOMER", "BLOCKED", "READY_FOR_LAUNCH", "DONE"]);
-const SEOStatus = z.enum(["NONE", "QUESTIONNAIRE", "ANALYSIS", "DONE"]);
-const TextitStatus = z.enum(["NONE", "SENT_OUT", "DONE"]);
+const MaterialStatus = z.enum(["ANGEFORDERT", "TEILWEISE", "VOLLSTAENDIG", "NV"]);
+
+const WebsitePriority = z.enum(["NONE", "PRIO_1", "PRIO_2", "PRIO_3"]);
+const CMS = z.enum(["SHOPWARE", "WORDPRESS", "JOOMLA", "LOGO", "PRINT", "CUSTOM", "OTHER"]);
+const ProductionStatus = z.enum(["NONE", "BEENDET", "MMW", "VOLLST_A_K"]);
+const SEOStatus = z.enum(["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"]);
+const TextitStatus = z.enum(["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"]);
 
 const FormSchema = z.object({
   projectId: z.string().min(1),
   title: z.string().min(1, "Titel fehlt"),
-  status: ProjectStatus,
   agentId: z.string().optional().transform((v) => (v ? v : null)),
 
   domain: z.string().optional().transform((v) => v?.trim() || null),
@@ -49,7 +49,7 @@ const FormSchema = z.object({
   effortBuildMin: z.string().optional().transform(toMinutesFromHours),
   effortDemoMin: z.string().optional().transform(toMinutesFromHours),
 
-  materialAvailable: triState,
+  materialStatus: MaterialStatus,
   seo: SEOStatus,
   textit: TextitStatus,
   accessible: triState,
@@ -77,6 +77,7 @@ export async function updateWebsite(formData: FormData) {
     webDate: data.webDate,
     demoDate: data.demoDate,
     onlineDate: data.onlineDate,
+    materialStatus: data.materialStatus,
   });
 
   // cmsOther nur speichern, wenn cms OTHER oder CUSTOM ist
@@ -107,7 +108,7 @@ export async function updateWebsite(formData: FormData) {
       lastMaterialAt: data.lastMaterialAt,
       effortBuildMin: data.effortBuildMin,
       effortDemoMin: data.effortDemoMin,
-      materialAvailable: data.materialAvailable,
+      materialStatus: data.materialStatus,
       seo: data.seo,
       textit: data.textit,
       accessible: data.accessible,
@@ -127,7 +128,7 @@ export async function updateWebsite(formData: FormData) {
       lastMaterialAt: data.lastMaterialAt,
       effortBuildMin: data.effortBuildMin,
       effortDemoMin: data.effortDemoMin,
-      materialAvailable: data.materialAvailable,
+      materialStatus: data.materialStatus,
       seo: data.seo,
       textit: data.textit,
       accessible: data.accessible,
@@ -139,6 +140,8 @@ export async function updateWebsite(formData: FormData) {
   revalidatePath(`/projects/${data.projectId}`);
   redirect(`/projects/${data.projectId}`);
 }
+
+
 
 
 

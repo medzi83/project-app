@@ -10,14 +10,15 @@ datasource db {
 
 model User {
   id            String        @id @default(cuid())
-  email         String        @unique
+  email         String?       @unique
   name          String?
   password      String
   role          Role          @default(CUSTOMER)
   clientId      String?
-  active    Boolean  @default(true)  
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  active        Boolean       @default(true)
+  color         String?
   projects      Project[]     @relation("AgentProjects")
   notesAuthored ProjectNote[] @relation("NoteAuthor")
   client        Client?       @relation(fields: [clientId], references: [id])
@@ -60,25 +61,25 @@ model Project {
 }
 
 model ProjectWebsite {
-  projectId         String           @id
-  domain            String?
-  priority          WebsitePriority  @default(NORMAL)
-  pStatus           ProductionStatus @default(NONE)
-  cms               CMS              @default(SHOPWARE)
-  cmsOther          String?
-  webDate           DateTime?
-  demoDate          DateTime?
-  onlineDate        DateTime?
-  lastMaterialAt    DateTime?
-  effortBuildMin    Int?
-  effortDemoMin     Int?
-  materialAvailable Boolean?
-  seo               SEOStatus        @default(NONE)
-  textit            TextitStatus     @default(NONE)
-  accessible        Boolean?
-  note              String?
-  demoLink          String?
-  project           Project          @relation(fields: [projectId], references: [id])
+  projectId      String           @id
+  domain         String?
+  priority       WebsitePriority  @default(NONE)
+  pStatus        ProductionStatus @default(NONE)
+  cms            CMS              @default(JOOMLA)
+  cmsOther       String?
+  webDate        DateTime?
+  demoDate       DateTime?
+  onlineDate     DateTime?
+  lastMaterialAt DateTime?
+  effortBuildMin Int?
+  effortDemoMin  Int?
+  seo            SEOStatus        @default(NEIN)
+  textit         TextitStatus     @default(NEIN)
+  accessible     Boolean?
+  note           String?
+  demoLink       String?
+  materialStatus MaterialStatus   @default(ANGEFORDERT)
+  project        Project          @relation(fields: [projectId], references: [id])
 }
 
 model ProjectNote {
@@ -93,6 +94,15 @@ model ProjectNote {
   @@index([projectId, createdAt])
 }
 
+model Server {
+  id         String   @id @default(cuid())
+  name       String
+  ip         String
+  froxlorUrl String?
+  mysqlUrl   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
 enum Role {
   ADMIN
   AGENT
@@ -106,52 +116,56 @@ enum ProjectType {
 }
 
 enum ProjectStatus {
-  NEW
-  BRIEFING
-  IN_PROGRESS
-  ON_HOLD
-  REVIEW
-  DONE
+  WEBTERMIN
+  MATERIAL
+  UMSETZUNG
+  DEMO
+  ONLINE
 }
 
 enum WebsitePriority {
-  LOW
-  NORMAL
-  HIGH
-  CRITICAL
+  NONE
+  PRIO_1
+  PRIO_2
+  PRIO_3
 }
 
 enum CMS {
   SHOPWARE
   WORDPRESS
-  TYPO3
   JOOMLA
-  WEBFLOW
-  WIX
+  LOGO
+  PRINT
   CUSTOM
   OTHER
 }
 
 enum ProductionStatus {
   NONE
-  TODO
-  IN_PROGRESS
-  WITH_CUSTOMER
-  BLOCKED
-  READY_FOR_LAUNCH
-  DONE
+  BEENDET
+  MMW
+  VOLLST_A_K
 }
 
 enum SEOStatus {
-  NONE
-  QUESTIONNAIRE
-  ANALYSIS
-  DONE
+  NEIN
+  NEIN_NEIN
+  JA_NEIN
+  JA_JA
 }
 
 enum TextitStatus {
-  NONE
-  SENT_OUT
-  DONE
+  NEIN
+  NEIN_NEIN
+  JA_NEIN
+  JA_JA
 }
+
+enum MaterialStatus {
+  ANGEFORDERT
+  TEILWEISE
+  VOLLSTAENDIG
+  NV
+}
+
 

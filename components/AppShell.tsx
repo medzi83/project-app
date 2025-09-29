@@ -1,33 +1,15 @@
-"use client";
+﻿"use client";
 
 import React from "react";
+import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutGrid, FolderKanban, Users, Settings, LogOut, ChevronDown, ChevronRight, PlusCircle } from "lucide-react";
+import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-
-/**
- * AppShell - ein responsives Layout mit Sidebar-Navigation, Topbar & Role-based Menues
- *
- * Verwendung (Next.js App Router):
- * 1) Lege diese Datei als components/AppShell.tsx ab.
- * 2) Umhuelle deine Seiten in app/(dashboard)/layout.tsx:
- *    export default function Layout({ children }) {
- *      // TODO: userRole & counts aus Session/DB laden
- *      return (
- *        <AppShell
- *          user={{ name: "Michael", role: "ADMIN" }}
- *          counts={{ projectsOpen: 8, projectsAll: 24, agentsActive: 5 }}
- *        >
- *          {children}
- *        </AppShell>
- *      );
- *    }
- */
 
 export type Role = "ADMIN" | "AGENT";
 
@@ -53,10 +35,8 @@ export default function AppShell({ user, counts, children }: AppShellProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Topbar */}
       <div className="sticky top-0 z-40 border-b bg-white">
         <div className="flex w-full items-center gap-3 px-4 py-3">
-          {/* Mobile: Sidebar Toggle */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
@@ -72,27 +52,27 @@ export default function AppShell({ user, counts, children }: AppShellProps) {
             </SheetContent>
           </Sheet>
 
-          {/* Brand */}
           <Link href="/" className="font-semibold tracking-tight">Projektverwaltung</Link>
 
-          {/* Spacer */}
           <div className="ml-auto flex items-center gap-2">
             <UserPill user={user} />
-            <Button variant="outline" size="sm" className="hidden md:inline-flex">
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden md:inline-flex"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+            >
               <LogOut className="mr-2 h-4 w-4" /> Logout
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Page */}
       <div className="grid w-full max-w-7xl grid-cols-1 md:grid-cols-[260px_1fr]">
-        {/* Desktop Sidebar */}
         <aside className="hidden border-r bg-white md:block">
           <Sidebar user={user} counts={counts} />
         </aside>
 
-        {/* Content */}
         <main className="min-h-[calc(100vh-56px)] p-4 md:p-6">
           {children}
         </main>
@@ -101,34 +81,46 @@ export default function AppShell({ user, counts, children }: AppShellProps) {
   );
 }
 
-/** Sidebar mit aktiver Link-Hervorhebung und Rollen-basierten Eintraegen */
+type NavItem = {
+  label: string;
+  href: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  badge?: string;
+};
+
 function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; onNavigate?: () => void }) {
   const pathname = usePathname();
 
   const baseItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
-    {
-      label: "Projekte",
-      href: "/projects",
-      icon: FolderKanban,
-      badge: counts ? `${counts.projectsOpen ?? 0}/${counts.projectsAll ?? 0}` : undefined,
-    },
+    { label: "Webseitenprojekte", href: "/projects", icon: FolderKanban },
+    { label: "Filmprojekte", href: "/film-projects", icon: Clapperboard },
+    { label: "SocialMedia-Projekte", href: "/social-projects", icon: Share2 },
+    { label: "Kunden", href: "/clients", icon: Building2 },
     { label: "Einstellungen", href: "/settings", icon: Settings },
   ];
 
-  if (user.role === "ADMIN" || user.role === "AGENT") {
-    baseItems.splice(2, 0, { label: "Projekt anlegen", href: "/projects/new", icon: PlusCircle });
-  };
-
-  const adminItems: NavItem[] = [
-    { label: "Agenten", href: "/admin/agents", icon: Users, badge: counts ? String(counts.agentsActive ?? 0) : undefined },
-  ];
+  const adminItems: NavItem[] = user.role === "ADMIN"
+    ? [
+        { label: "Admins", href: "/admin/admins", icon: Shield },
+        { label: "Agenten", href: "/admin/agents", icon: Users, badge: counts ? String(counts.agentsActive ?? 0) : undefined },
+        { label: "Server", href: "/admin/server", icon: Server },
+      ]
+    : [];
 
   return (
     <div className="flex h-[calc(100vh-56px)] flex-col">
-      {/* Header */}
-      <div className="px-4 py-4">
+      <div className="px-4 py-4 space-y-2">
         <h2 className="text-sm font-medium text-muted-foreground">Navigation</h2>
+        {(user.role === "ADMIN" || user.role === "AGENT") && (
+          <Link
+            href="/projects/new"
+            onClick={onNavigate}
+            className="flex items-center gap-2 rounded-xl bg-black px-3 py-2 text-sm font-medium text-white hover:bg-black/90"
+          >
+            <PlusCircle className="h-4 w-4" /> Projekt anlegen
+          </Link>
+        )}
       </div>
       <Separator />
 
@@ -136,7 +128,7 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
         <nav className="px-2 py-3">
           <NavSection label="Allgemein" items={baseItems} activePath={pathname} onNavigate={onNavigate} />
 
-          {user.role === "ADMIN" && (
+          {adminItems.length > 0 && (
             <div className="mt-6">
               <NavSection label="Admin" items={adminItems} activePath={pathname} onNavigate={onNavigate} />
             </div>
@@ -144,7 +136,6 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
         </nav>
       </ScrollArea>
 
-      {/* Footer */}
       <div className="mt-auto space-y-2 p-3">
         <Separator />
         <div className="flex items-center justify-between rounded-xl bg-gray-50 p-3">
@@ -159,26 +150,9 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
   );
 }
 
-function RoleBadge({ role }: { role: Role }) {
-  return (
-    <Badge variant={role === "ADMIN" ? "default" : "secondary"} className="uppercase">
-      {role.toLowerCase()}
-    </Badge>
-  );
-}
-
-// --- Nav Section & Items ---
-
-type NavItem = {
-  label: string;
-  href: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  badge?: string;
-  children?: NavItem[]; // optional: fuer kuenftige Untermenues
-};
-
 function NavSection({ label, items, activePath, onNavigate }: { label: string; items: NavItem[]; activePath: string | null; onNavigate?: () => void }) {
   const [open, setOpen] = React.useState(true);
+  if (items.length === 0) return null;
   return (
     <div>
       <button
@@ -222,6 +196,14 @@ function SidebarLink({ item, activePath, onNavigate }: { item: NavItem; activePa
   );
 }
 
+function RoleBadge({ role }: { role: Role }) {
+  return (
+    <Badge variant={role === "ADMIN" ? "default" : "secondary"} className="uppercase">
+      {role.toLowerCase()}
+    </Badge>
+  );
+}
+
 function UserPill({ user }: { user: User }) {
   return (
     <div className="flex items-center gap-2 rounded-full border bg-white px-3 py-1">
@@ -235,14 +217,4 @@ function UserPill({ user }: { user: User }) {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
 

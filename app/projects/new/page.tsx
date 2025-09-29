@@ -1,9 +1,9 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { createClient, createProject } from "./actions";
+import { labelForProductionStatus, labelForWebsitePriority, labelForSeoStatus, labelForTextitStatus } from "@/lib/project-status";import { createClient, createProject } from "./actions";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -11,16 +11,21 @@ type Props = {
 
 type Option = { value: string; label: string };
 
-const STATUSES = ["NEW", "BRIEFING", "IN_PROGRESS", "ON_HOLD", "REVIEW", "DONE"] as const;
-const PRIORITIES = ["LOW", "NORMAL", "HIGH", "CRITICAL"] as const;
-const CMS = ["SHOPWARE", "WORDPRESS", "TYPO3", "JOOMLA", "WEBFLOW", "WIX", "CUSTOM", "OTHER"] as const;
-const PRODUCTION = ["NONE", "TODO", "IN_PROGRESS", "WITH_CUSTOMER", "BLOCKED", "READY_FOR_LAUNCH", "DONE"] as const;
-const SEO = ["NONE", "QUESTIONNAIRE", "ANALYSIS", "DONE"] as const;
-const TEXTIT = ["NONE", "SENT_OUT", "DONE"] as const;
+const PRIORITIES = ["NONE", "PRIO_1", "PRIO_2", "PRIO_3"] as const;
+const CMS = ["SHOPWARE", "WORDPRESS", "JOOMLA", "LOGO", "PRINT", "CUSTOM", "OTHER"] as const;
+const PRODUCTION = ["NONE", "BEENDET", "MMW", "VOLLST_A_K"] as const;
+const SEO = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"] as const;
+const TEXTIT = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"] as const;
 const TRI = [
   { value: "unknown", label: "(nicht gesetzt)" },
   { value: "yes", label: "Ja" },
   { value: "no", label: "Nein" },
+];
+const MATERIAL_STATUS = [
+  { value: "ANGEFORDERT", label: "angefordert" },
+  { value: "TEILWEISE", label: "teilweise" },
+  { value: "VOLLSTAENDIG", label: "vollst�ndig" },
+  { value: "NV", label: "N.V." },
 ];
 
 const str = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
@@ -55,7 +60,7 @@ export default async function NewProjectPage({ searchParams }: Props) {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Projekt anlegen</h1>
         <p className="text-sm text-muted-foreground">
-          Lege hier zuerst optional einen neuen Kunden an und erstelle anschließend das Projekt.
+          Lege hier zuerst optional einen neuen Kunden an und erstelle anschlieend das Projekt.
         </p>
       </header>
 
@@ -110,7 +115,7 @@ export default async function NewProjectPage({ searchParams }: Props) {
         </div>
         {clientIdFromQuery && !clientError && (
           <p className="text-sm text-green-700">
-            Neuer Kunde wurde angelegt und ist vorausgewählt.
+            Neuer Kunde wurde angelegt und ist vorausgewhlt.
           </p>
         )}
         {projectError && <p className="text-sm text-red-600">{projectError}</p>}
@@ -122,14 +127,6 @@ export default async function NewProjectPage({ searchParams }: Props) {
               <input name="title" required className="p-2 border rounded" placeholder="Projektname" />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Status</span>
-              <select name="status" defaultValue="NEW" className="p-2 border rounded">
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">Kunde *</span>
               <select
                 name="clientId"
@@ -137,7 +134,7 @@ export default async function NewProjectPage({ searchParams }: Props) {
                 defaultValue={clientIdFromQuery && clientOptions.some((c) => c.value === clientIdFromQuery) ? clientIdFromQuery : ""}
                 className="p-2 border rounded"
               >
-                <option value="">Bitte auswählen</option>
+                <option value="">Bitte auswhlen</option>
                 {clientOptions.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
@@ -159,8 +156,8 @@ export default async function NewProjectPage({ searchParams }: Props) {
               <input name="domain" className="p-2 border rounded" placeholder="www.example.de" />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Priorität</span>
-              <select name="priority" defaultValue="NORMAL" className="p-2 border rounded">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Prioritt</span>
+              <select name="priority" defaultValue="NONE" className="p-2 border rounded">
                 {PRIORITIES.map((p) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
@@ -198,9 +195,9 @@ export default async function NewProjectPage({ searchParams }: Props) {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <SelectField name="materialAvailable" label="Material vorhanden?" options={TRI} defaultValue="unknown" />
-            <SelectField name="seo" label="SEO" options={SEO.map((v) => ({ value: v, label: v }))} defaultValue="NONE" />
-            <SelectField name="textit" label="Textit" options={TEXTIT.map((v) => ({ value: v, label: v }))} defaultValue="NONE" />
+            <SelectField name="materialStatus" label="Material" options={MATERIAL_STATUS} defaultValue="ANGEFORDERT" />
+            <SelectField name="seo" label="SEO" options={SEO.map((v) => ({ value: v, label: v }))} defaultValue="NEIN" />
+            <SelectField name="textit" label="Textit" options={TEXTIT.map((v) => ({ value: v, label: v }))} defaultValue="NEIN" />
             <SelectField name="accessible" label="Barrierefrei" options={TRI} defaultValue="unknown" />
           </div>
 
@@ -267,6 +264,9 @@ function SelectField({
     </label>
   );
 }
+
+
+
 
 
 

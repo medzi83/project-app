@@ -51,6 +51,7 @@ async function main() {
       name: "Agentin",
       role: "AGENT",
       password: hash("agent123"),
+      color: "#2563EB",
     },
   });
 
@@ -77,7 +78,7 @@ async function main() {
       data: {
         title: "Website Relaunch",
         type: "WEBSITE",
-        status: "IN_PROGRESS",
+        status: "UMSETZUNG",
         clientId: demoClient.id,
         agentId: agent.id,
         important: "SEO-Migration beachten",
@@ -99,7 +100,7 @@ async function main() {
       lastMaterialAt: null,
       effortBuildMin: 540,
       effortDemoMin: 60,
-      materialAvailable: true,
+      materialStatus: "VOLLSTAENDIG",
       seo: "ANALYSIS",
       textit: "SENT_OUT",
       accessible: false,
@@ -115,7 +116,7 @@ async function main() {
       webDate: new Date(),
       effortBuildMin: 540,
       effortDemoMin: 60,
-      materialAvailable: true,
+      materialStatus: "VOLLSTAENDIG",
       seo: "ANALYSIS",
       textit: "SENT_OUT",
       accessible: false,
