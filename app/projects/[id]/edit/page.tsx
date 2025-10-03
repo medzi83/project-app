@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { labelForProjectStatus } from "@/lib/project-status";
 import { getServerSession } from "next-auth";
@@ -54,7 +54,7 @@ export default async function EditProjectPage({ params }: Props) {
           <Field label="Umsetzer (Agent)">
             <select name="agentId" defaultValue={project.agentId ?? ""} className="w-full p-2 border rounded">
               <option value=""> keiner </option>
-              {agents.map(a=> <option key={a.id} value={a.id}>{a.name ?? a.email}</option>)}
+              {agents.flatMap(a => ([<option key={a.id+"-base"} value={a.id}>{a.name ?? a.email}</option>, <option key={a.id+"-wt"} value={a.id}>{(a.name ?? a.email)} WT</option>]))}
             </select>
           </Field>
         </div>
@@ -119,7 +119,7 @@ export default async function EditProjectPage({ params }: Props) {
             <select name="materialStatus" defaultValue={w?.materialStatus ?? "ANGEFORDERT"} className="w-full p-2 border rounded">
               <option value="ANGEFORDERT">angefordert</option>
               <option value="TEILWEISE">teilweise</option>
-              <option value="VOLLSTAENDIG">vollständig</option>
+              <option value="VOLLSTAENDIG">vollst�ndig</option>
               <option value="NV">N.V.</option>
             </select>
           </Field>
@@ -168,6 +168,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
 
 
 

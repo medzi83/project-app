@@ -18,7 +18,9 @@ type DeriveProjectStatusInput = {
 };
 
 const DONE_P_STATUS = new Set<string>(["DONE", "BEENDET", "FINISHED"]);
-const MATERIAL_COMPLETE = "VOLLSTAENDIG";
+const MATERIAL_COMPLETE: Prisma.$Enums.MaterialStatus = "VOLLSTAENDIG";
+const VOLLST_A_K: Prisma.$Enums.ProductionStatus = "VOLLST_A_K";
+export const DONE_PRODUCTION_STATUSES: Prisma.$Enums.ProductionStatus[] = ["BEENDET"];
 
 const toDate = (value: DateLike) => {
   if (!value) return null;
@@ -41,8 +43,8 @@ const normalizeMaterialStatus = (status?: MaterialStatusValue) => {
   return String(status).toUpperCase();
 };
 
-// Ereignisse -> bestehende Prisma-Enumwerte
-// WEBTERMIN, MATERIAL, UMSETZUNG, DEMO, ONLINE
+export type DerivedStatusFilter = Prisma.$Enums.ProjectStatus | "BEENDET";
+
 export function deriveProjectStatus({
   pStatus,
   webDate,
@@ -51,7 +53,6 @@ export function deriveProjectStatus({
   materialStatus,
   now,
 }: DeriveProjectStatusInput): Prisma.$Enums.ProjectStatus {
-  const effectiveNow = now ?? new Date();
   const normalizedPStatus = normalizeStatus(pStatus);
   if (normalizedPStatus && DONE_P_STATUS.has(normalizedPStatus)) {
     return "ONLINE";
@@ -62,9 +63,19 @@ export function deriveProjectStatus({
     return "ONLINE";
   }
 
+  const demo = toDate(demoDate);
+  if (demo) {
+    return "DEMO";
+  }
+
+  const effectiveNow = now ?? new Date();
   const web = toDate(webDate);
   if (!web || web > effectiveNow) {
     return "WEBTERMIN";
+  }
+
+  if (normalizedPStatus === VOLLST_A_K) {
+    return "UMSETZUNG";
   }
 
   const normalizedMaterial = normalizeMaterialStatus(materialStatus);
@@ -72,34 +83,114 @@ export function deriveProjectStatus({
     return "MATERIAL";
   }
 
-  const demo = toDate(demoDate);
-  if (demo) {
-    return "DEMO";
-  }
-
   return "UMSETZUNG";
 }
 
-// Optional: Deutsche Labels fuer das UI
-export function labelForProjectStatus(
-  status: Prisma.$Enums.ProjectStatus,
-  opts?: { pStatus?: ProductionStatusValue }
-): string {
-  const normalizedPStatus = normalizeStatus(opts?.pStatus);
-  if (status === "ONLINE") {
-    return normalizedPStatus && DONE_P_STATUS.has(normalizedPStatus) ? "Beendet" : "Online";
-  }
+export function buildWebsiteStatusWhere(
+  status: DerivedStatusFilter,
+  now: Date = new Date(),
+): Prisma.ProjectWhereInput | undefined {
+  const effectiveNow = new Date(now);
+
+  const websiteBase = (
+    conditions: Prisma.ProjectWebsiteWhereInput,
+  ): Prisma.ProjectWhereInput => ({
+    type: "WEBSITE",
+    website: { is: conditions },
+  });
+
+  const excludeDone: Prisma.ProjectWebsiteWhereInput = {
+    pStatus: { notIn: DONE_PRODUCTION_STATUSES },
+  };
+
   switch (status) {
-    case "WEBTERMIN": return "Webtermin";
-    case "MATERIAL": return "Material";
-    case "UMSETZUNG": return "Umsetzung";
-    case "DEMO": return "Demo";
-    default: return status;
+    case "BEENDET":
+      return websiteBase({
+        pStatus: { in: DONE_PRODUCTION_STATUSES },
+      });
+    case "ONLINE":
+      return websiteBase({
+        OR: [
+          { pStatus: { in: DONE_PRODUCTION_STATUSES } },
+          { onlineDate: { not: null } },
+        ],
+      });
+    case "DEMO":
+      return websiteBase({
+        AND: [
+          excludeDone,
+          { onlineDate: null },
+          { demoDate: { not: null } },
+        ],
+      });
+    case "WEBTERMIN":
+      return websiteBase({
+        AND: [
+          excludeDone,
+          { onlineDate: null },
+          { demoDate: null },
+          {
+            OR: [
+              { webDate: null },
+              { webDate: { gt: effectiveNow } },
+            ],
+          },
+        ],
+      });
+    case "MATERIAL":
+      return websiteBase({
+        AND: [
+          excludeDone,
+          { onlineDate: null },
+          { demoDate: null },
+          { webDate: { lte: effectiveNow } },
+          {
+            OR: [
+              { materialStatus: { not: MATERIAL_COMPLETE } },
+              { materialStatus: null },
+            ],
+          },
+          { pStatus: { not: VOLLST_A_K } },
+        ],
+      });
+    case "UMSETZUNG":
+      return websiteBase({
+        AND: [
+          excludeDone,
+          { onlineDate: null },
+          { demoDate: null },
+          { webDate: { lte: effectiveNow } },
+          {
+            OR: [
+              { pStatus: VOLLST_A_K },
+              { materialStatus: MATERIAL_COMPLETE },
+            ],
+          },
+        ],
+      });
+    default:
+      return undefined;
   }
 }
 
+const PROJECT_STATUS_LABELS: Record<Prisma.$Enums.ProjectStatus, string> = {
+  WEBTERMIN: "Webtermin",
+  MATERIAL: "Material",
+  UMSETZUNG: "Umsetzung",
+  DEMO: "Demo",
+  ONLINE: "Online",
+};
 
-
+export function labelForProjectStatus(
+  status: Prisma.$Enums.ProjectStatus,
+  opts?: { pStatus?: ProductionStatusValue },
+): string {
+  const normalizedPStatus = normalizeStatus(opts?.pStatus);
+  if (normalizedPStatus && DONE_P_STATUS.has(normalizedPStatus)) {
+    return "Beendet";
+  }
+  return PROJECT_STATUS_LABELS[status] ?? status;
+}
 
 const WEBSITE_PRIORITY_LABELS: Record<Prisma.$Enums.WebsitePriority, string> = {
   NONE: "-",
@@ -177,3 +268,4 @@ export function labelForTextitStatus(value?: TextitStatusValue): string {
   const map = TEXTIT_STATUS_LABELS as Record<string, string>;
   return map[normalized] ?? normalized.replace(/_/g, "/");
 }
+

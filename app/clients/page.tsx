@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import ConfirmSubmit from "@/components/ConfirmSubmit";
+import { deleteSelectedClients } from "./actions";
 
 const SERVICE_DEFS = [
   { key: "website", label: "Webseite" },
@@ -29,46 +31,75 @@ const formatDate = (value?: Date | string | null) => {
   }
 };
 
-export default async function ClientsPage() {
+type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+
+export default async function ClientsPage({ searchParams }: Props) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
   if (!session.user.role || !["ADMIN", "AGENT"].includes(session.user.role)) {
     redirect("/");
   }
+  const isAdmin = session.user.role === "ADMIN";
 
-  const clients = await prisma.client.findMany({
-    orderBy: { name: "asc" },
-    include: {
-      _count: { select: { projects: true } },
-      projects: {
-        select: {
-          type: true,
-          website: {
-            select: {
-              seo: true,
-              textit: true,
-              cms: true,
-            },
+  const spRaw = await searchParams;
+  const page = Math.max(1, parseInt(typeof spRaw.page === "string" ? spRaw.page : "1") || 1);
+  const psRaw = typeof spRaw.ps === "string" ? spRaw.ps : "50";
+  const pageSize = psRaw === "100" ? 100 : 50;
+  const skip = (page - 1) * pageSize;
+
+  const [clients, total] = await Promise.all([
+    prisma.client.findMany({
+      orderBy: { name: "asc" },
+      skip,
+      take: pageSize,
+      include: {
+        _count: { select: { projects: true } },
+        projects: {
+          select: {
+            type: true,
+            website: { select: { seo: true, textit: true, cms: true } },
           },
         },
       },
-    },
-  });
+    }),
+    prisma.client.count(),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const from = total === 0 ? 0 : skip + 1;
+  const to = Math.min(total, skip + clients.length);
 
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Kunden</h1>
-          <p className="text-sm text-gray-500">Alle Kunden mit Kontaktdaten, Projekten und Leistungen im \u00DCberblick.</p>
+          <p className="text-sm text-gray-500">Alle Kunden mit Kontaktdaten, Projekten und Leistungen im Überblick.</p>
         </div>
       </header>
 
       <section className="rounded-lg border bg-white">
+        {isAdmin && (
+          <div className="flex items-center justify-end gap-2 p-3 border-b text-xs text-gray-500">
+            Admin: Kunden löschen über Auswahl und Button unten.
+          </div>
+        )}
+        <div className="flex items-center justify-between gap-2 p-3 border-b text-sm">
+          <div className="text-gray-600">Zeige {from}–{to} von {total}</div>
+          <div className="flex items-center gap-3">
+            <a className={pageSize===50?"font-semibold underline":"underline"} href={`?ps=50&page=1`}>50/Seite</a>
+            <a className={pageSize===100?"font-semibold underline":"underline"} href={`?ps=100&page=1`}>100/Seite</a>
+            <span className="mx-2">|</span>
+            <a className={page===1?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}`}>Zurück</a>
+            <span>Seite {page} / {totalPages}</span>
+            <a className={page>=totalPages?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}`}>Weiter</a>
+          </div>
+        </div>
         <div className="overflow-x-auto">
+          <form action={deleteSelectedClients}>
           <table className="min-w-[900px] w-full text-sm">
             <thead className="bg-gray-50">
               <tr className="[&>th]:px-3 [&>th]:py-2 text-left uppercase tracking-wide text-xs text-gray-500">
+                {isAdmin && <th className="w-8">Ausw.</th>}
                 <th>Kd.-Nr.</th>
                 <th>Kunde</th>
                 <th>Kontakt</th>
@@ -97,6 +128,11 @@ export default async function ClientsPage() {
 
                 return (
                   <tr key={client.id} className="border-t">
+                    {isAdmin && (
+                      <td>
+                        <input type="checkbox" name="ids" value={client.id} />
+                      </td>
+                    )}
                     <td className="font-mono text-xs text-gray-600">{client.customerNo ?? "-"}</td>
                     <td className="font-medium">{client.name}</td>
                     <td>{client.contact ?? "-"}</td>
@@ -130,13 +166,32 @@ export default async function ClientsPage() {
               })}
               {clients.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-sm text-gray-500">
+                  <td colSpan={isAdmin ? 9 : 8} className="py-8 text-center text-sm text-gray-500">
                     Keine Kunden gefunden.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+          <div className="p-3 border-t flex justify-between text-sm text-gray-600">
+            <div>
+              Zeige {from}–{to} von {total}
+            </div>
+            <div className="flex items-center gap-3">
+              <a className={pageSize===50?"font-semibold underline":"underline"} href={`?ps=50&page=1`}>50/Seite</a>
+              <a className={pageSize===100?"font-semibold underline":"underline"} href={`?ps=100&page=1`}>100/Seite</a>
+              <span className="mx-2">|</span>
+              <a className={page===1?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}`}>Zurück</a>
+              <span>Seite {page} / {totalPages}</span>
+              <a className={page>=totalPages?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}`}>Weiter</a>
+            </div>
+            {isAdmin && (
+              <ConfirmSubmit confirmText="Ausgewählte Kunden unwiderruflich löschen?" className="px-3 py-1.5 rounded border border-red-300 text-red-700 bg-red-50 hover:bg-red-100">
+                Ausgewählte löschen
+              </ConfirmSubmit>
+            )}
+          </div>
+          </form>
         </div>
       </section>
     </div>

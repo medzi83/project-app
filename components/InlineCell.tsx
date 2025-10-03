@@ -66,15 +66,26 @@ export default function InlineCell({
 
   // READ MODE
   if (!editing) {
-    return (
-      <span
-        onDoubleClick={enterEdit}
-        title="Doppelklick zum Bearbeiten"
-        className={displayClassName ? `${displayClassName} cursor-text` : "cursor-text"}
-        style={displayStyle}
-      >
+    const displayNode = (
+      <span className={displayClassName} style={displayStyle}>
         {fallbackDisplay}
       </span>
+    );
+
+    const baseButtonClass = "inline-flex w-full items-center justify-start gap-2 rounded px-1 py-0.5 text-left cursor-text bg-transparent";
+    const interactiveClass = "transition hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black";
+    const buttonClassName = `${baseButtonClass} ${interactiveClass}`;
+
+    return (
+      <button
+        type="button"
+        onClick={enterEdit}
+        onDoubleClick={enterEdit}
+        title="Zum Bearbeiten klicken"
+        className={buttonClassName}
+      >
+        {displayNode}
+      </button>
     );
   }
 

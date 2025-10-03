@@ -1,8 +1,9 @@
-import { prisma } from "@/lib/prisma";
+﻿import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
-import { createAgent, resetAgentPassword, updateAgentName, toggleAgentActive } from "../agents/actions";
+import { createAgent, resetAgentPassword, updateAgentName, toggleAgentActive, deleteAgent } from "../agents/actions";
+import ConfirmSubmit from "@/components/ConfirmSubmit";
 import AgentColorForm from "./AgentColorForm";
 
 
@@ -24,6 +25,7 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
   const agentOk = sp.agentOk === "1";
   const pwdError = typeof sp.pwdError === "string" ? decodeURIComponent(sp.pwdError) : undefined;
   const pwdOk = sp.pwdOk === "1";
+  const delOk = sp.delOk === "1";
 
   const agents = await prisma.user.findMany({
     where: { role: "AGENT", ...(showInactive ? {} : { active: true }) },
@@ -37,7 +39,7 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Agenten-Verwaltung</h1>
-          <p className="text-sm text-gray-500">Agenten verwalten, Passwörter setzen und Farben vergeben.</p>
+          <p className="text-sm text-gray-500">Agenten verwalten, PasswÃ¶rter setzen und Farben vergeben.</p>\n          {delOk && <p className="text-sm text-green-700">Agent wurde gelöscht.</p>}
         </div>
         <details className="relative">
           <summary className="cursor-pointer rounded-lg bg-black px-4 py-2 text-sm font-medium text-white shadow hover:bg-black/90">
@@ -119,6 +121,10 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
                         {a.active ? "Deaktivieren" : "Aktivieren"}
                       </button>
                     </form>
+                    <form action={deleteAgent}>
+                      <input type="hidden" name="userId" value={a.id} />
+                      <ConfirmSubmit confirmText="Diesen Agent unwiderruflich löschen? Zugeordnete Projekte werden vom Agent gelöst." className="rounded border px-2 py-1 text-red-700 border-red-300 bg-red-50 hover:bg-red-100">Löschen</ConfirmSubmit>
+                    </form>
                   </td>
                 </tr>
               ))}
@@ -141,4 +147,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
+
+
+
+
+
+
+
 

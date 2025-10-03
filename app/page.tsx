@@ -5,7 +5,7 @@ import Link from "next/link";
 export default async function Home() {
   const session = await getServerSession(authOptions);
   if (!session) {
-    return <div className="p-6">Nicht angemeldet. <a className="underline" href="/login">Login</a></div>;
+    return <div className="p-6">Nicht angemeldet. <Link className="underline" href="/login">Login</Link></div>;
   }
   const role = session.user.role;
 
@@ -15,7 +15,7 @@ export default async function Home() {
       <p>Angemeldet als <b>{session.user?.email}</b> ({role})</p>
       <Link className="underline" href="/projects">Projekte ansehen</Link><p></p>
       {session?.user?.role === "ADMIN" && (
-  <a href="/admin" className="underline">Admin</a>
+  <Link href="/admin" className="underline">Admin</Link>
 )}
 
     </main>

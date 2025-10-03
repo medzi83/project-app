@@ -33,7 +33,7 @@ export default async function ServerAdminPage({ searchParams }: Props) {
         </div>
         <details className="relative" open={Boolean(error)}>
           <summary className="cursor-pointer rounded-lg bg-black px-4 py-2 text-sm font-medium text-white shadow hover:bg-black/90">
-            Server hinzufügen
+            Server hinzufuegen
           </summary>
           <div className="absolute right-0 mt-2 w-[360px] space-y-4 rounded-lg border bg-white p-4 shadow-lg">
             {error && <p className="text-sm text-red-600">{error}</p>}
@@ -149,3 +149,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
+

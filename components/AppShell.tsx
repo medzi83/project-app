@@ -4,7 +4,7 @@ import React from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield } from "lucide-react";
+import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -105,6 +105,7 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
         { label: "Admins", href: "/admin/admins", icon: Shield },
         { label: "Agenten", href: "/admin/agents", icon: Users, badge: counts ? String(counts.agentsActive ?? 0) : undefined },
         { label: "Server", href: "/admin/server", icon: Server },
+        { label: "Import", href: "/admin/import", icon: Upload },
       ]
     : [];
 

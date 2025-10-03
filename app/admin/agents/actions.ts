@@ -191,6 +191,36 @@ export async function toggleAgentActive(formData: FormData) {
   redirect("/admin/agents");
 }
 
+/* ---------- Agent löschen ---------- */
+const DeleteAgentSchema = z.object({ userId: z.string().min(1) });
+
+export async function deleteAgent(formData: FormData) {
+  await requireAdmin();
+
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = DeleteAgentSchema.safeParse(raw);
+  if (!parsed.success) redirect("/admin/agents");
+
+  const { userId } = parsed.data;
+
+  // Verhindere Löschung, wenn Notizen existieren (FK-Bindung)
+  const notes = await prisma.projectNote.count({ where: { authorId: userId } });
+  if (notes > 0) {
+    redirect(`/admin/agents?agentError=${encodeURIComponent("Agent hat Notizen und kann nicht gelöscht werden.")}`);
+  }
+
+  await prisma.$transaction([
+    // Projekte von Agent lösen
+    prisma.project.updateMany({ where: { agentId: userId }, data: { agentId: null } }),
+    // Agent löschen
+    prisma.user.delete({ where: { id: userId } }),
+  ]);
+
+  revalidatePath("/admin/agents");
+  revalidatePath("/projects");
+  redirect(`/admin/agents?delOk=1`);
+}
+
 
 
 
