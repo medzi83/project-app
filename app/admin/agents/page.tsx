@@ -1,8 +1,7 @@
-﻿import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { prisma } from "@/lib/prisma";
+import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
-import { createAgent, resetAgentPassword, updateAgentName, toggleAgentActive, deleteAgent } from "../agents/actions";
+import { createAgent, resetAgentPassword, updateAgentName, toggleAgentActive, deleteAgent, updateAgentCategories } from "../agents/actions";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import AgentColorForm from "./AgentColorForm";
 
@@ -15,7 +14,7 @@ const fmtDate = (d?: Date | string | null) =>
   d ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(d)) : "-";
 
 export default async function AgentsAdminPage({ searchParams }: Props) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/");
 
@@ -30,7 +29,22 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
   const agents = await prisma.user.findMany({
     where: { role: "AGENT", ...(showInactive ? {} : { active: true }) },
     orderBy: { name: "asc" },
-    include: { _count: { select: { projects: true } } },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      active: true,
+      color: true,
+      createdAt: true,
+      categories: true,
+      _count: {
+        select: {
+          projects: true,
+          filmProjectsResponsible: true,
+          filmProjectsCutting: true,
+        }
+      },
+    },
   });
 
 
@@ -39,7 +53,8 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Agenten-Verwaltung</h1>
-          <p className="text-sm text-gray-500">Agenten verwalten, PasswÃ¶rter setzen und Farben vergeben.</p>\n          {delOk && <p className="text-sm text-green-700">Agent wurde gelöscht.</p>}
+          <p className="text-sm text-gray-500">Agenten verwalten, Passwoerter setzen und Farben vergeben.</p>
+          {delOk && <p className="text-sm text-green-700">Agent wurde geloescht.</p>}
         </div>
         <details className="relative">
           <summary className="cursor-pointer rounded-lg bg-black px-4 py-2 text-sm font-medium text-white shadow hover:bg-black/90">
@@ -57,6 +72,22 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
               </Field>
               <Field label="Initiales Passwort *">
                 <input name="password" type="password" required className="w-full rounded border p-2" placeholder="min. 8 Zeichen" />
+              </Field>
+              <Field label="Kategorien">
+                <div className="space-y-1">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="categories" value="WEBSEITE" className="rounded" />
+                    <span>Webseite</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="categories" value="FILM" className="rounded" />
+                    <span>Film</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="categories" value="SOCIALMEDIA" className="rounded" />
+                    <span>Social Media</span>
+                  </label>
+                </div>
               </Field>
               <button className="w-full rounded bg-black px-4 py-2 text-white">Anlegen</button>
             </form>
@@ -85,6 +116,7 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
               <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
                 <th>Name</th>
                 <th>Farbe</th>
+                <th>Kategorien</th>
                 <th>E-Mail</th>
                 <th>Projekte</th>
                 <th>Erstellt</th>
@@ -105,8 +137,26 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
                   <td>
                     <AgentColorForm userId={a.id} color={a.color} />
                   </td>
+                  <td>
+                    <form action={updateAgentCategories} className="space-y-1">
+                      <input type="hidden" name="userId" value={a.id} />
+                      <label className="flex items-center gap-1 text-xs">
+                        <input type="checkbox" name="categories" value="WEBSEITE" defaultChecked={a.categories.includes("WEBSEITE")} className="rounded" />
+                        <span>Web</span>
+                      </label>
+                      <label className="flex items-center gap-1 text-xs">
+                        <input type="checkbox" name="categories" value="FILM" defaultChecked={a.categories.includes("FILM")} className="rounded" />
+                        <span>Film</span>
+                      </label>
+                      <label className="flex items-center gap-1 text-xs">
+                        <input type="checkbox" name="categories" value="SOCIALMEDIA" defaultChecked={a.categories.includes("SOCIALMEDIA")} className="rounded" />
+                        <span>Social</span>
+                      </label>
+                      <button className="rounded border px-2 py-0.5 text-xs" title="Kategorien speichern">Speichern</button>
+                    </form>
+                  </td>
                   <td className="whitespace-nowrap">{a.email ?? "-"}</td>
-                  <td>{a._count.projects}</td>
+                  <td>{a._count.projects + a._count.filmProjectsResponsible + a._count.filmProjectsCutting}</td>
                   <td className="whitespace-nowrap">{fmtDate(a.createdAt)}</td>
                   <td className="space-y-2 whitespace-nowrap">
                     <form action={resetAgentPassword} className="flex items-center gap-2">
@@ -123,13 +173,13 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
                     </form>
                     <form action={deleteAgent}>
                       <input type="hidden" name="userId" value={a.id} />
-                      <ConfirmSubmit confirmText="Diesen Agent unwiderruflich löschen? Zugeordnete Projekte werden vom Agent gelöst." className="rounded border px-2 py-1 text-red-700 border-red-300 bg-red-50 hover:bg-red-100">Löschen</ConfirmSubmit>
+                      <ConfirmSubmit confirmText="Diesen Agent unwiderruflich loeschen? Zugeordnete Projekte werden vom Agent geloest." className="rounded border px-2 py-1 text-red-700 border-red-300 bg-red-50 hover:bg-red-100">Loeschen</ConfirmSubmit>
                     </form>
                   </td>
                 </tr>
               ))}
               {agents.length === 0 && (
-                <tr><td colSpan={6} className="py-8 text-center opacity-60">Keine Agenten vorhanden.</td></tr>
+                <tr><td colSpan={7} className="py-8 text-center opacity-60">Keine Agenten vorhanden.</td></tr>
               )}
             </tbody>
           </table>
@@ -147,6 +197,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
+
+
+
+
 
 
 

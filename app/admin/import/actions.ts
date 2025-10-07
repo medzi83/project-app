@@ -1,7 +1,9 @@
-"use server";\nimport type { Prisma } from "@prisma/client";\nimport { prisma } from "@/lib/prisma";
+"use server";
+import type { ProjectStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { normalizeMaterialStatus } from "@/lib/project-status";
 import { revalidatePath } from "next/cache";
 import { saveImportResult } from "./store";
-
 type ImportResult = {
   imported: number;
   skipped: number;
@@ -9,22 +11,18 @@ type ImportResult = {
   resultId?: string;
   createdAgents?: { name: string; email: string }[];
 };
-
 // Ephemeral in-memory store for last import results to show on result page
 // Note: helper storage moved to ./store (no "use server")
-
 // Simple CSV parser that supports ; , or tab delimiters and quotes
 function detectDelimiter(headerLine: string): string {
   if (headerLine.includes("\t")) return "\t";
   if ((headerLine.match(/;/g) || []).length >= (headerLine.match(/,/g) || []).length) return ";";
   return ",";
 }
-
 function parseCSV(text: string): { headers: string[]; rows: string[][] } {
   const lines = text.replace(/\r\n?/g, "\n").split("\n").filter((l) => l.trim().length > 0);
   if (lines.length === 0) return { headers: [], rows: [] };
   const delim = detectDelimiter(lines[0]);
-
   const parseLine = (line: string): string[] => {
     const out: string[] = [];
     let cur = "";
@@ -48,12 +46,10 @@ function parseCSV(text: string): { headers: string[]; rows: string[][] } {
     out.push(cur);
     return out;
   };
-
   const headers = parseLine(lines[0]).map((h) => h.trim());
   const rows = lines.slice(1).map((l) => parseLine(l));
   return { headers, rows };
 }
-
 const norm = (v: string | undefined | null) => (v ?? "").trim();
 const normUC = (v: string | undefined | null) =>
   norm(v)
@@ -62,7 +58,6 @@ const normUC = (v: string | undefined | null) =>
     .replace(/\u00D6/g, "OE")
     .replace(/\u00DC/g, "UE")
     .replace(/\u00DF/g, "SS");
-
 const mapPriority = (val: string | undefined) => {
   const v = normUC(val);
   if (!v) return "NONE" as const;
@@ -72,8 +67,7 @@ const mapPriority = (val: string | undefined) => {
   if (["NONE", "KEINE", "0"].includes(v)) return "NONE" as const;
   return "NONE" as const;
 };
-
-const mapProjectStatus = (val: string | undefined): Prisma.$Enums.ProjectStatus => {
+const mapProjectStatus = (val: string | undefined): ProjectStatus => {
   const v = normUC(val);
   switch (v) {
     case "WEBTERMIN":
@@ -81,12 +75,11 @@ const mapProjectStatus = (val: string | undefined): Prisma.$Enums.ProjectStatus 
     case "UMSETZUNG":
     case "DEMO":
     case "ONLINE":
-      return v as Prisma.$Enums.ProjectStatus;
+      return v as ProjectStatus;
     default:
       return "WEBTERMIN";
   }
 };
-
 const mapCMS = (val: string | undefined) => {
   const v = normUC(val);
   if (["WORDPRESS", "WP"].includes(v)) return { cms: "WORDPRESS" as const, other: undefined };
@@ -98,7 +91,6 @@ const mapCMS = (val: string | undefined) => {
   if (!v) return { cms: "OTHER" as const, other: undefined };
   return { cms: "OTHER" as const, other: norm(val) };
 };
-
 const mapPStatus = (val: string | undefined) => {
   const v = normUC(val);
   if (!v) return "NONE" as const;
@@ -115,7 +107,6 @@ const mapPStatus = (val: string | undefined) => {
   ].includes(v)) return "VOLLST_A_K" as const;
   return "NONE" as const;
 };
-
 const mapYN4 = (val: string | undefined) => {
   const v = normUC(val);
   if (["NEIN", "N", "NO"].includes(v)) return "NEIN" as const;
@@ -125,17 +116,7 @@ const mapYN4 = (val: string | undefined) => {
   if (!v) return undefined;
   return undefined;
 };
-
-const mapMaterial = (val: string | undefined) => {
-  const v = normUC(val);
-  // Leerwerte erlaubt, sonst Werte wie in der App
-  if (!v) return undefined; // bleibt Default ANGEFORDERT
-  if (["ANGEFORDERT"].includes(v)) return "ANGEFORDERT" as const;
-  if (["TEILWEISE", "TEILW"].includes(v)) return "TEILWEISE" as const;
-  if (["VOLLSTAENDIG", "VOLLST", "JA"].includes(v)) return "VOLLSTAENDIG" as const;
-  if (["NV", "NEIN"].includes(v)) return "NV" as const;
-  return undefined;
-};
+const mapMaterial = (val: string | undefined) => normalizeMaterialStatus(val);
 
 const toDate = (val: string | undefined) => {
   const raw = norm(val);
@@ -144,7 +125,7 @@ const toDate = (val: string | undefined) => {
   // Support dd.mm.yyyy (or d.m.yy), allowing spaces around dots and optional time hh:mm
   const dm = v.match(/^(\d{1,2})\s*\.\s*(\d{1,2})\s*\.\s*(\d{2}|\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
   if (dm) {
-    const [_, dStr, mStr, yStr, hh, min] = dm;
+    const [, dStr, mStr, yStr, hh, min] = dm;
     let y = Number(yStr);
     if (yStr.length === 2) {
       y += y < 70 ? 2000 : 1900;
@@ -166,11 +147,9 @@ const toDate = (val: string | undefined) => {
 export async function importProjects(formData: FormData): Promise<ImportResult> {
   const file = formData.get("file") as File | null;
   if (!file) return { imported: 0, skipped: 0, errors: [{ row: 0, reason: "Keine Datei hochgeladen" }] };
-
   const text = await file.text();
   const { headers, rows } = parseCSV(text);
   const col = (name: string) => headers.findIndex((h) => h.trim().toLowerCase() === name.trim().toLowerCase());
-
   const idx = {
     prio: col("Prio"),
     status: col("Status"),
@@ -189,42 +168,48 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
     arbeitstage: col("Arbeitstage"),
     seo: col("SEO  (Fragebogen /Analyse)"),
     textit: col("Textit (raus / fertig)"),
-    accessible: col("Barrierefrei ÃƒÂ¢Ã¢â€žÂ¢Ã‚Â¿"),
+    accessible: col("Barrierefrei (ja/nein)"),
     note: col("Hinweis"),
   };
-
   const requiredCols: (keyof typeof idx)[] = ["status", "partner", "nameFirma"];
   for (const key of requiredCols) {
     if (idx[key] === -1) {
       return { imported: 0, skipped: 0, errors: [{ row: 0, reason: `Spalte fehlt: ${key}` }] };
     }
   }
-
   let imported = 0;
   let skipped = 0;
   const errors: { row: number; reason: string }[] = [];
   const createdAgents: { name: string; email: string }[] = [];
-
   // Cache existing clients and agents to reduce queries
   const existingClients = new Map<string, { id: string }>();
   const existingAgents = new Map<string, { id: string }>();
-
   // Preload agents by name
   const agentRecords = await prisma.user.findMany({ where: { role: "AGENT" }, select: { id: true, name: true } });
   for (const a of agentRecords) if (a.name) existingAgents.set(a.name.trim().toLowerCase(), { id: a.id });
-
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const rowNum = i + 2; // considering header at 1
-
     const partnerNoRaw = norm(row[idx.partner]);
-    // Split optional -1/-2 suffix: same client (base), title only set when suffix present
+    // Normalize customer number:
+    // 1. Remove prefix E, EM or VW: E12345 -> 12345, VW12345 -> 12345, EM12345 -> 12345
+    // 2. Remove suffix -1, -2, etc.: 12345-1 -> 12345
+    // Multiple projects can have the same base customer number
     let partnerNoBase = partnerNoRaw;
     let projectTitleFromSuffix = "";
-    const suffixMatch = partnerNoRaw.match(/^(.*?)-(1|2)$/);
+
+    // Remove E, EM or VW prefix
+    partnerNoBase = partnerNoBase.replace(/^(E|EM|VW)/i, "");
+
+    // Remove numeric suffix (e.g., -1, -2, -3)
+    const suffixMatch = partnerNoBase.match(/^(.*?)-(\d+)$/);
     if (suffixMatch) {
       partnerNoBase = suffixMatch[1];
-      projectTitleFromSuffix = partnerNoRaw; // keep full with -1/-2 as title
+    }
+
+    // Use raw number with suffix as project title if suffix was present
+    if (partnerNoRaw !== partnerNoBase) {
+      projectTitleFromSuffix = partnerNoRaw;
     }
     const clientName = norm(row[idx.nameFirma]);
     let status = mapProjectStatus(row[idx.status]);
@@ -238,7 +223,6 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
       errors.push({ row: rowNum, reason: "Name/Firma fehlt" });
       continue;
     }
-
     const prio = mapPriority(row[idx.prio]);
     const { cms, other: cmsOther } = mapCMS(row[idx.cms]);
     const pStatus = mapPStatus(row[idx.pstatus]);
@@ -268,7 +252,6 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
     })();
     const note = norm(row[idx.note]);
     const umsetzerName = norm(row[idx.umsetzer]);
-
     try {
       // Ensure client
       let client = existingClients.get(partnerNoBase);
@@ -281,7 +264,6 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
         }
         existingClients.set(partnerNoBase, { id: client.id });
       }
-
       // Ensure agent (by name), create unknown agents automatically
       let agentId: string | undefined = undefined;
       if (umsetzerName) {
@@ -316,7 +298,7 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
                 email,
                 role: "AGENT",
                 active: true,
-                // Password ist erforderlich; hier Dummy, da Login darÃƒÆ’Ã‚Â¼ber nicht vorgesehen ist
+                // Password ist erforderlich; hier Dummy, da Login darueber nicht vorgesehen ist
                 password: `imported-${Math.random().toString(36).slice(2, 10)}`,
               },
               select: { id: true },
@@ -328,7 +310,6 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
         }
         agentId = agent.id;
       }
-
       const project = await prisma.project.create({
         data: {
           // Only set title when suffix present in import (e.g., 12345-1 or 12345-2), otherwise keep empty
@@ -339,7 +320,6 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
         },
         select: { id: true },
       });
-
       // Upsert website details (1:1)
       await prisma.projectWebsite.upsert({
         where: { projectId: project.id },
@@ -379,7 +359,6 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
           materialStatus: materialStatus ?? undefined,
         },
       });
-
       imported++;
     } catch (error: unknown) {
       skipped++;
@@ -387,24 +366,7 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
       errors.push({ row: rowNum, reason });
     }
   }
-
   revalidatePath("/dashboard");
   const id = saveImportResult({ imported, skipped, errors, createdAgents });
   return { imported, skipped, errors, resultId: id, createdAgents };
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

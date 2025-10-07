@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authz";
 
-export async function GET(_: Request, { params }: { params: { id: string }}) {
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await requireRole(["ADMIN","AGENT","CUSTOMER"]);
   const project = await prisma.project.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { client: true, agent: true, notes: { include: { author: true } } },
   });
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });

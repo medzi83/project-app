@@ -1,9 +1,9 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthSession } from "@/lib/authz";
+
 import Link from "next/link";
 
 export default async function Home() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session) {
     return <div className="p-6">Nicht angemeldet. <Link className="underline" href="/login">Login</Link></div>;
   }

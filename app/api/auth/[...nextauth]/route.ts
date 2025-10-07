@@ -1,4 +1,5 @@
-import NextAuth, { NextAuthOptions } from "next-auth";
+import NextAuth from "next-auth/next";
+import type { Session } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
@@ -19,8 +20,8 @@ function extractRoleAndClient(value: unknown): RoleAndClient {
 }
 
 
-export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt" },
+export const authOptions = {
+  session: { strategy: "jwt" as const },
   providers: [
     Credentials({
       name: "Credentials",
@@ -42,7 +43,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: Record<string, unknown>; user?: unknown }) {
       if (user) {
         const details = extractRoleAndClient(user);
         if (details.role) {
@@ -52,7 +53,8 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-    async session({ session, token }) {
+    async session(params: { session: Session; token: Record<string, unknown> } & Record<string, unknown>): Promise<Session> {
+      const { session, token } = params;
       const details = extractRoleAndClient(token);
       if (session.user) {
         session.user.role = details.role;
@@ -64,6 +66,7 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-const handler = NextAuth(authOptions);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const handler = NextAuth(authOptions as any);
 export { handler as GET, handler as POST };
 

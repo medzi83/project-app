@@ -1,14 +1,14 @@
-﻿"use server";
+"use server";
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthSession } from "@/lib/authz";
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 async function requireAdmin() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session?.user || session.user.role !== "ADMIN") {
     redirect("/");
   }
@@ -20,6 +20,8 @@ const CreateServerSchema = z.object({
   ip: z.string().min(1, "Bitte IP-Adresse angeben").trim(),
   froxlorUrl: z.string().url("Ungültige URL").trim().optional().or(z.literal("")),
   mysqlUrl: z.string().url("Ungültige URL").trim().optional().or(z.literal("")),
+  froxlorApiKey: z.string().trim().optional().or(z.literal("")),
+  froxlorApiSecret: z.string().trim().optional().or(z.literal("")),
 });
 
 export async function createServer(formData: FormData) {
@@ -31,13 +33,15 @@ export async function createServer(formData: FormData) {
     redirect(`/admin/server?error=${encodeURIComponent(msg)}`);
   }
 
-  const { name, ip, froxlorUrl, mysqlUrl } = parsed.data;
+  const { name, ip, froxlorUrl, mysqlUrl, froxlorApiKey, froxlorApiSecret } = parsed.data;
   await prisma.server.create({
     data: {
       name,
       ip,
       froxlorUrl: froxlorUrl || null,
       mysqlUrl: mysqlUrl || null,
+      froxlorApiKey: froxlorApiKey || null,
+      froxlorApiSecret: froxlorApiSecret || null,
     },
   });
 
@@ -51,6 +55,8 @@ const UpdateServerSchema = z.object({
   ip: z.string().min(1).trim(),
   froxlorUrl: z.string().url().trim().optional().or(z.literal("")),
   mysqlUrl: z.string().url().trim().optional().or(z.literal("")),
+  froxlorApiKey: z.string().trim().optional().or(z.literal("")),
+  froxlorApiSecret: z.string().trim().optional().or(z.literal("")),
 });
 
 export async function updateServer(formData: FormData) {
@@ -62,7 +68,7 @@ export async function updateServer(formData: FormData) {
     redirect(`/admin/server?error=${encodeURIComponent(msg)}`);
   }
 
-  const { id, name, ip, froxlorUrl, mysqlUrl } = parsed.data;
+  const { id, name, ip, froxlorUrl, mysqlUrl, froxlorApiKey, froxlorApiSecret } = parsed.data;
   await prisma.server.update({
     where: { id },
     data: {
@@ -70,6 +76,8 @@ export async function updateServer(formData: FormData) {
       ip,
       froxlorUrl: froxlorUrl || null,
       mysqlUrl: mysqlUrl || null,
+      froxlorApiKey: froxlorApiKey || null,
+      froxlorApiSecret: froxlorApiSecret || null,
     },
   });
 

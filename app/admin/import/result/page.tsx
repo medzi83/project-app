@@ -1,5 +1,5 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthSession } from "@/lib/authz";
+
 import { redirect } from "next/navigation";
 import { getImportResult } from "../store";
 
@@ -10,7 +10,7 @@ type Props = {
 const str = (v: string | string[] | undefined) => (typeof v === 'string' ? v : undefined);
 
 export default async function ImportResultPage({ searchParams }: Props) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/");
 

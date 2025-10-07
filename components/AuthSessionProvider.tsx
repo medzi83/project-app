@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { SessionProvider } from "next-auth/react";
 import type { Session } from "next-auth";
@@ -9,5 +9,6 @@ export type AuthSessionProviderProps = {
 };
 
 export default function AuthSessionProvider({ children, session }: AuthSessionProviderProps) {
-  return <SessionProvider session={session}>{children}</SessionProvider>;
+  const normalizedSession = session ? { ...session, expires: session.expires ?? "" } : undefined;
+  return <SessionProvider session={normalizedSession}>{children}</SessionProvider>;
 }

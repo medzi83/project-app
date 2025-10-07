@@ -3,17 +3,16 @@
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireRole } from "@/lib/authz";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 async function requireAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user || session.user.role !== "ADMIN") {
+  try {
+    return await requireRole(["ADMIN"]);
+  } catch {
     redirect("/");
   }
-  return session;
 }
 
 function getPrismaErrorCode(error: unknown): string | undefined {
@@ -26,7 +25,7 @@ function getPrismaErrorCode(error: unknown): string | undefined {
 
 const CreateAdminSchema = z.object({
   name: z.string().optional().transform((v) => v?.trim() || null),
-  email: z.string().email("Ungültige E-Mail").transform((v) => v.toLowerCase()),
+  email: z.string().email("Ungueltige E-Mail").transform((v) => v.toLowerCase()),
   password: z.string().min(8, "Mind. 8 Zeichen"),
 });
 
@@ -127,7 +126,7 @@ export async function toggleAdminActive(formData: FormData) {
   if (!isActive) {
     const remaining = await prisma.user.count({ where: { role: "ADMIN", active: true, id: { not: userId } } });
     if (remaining === 0) {
-      redirect(`/admin/admins?adminError=${encodeURIComponent("Mindestens ein aktiver Admin wird benötigt.")}`);
+      redirect(`/admin/admins?adminError=${encodeURIComponent("Mindestens ein aktiver Admin wird benoetigt.")}`);
     }
     const actingEmail = session.user.email ?? null;
     if (actingEmail) {

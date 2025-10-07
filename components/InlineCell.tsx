@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { CSSProperties, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateInlineField } from "@/app/projects/inline-actions";
@@ -9,10 +9,10 @@ type Props = {
   target: "project" | "website";
   id: string;             // projectId
   name: string;           // Feldname (whitelisted)
-  type: "text" | "number" | "date" | "select" | "tri";
+  type: "text" | "number" | "date" | "select" | "tri" | "textarea";
   display: string;        // Anzeige im Read-Mode
-  value?: string | number | boolean | null; // Startwert für Edit
-  options?: Option[];     // für select/tri
+  value?: string | number | boolean | null; // Startwert fuer Edit
+  options?: Option[];     // fuer select/tri
   canEdit: boolean;
   displayClassName?: string;
   displayStyle?: CSSProperties;
@@ -34,16 +34,18 @@ export default function InlineCell({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
-  const inputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (editing && inputRef.current) {
       inputRef.current.focus();
-      if (inputRef.current instanceof HTMLInputElement) inputRef.current.select?.();
+      if (inputRef.current instanceof HTMLInputElement || inputRef.current instanceof HTMLTextAreaElement) {
+        inputRef.current.select?.();
+      }
     }
   }, [editing]);
 
-  const fallbackDisplay = display && display.trim() !== "" ? display : "—";
+  const fallbackDisplay = display && display.trim() !== "" ? display : "";
 
   if (!canEdit) {
     return (
@@ -72,7 +74,7 @@ export default function InlineCell({
       </span>
     );
 
-    const baseButtonClass = "inline-flex w-full items-center justify-start gap-2 rounded px-1 py-0.5 text-left cursor-text bg-transparent";
+    const baseButtonClass = "inline-flex w-full items-start justify-start gap-2 rounded px-1 py-0.5 text-left cursor-text bg-transparent";
     const interactiveClass = "transition hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black";
     const buttonClassName = `${baseButtonClass} ${interactiveClass}`;
 
@@ -109,7 +111,11 @@ export default function InlineCell({
             if (e.key === "Enter")  { e.preventDefault(); formRef.current?.requestSubmit(); }
           }}
         >
-          {options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {options?.map((o, index) => (
+            <option key={o.value ? `${o.value}-${index}` : `none-${index}`} value={o.value}>
+              {o.label}
+            </option>
+          ))}
         </select>
       )}
 
@@ -129,7 +135,11 @@ export default function InlineCell({
             { value: "unknown", label: "(nicht gesetzt)" },
             { value: "yes", label: "Ja" },
             { value: "no", label: "Nein" },
-          ]).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          ]).map((o, index) => (
+            <option key={o.value ? `${o.value}-${index}` : `none-${index}`} value={o.value}>
+              {o.label}
+            </option>
+          ))}
         </select>
       )}
 
@@ -173,6 +183,20 @@ export default function InlineCell({
         />
       )}
 
+      {type === "textarea" && (
+        <textarea
+          name="value"
+          defaultValue={vStr}
+          ref={(el: HTMLTextAreaElement | null) => { inputRef.current = el; }}
+          className="w-56 p-1 border rounded"
+          rows={4}
+          onBlur={() => formRef.current?.requestSubmit()}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") { e.preventDefault(); cancel(); }
+            if ((e.key === "Enter" && (e.ctrlKey || e.metaKey)))  { e.preventDefault(); formRef.current?.requestSubmit(); }
+          }}
+        />
+      )}
       {isPending && <span className="ml-2 text-xs opacity-60">...speichere</span>}
     </form>
   );
@@ -188,3 +212,10 @@ function vToString(v: Props["value"], type: Props["type"]) {
   if (type === "tri") return v === true ? "yes" : v === false ? "no" : "unknown";
   return String(v);
 }
+
+
+
+
+
+
+

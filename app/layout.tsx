@@ -1,8 +1,8 @@
-﻿import "./globals.css";
+import "./globals.css";
 import AppShell from "@/components/AppShell";
 import AuthSessionProvider from "@/components/AuthSessionProvider";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthSession } from "@/lib/authz";
+
 import { prisma } from "@/lib/prisma";
 import type { ReactNode } from "react";
 
@@ -29,7 +29,7 @@ function resolveShellRole(session?: AppSession | null): ShellRole | null {
 }
 
 export default async function RootLayout({ children }: RootLayoutProps) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   const hasSession = Boolean(session);
   const resolvedRole = hasSession ? resolveShellRole(session as AppSession) ?? "AGENT" : null;
 

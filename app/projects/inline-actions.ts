@@ -1,10 +1,17 @@
-﻿"use server";
+"use server";
 
 import { prisma } from "@/lib/prisma";
 import { deriveProjectStatus } from "@/lib/project-status";
-import type { Prisma } from "@prisma/client";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import type {
+  Prisma,
+  WebsitePriority,
+  ProductionStatus,
+  CMS,
+  MaterialStatus,
+  SEOStatus,
+  TextitStatus,
+} from "@prisma/client";
+import { getAuthSession } from "@/lib/authz";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -13,7 +20,7 @@ const WebsiteKey = z.enum([
   "domain","priority","pStatus","cms",
   "webDate","demoDate","onlineDate","lastMaterialAt",
   "effortBuildMin","effortDemoMin",
-  "materialStatus","seo","textit","accessible",
+  "materialStatus","seo","textit","accessible","note",
 ]);
 
 const FormSchema = z.object({
@@ -43,7 +50,7 @@ function coerce(key: string, v: string | undefined) {
 }
 
 export async function updateInlineField(formData: FormData) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session?.user || !["ADMIN","AGENT"].includes(session.user.role || "")) {
     throw new Error("FORBIDDEN");
   }
@@ -73,19 +80,19 @@ export async function updateInlineField(formData: FormData) {
         break;
       }
       case "priority": {
-        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NONE") as Prisma.$Enums.WebsitePriority;
+        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NONE") as WebsitePriority;
         updateData.priority = nextValue;
         createData.priority = nextValue;
         break;
       }
       case "pStatus": {
-        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NONE") as Prisma.$Enums.ProductionStatus;
+        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NONE") as ProductionStatus;
         updateData.pStatus = nextValue;
         createData.pStatus = nextValue;
         break;
       }
       case "cms": {
-        const nextValue = (typeof parsedValue === "string" ? parsedValue : "SHOPWARE") as Prisma.$Enums.CMS;
+        const nextValue = (typeof parsedValue === "string" ? parsedValue : "SHOPWARE") as CMS;
         updateData.cms = nextValue;
         createData.cms = nextValue;
         break;
@@ -127,19 +134,19 @@ export async function updateInlineField(formData: FormData) {
         break;
       }
       case "materialStatus": {
-        const nextValue = (typeof parsedValue === "string" ? parsedValue : "ANGEFORDERT") as Prisma.$Enums.MaterialStatus;
+        const nextValue = (typeof parsedValue === "string" ? parsedValue : "ANGEFORDERT") as MaterialStatus;
         updateData.materialStatus = nextValue;
         createData.materialStatus = nextValue;
         break;
       }
       case "seo": {
-        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NEIN") as Prisma.$Enums.SEOStatus;
+        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NEIN") as SEOStatus;
         updateData.seo = nextValue;
         createData.seo = nextValue;
         break;
       }
       case "textit": {
-        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NEIN") as Prisma.$Enums.TextitStatus;
+        const nextValue = (typeof parsedValue === "string" ? parsedValue : "NEIN") as TextitStatus;
         updateData.textit = nextValue;
         createData.textit = nextValue;
         break;
@@ -148,6 +155,12 @@ export async function updateInlineField(formData: FormData) {
         const nextValue = typeof parsedValue === "boolean" ? parsedValue : null;
         updateData.accessible = nextValue;
         createData.accessible = nextValue;
+        break;
+      }
+      case "note": {
+        const nextValue = typeof parsedValue === "string" ? parsedValue : null;
+        updateData.note = nextValue;
+        createData.note = nextValue ?? undefined;
         break;
       }
     }
@@ -190,6 +203,8 @@ export async function updateInlineField(formData: FormData) {
 
   revalidatePath("/projects");
 }
+
+
 
 
 

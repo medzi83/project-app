@@ -1,15 +1,9 @@
-import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import {
-  labelForProductionStatus,
-  labelForWebsitePriority,
-  labelForSeoStatus,
-  labelForTextitStatus,
-} from "@/lib/project-status";
-import { createClient, createProject } from "./actions";
+import { getAuthSession } from "@/lib/authz";
+import { createClient } from "./actions";
+import { UnifiedProjectForm } from "./ProjectForm";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -17,48 +11,10 @@ type Props = {
 
 type Option = { value: string; label: string };
 
-const PRIORITIES = ["NONE", "PRIO_1", "PRIO_2", "PRIO_3"] as const;
-const CMS = ["SHOPWARE", "WORDPRESS", "JOOMLA", "LOGO", "PRINT", "CUSTOM", "OTHER"] as const;
-const PRODUCTION = ["NONE", "BEENDET", "MMW", "VOLLST_A_K"] as const;
-const SEO = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"] as const;
-const TEXTIT = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"] as const;
-const TRI = [
-  { value: "unknown", label: "(nicht gesetzt)" },
-  { value: "yes", label: "Ja" },
-  { value: "no", label: "Nein" },
-];
-const MATERIAL_STATUS = [
-  { value: "ANGEFORDERT", label: "angefordert" },
-  { value: "TEILWEISE", label: "teilweise" },
-  { value: "VOLLSTAENDIG", label: "vollstaendig" },
-  { value: "NV", label: "N.V." },
-];
-
-const PRIORITY_OPTIONS: Option[] = PRIORITIES.map((value) => ({
-  value,
-  label: labelForWebsitePriority(value),
-}));
-const CMS_OPTIONS: Option[] = CMS.map((value) => ({
-  value,
-  label: value,
-}));
-const PRODUCTION_OPTIONS: Option[] = PRODUCTION.map((value) => ({
-  value,
-  label: labelForProductionStatus(value),
-}));
-const SEO_OPTIONS: Option[] = SEO.map((value) => ({
-  value,
-  label: labelForSeoStatus(value),
-}));
-const TEXTIT_OPTIONS: Option[] = TEXTIT.map((value) => ({
-  value,
-  label: labelForTextitStatus(value),
-}));
-
 const str = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
 
 export default async function NewProjectPage({ searchParams }: Props) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session) redirect("/login");
   if (!["ADMIN", "AGENT"].includes(session.user.role || "")) redirect("/projects");
 
@@ -66,10 +22,25 @@ export default async function NewProjectPage({ searchParams }: Props) {
   const clientError = str(params.clientError);
   const projectError = str(params.projectError);
   const clientIdFromQuery = str(params.cid);
+  const clientSearch = str(params.clientSearch);
 
   const [clients, agents] = await Promise.all([
-    prisma.client.findMany({ orderBy: { name: "asc" } }),
-    prisma.user.findMany({ where: { role: "AGENT" }, orderBy: { name: "asc" } }),
+    prisma.client.findMany({
+      where: clientSearch
+        ? {
+            OR: [
+              { name: { contains: clientSearch, mode: "insensitive" } },
+              { customerNo: { contains: clientSearch, mode: "insensitive" } },
+            ],
+          }
+        : undefined,
+      orderBy: { name: "asc" },
+    }),
+    prisma.user.findMany({
+      where: { role: "AGENT", active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true, categories: true }
+    }),
   ]);
 
   const clientOptions: Option[] = clients.map((c) => ({
@@ -77,17 +48,31 @@ export default async function NewProjectPage({ searchParams }: Props) {
     label: c.customerNo ? `${c.customerNo} | ${c.name}` : c.name,
   }));
 
-  const agentOptions: Option[] = [
-    { value: "", label: "- ohne Agent -" },
-    ...agents.flatMap((a) => [{ value: a.id, label: (a.name ?? a.email) }, { value: a.id, label: `${a.name ?? a.email} WT` }]),
+  const websiteAgents = agents.filter(a => a.categories.includes("WEBSEITE"));
+  const filmAgents = agents.filter(a => a.categories.includes("FILM"));
+
+  const websiteAgentOptions: Option[] = [
+    { value: "", label: "- kein Agent -" },
+    ...websiteAgents.map((a) => ({ value: a.id, label: a.name ?? a.email ?? "" })),
   ];
+
+  const filmAgentOptions: Option[] = [
+    { value: "", label: "- kein Agent -" },
+    ...filmAgents.map((a) => ({ value: a.id, label: a.name ?? a.email ?? "" })),
+  ];
+
+  const filmPersonOptions: Option[] = [
+    { value: "", label: "- nicht vergeben -" },
+    ...filmAgents.map((a) => ({ value: a.id, label: a.name ?? a.email ?? "" })),
+  ];
+
 
   return (
     <div className="p-6 space-y-10">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Projekt anlegen</h1>
         <p className="text-sm text-muted-foreground">
-          Lege hier zuerst optional einen neuen Kunden an und erstelle anschliessend das Projekt.
+          Lege bei Bedarf zuerst einen Kunden an, wähle ihn anschließend aus und erstelle danach das gewünschte Projekt.
         </p>
       </header>
 
@@ -96,196 +81,91 @@ export default async function NewProjectPage({ searchParams }: Props) {
           <div>
             <h2 className="text-lg font-semibold">Neuen Kunden anlegen</h2>
             <p className="text-sm text-muted-foreground">
-              Bereits vorhandene Kunden findest du weiter unten im Projektformular in der Auswahl.
+              Bereits vorhandene Kunden findest du weiter unten in der Auswahl.
             </p>
           </div>
           <span className="text-sm text-muted-foreground">optional</span>
         </summary>
-        <div className="border-t px-6 py-6 space-y-4">
+        <div className="space-y-4 border-t px-6 py-6">
           {clientError && <p className="text-sm text-red-600">{clientError}</p>}
           <form action={createClient} className="grid gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">Name *</span>
-              <input name="name" required className="p-2 border rounded" placeholder="z. B. Muster GmbH" />
+              <input name="name" required className="rounded border p-2" placeholder="z. B. Muster GmbH" />
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">Kundennummer</span>
-              <input name="customerNo" className="p-2 border rounded" placeholder="optional" />
+              <input name="customerNo" className="rounded border p-2" placeholder="optional" />
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">Ansprechpartner</span>
-              <input name="contact" className="p-2 border rounded" placeholder="optional" />
+              <input name="contact" className="rounded border p-2" placeholder="optional" />
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">Telefon</span>
-              <input name="phone" className="p-2 border rounded" placeholder="optional" />
+              <input name="phone" className="rounded border p-2" placeholder="optional" />
             </label>
             <label className="flex flex-col gap-1 md:col-span-2">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">Notiz</span>
-              <textarea name="notes" rows={3} className="p-2 border rounded" placeholder="interne Hinweise" />
+              <textarea name="notes" rows={3} className="rounded border p-2" placeholder="optional" />
             </label>
-            <div className="md:col-span-2 flex justify-end">
-              <button type="submit" className="px-4 py-2 bg-black text-white rounded">
-                Kunde speichern
-              </button>
+            <div className="md:col-span-2 flex items-center justify-end gap-3">
+              <button type="submit" className="rounded bg-black px-4 py-2 text-white">Kunde speichern</button>
             </div>
           </form>
         </div>
       </details>
 
-      <section className="rounded-lg border p-6 space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold">Projekt</h2>
-          <p className="text-sm text-muted-foreground">Waehle hier den Kunden und die Projektdaten.</p>
+      <section className="rounded-lg border bg-white">
+        <div className="border-b px-6 py-5">
+          <h2 className="text-lg font-semibold">Projekt erfassen</h2>
+          <p className="text-sm text-muted-foreground">
+            Kunde auswählen oder suchen und Projekttyp festlegen.
+          </p>
         </div>
 
+        <div className="space-y-6 px-6 py-6">
+          <form method="get" className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="client-search" className="text-xs uppercase tracking-wide text-muted-foreground">
+                Kunde suchen
+              </label>
+              <input
+                id="client-search"
+                name="clientSearch"
+                defaultValue={clientSearch ?? ""}
+                className="rounded border p-2"
+                placeholder="Kundennr. oder Name"
+              />
+            </div>
+            {clientIdFromQuery && <input type="hidden" name="cid" value={clientIdFromQuery} />}
+            <button type="submit" className="rounded border px-3 py-2 text-sm">Filtern</button>
+            {clientSearch && (
+              <Link
+                href={`/projects/new?${new URLSearchParams(clientIdFromQuery ? { cid: clientIdFromQuery } : {}).toString()}`}
+                className="text-sm underline"
+              >
+                Zurücksetzen
+              </Link>
+            )}
+          </form>
 
-        {projectError && (
-          <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {projectError}
-          </div>
-        )}
+          {projectError && (
+            <div className="rounded border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {projectError}
+            </div>
+          )}
 
-        <form action={createProject} className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Kunde *</span>
-              <select name="clientId" defaultValue={clientIdFromQuery ?? ""} required className="p-2 border rounded">
-                <option value="">- bitte waehlen -</option>
-                {clientOptions.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Agent</span>
-              <select name="agentId" defaultValue="" className="p-2 border rounded">
-                {agentOptions.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Domain</span>
-              <input name="domain" className="p-2 border rounded" placeholder="www.example.de" />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Prioritaet</span>
-              <select name="priority" defaultValue="NONE" className="p-2 border rounded">
-                {PRIORITY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">CMS</span>
-              <select name="cms" defaultValue="SHOPWARE" className="p-2 border rounded">
-                {CMS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">CMS (falls OTHER/CUSTOM)</span>
-              <input name="cmsOther" className="p-2 border rounded" placeholder="optional" />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Produktionsstatus</span>
-              <select name="pStatus" defaultValue="NONE" className="p-2 border rounded">
-                {PRODUCTION_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <DateField name="webDate" label="Webtermin" />
-            <DateField name="demoDate" label="Demo an Kunden" />
-            <DateField name="onlineDate" label="Go-Live" />
-            <DateField name="lastMaterialAt" label="Letzter Materialeingang" />
-            <NumberField name="effortBuildMin" label="Aufwand Umsetzung (Stunden)" />
-            <NumberField name="effortDemoMin" label="Aufwand Demo (Stunden)" />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <SelectField name="materialStatus" label="Material" options={MATERIAL_STATUS} defaultValue="ANGEFORDERT" />
-            <SelectField name="seo" label="SEO" options={SEO_OPTIONS} defaultValue="NEIN" />
-            <SelectField name="textit" label="Textit" options={TEXTIT_OPTIONS} defaultValue="NEIN" />
-            <SelectField name="accessible" label="Barrierefrei" options={TRI} defaultValue="unknown" />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Demolink</span>
-              <input name="demoLink" className="p-2 border rounded" placeholder="https://..." />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Interne Notiz</span>
-              <textarea name="note" rows={3} className="p-2 border rounded" placeholder="optional" />
-            </label>
-          </div>
-
-          <div className="flex items-center justify-end gap-3">
-            <Link href="/projects" className="px-4 py-2 border rounded">Abbrechen</Link>
-            <button type="submit" className="px-4 py-2 bg-black text-white rounded">Projekt speichern</button>
-          </div>
-        </form>
+          <UnifiedProjectForm
+            clientOptions={clientOptions}
+            websiteAgentOptions={websiteAgentOptions}
+            filmAgentOptions={filmAgentOptions}
+            personOptions={filmPersonOptions}
+            clientIdFromQuery={clientIdFromQuery}
+          />
+        </div>
       </section>
     </div>
   );
 }
-
-function DateField({ name, label }: { name: string; label: string }) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-      <input type="date" name={name} className="p-2 border rounded" />
-    </label>
-  );
-}
-
-function NumberField({ name, label }: { name: string; label: string }) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-      <input type="number" name={name} className="p-2 border rounded" min={0} step={0.5} inputMode="decimal" />
-    </label>
-  );
-}
-
-function SelectField({
-  name,
-  label,
-  options,
-  defaultValue,
-}: {
-  name: string;
-  label: string;
-  options: Option[];
-  defaultValue?: string;
-}) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-      <select name={name} defaultValue={defaultValue} className="p-2 border rounded">
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-
-
-
-
-
-
 

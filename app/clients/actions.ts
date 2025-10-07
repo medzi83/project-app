@@ -1,12 +1,12 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthSession } from "@/lib/authz";
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 async function requireAdmin() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/");
 }

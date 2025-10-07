@@ -1,31 +1,50 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { labelForProjectStatus } from "@/lib/project-status";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { labelForProjectStatus, labelForMaterialStatus } from "@/lib/project-status";
+import { getAuthSession } from "@/lib/authz";
 import { redirect, notFound } from "next/navigation";
+import ConfirmSubmit from "@/components/ConfirmSubmit";
 import { updateWebsite } from "./actions";
+import { deleteProject } from "../../actions";
 
 type Props = { params: Promise<{ id: string }> };
+
+const MATERIAL_STATUSES = ["ANGEFORDERT", "TEILWEISE", "VOLLSTAENDIG", "NV"] as const;
 
 const dInput = (d?: Date | string | null) =>
   d ? new Date(d).toISOString().slice(0, 10) : "";
 
 export default async function EditProjectPage({ params }: Props) {
   const { id } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session) redirect("/login");
-  if (!["ADMIN", "AGENT"].includes(session.user.role || "")) redirect(`/projects/${id}`);
+  if (!session.user.role || !["ADMIN", "AGENT"].includes(session.user.role)) redirect(`/projects/${id}`);
 
-  const [project, agents] = await Promise.all([
+  const [project, allAgents] = await Promise.all([
     prisma.project.findUnique({
       where: { id },
       include: { client: true, agent: true, website: true },
     }),
-    prisma.user.findMany({ where: { role: "AGENT" }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({
+      where: { role: "AGENT" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true, categories: true }
+    }),
   ]);
 
   if (!project) notFound();
+
+  // Filter agents based on project type
+  const agents = allAgents.filter(a => {
+    if (project.type === "WEBSITE") {
+      return a.categories.includes("WEBSEITE");
+    } else if (project.type === "FILM") {
+      return a.categories.includes("FILM");
+    } else if (project.type === "SOCIAL") {
+      return a.categories.includes("SOCIALMEDIA");
+    }
+    return true; // fallback: show all agents
+  });
 
   const w = project.website;
 
@@ -36,7 +55,7 @@ export default async function EditProjectPage({ params }: Props) {
         {project.client?.name} {project.client?.customerNo ? ` ${project.client.customerNo}` : ""}  {project.title}
       </p>
 
-      <form action={updateWebsite} className="space-y-6">
+      <form id="edit-project-form" action={updateWebsite} className="space-y-6">
         <input type="hidden" name="projectId" value={project.id} />
 
         {/* Kopf */}
@@ -54,7 +73,7 @@ export default async function EditProjectPage({ params }: Props) {
           <Field label="Umsetzer (Agent)">
             <select name="agentId" defaultValue={project.agentId ?? ""} className="w-full p-2 border rounded">
               <option value=""> keiner </option>
-              {agents.flatMap(a => ([<option key={a.id+"-base"} value={a.id}>{a.name ?? a.email}</option>, <option key={a.id+"-wt"} value={a.id}>{(a.name ?? a.email)} WT</option>]))}
+              {agents.map(a => (<option key={a.id} value={a.id}>{a.name ?? a.email}</option>))}
             </select>
           </Field>
         </div>
@@ -117,10 +136,9 @@ export default async function EditProjectPage({ params }: Props) {
 
           <Field label="Material">
             <select name="materialStatus" defaultValue={w?.materialStatus ?? "ANGEFORDERT"} className="w-full p-2 border rounded">
-              <option value="ANGEFORDERT">angefordert</option>
-              <option value="TEILWEISE">teilweise</option>
-              <option value="VOLLSTAENDIG">vollst�ndig</option>
-              <option value="NV">N.V.</option>
+              {MATERIAL_STATUSES.map((value) => (
+              <option key={value} value={value}>{labelForMaterialStatus(value)}</option>
+            ))}
             </select>
           </Field>
 
@@ -151,11 +169,22 @@ export default async function EditProjectPage({ params }: Props) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link href={`/projects/${project.id}`} className="px-4 py-2 border rounded">Abbrechen</Link>
-          <button className="px-4 py-2 rounded bg-black text-white">Speichern</button>
-        </div>
       </form>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href={`/projects/${project.id}`} className="px-4 py-2 border rounded">Abbrechen</Link>
+        <button form="edit-project-form" className="px-4 py-2 rounded bg-black text-white">Speichern</button>
+        <form action={deleteProject}>
+          <input type="hidden" name="projectId" value={project.id} />
+          <ConfirmSubmit
+            confirmText="Dieses Projekt unwiderruflich löschen?"
+            className="rounded border border-red-300 bg-red-50 px-4 py-2 text-red-700 hover:bg-red-100"
+          >
+            Löschen
+          </ConfirmSubmit>
+        </form>
+      </div>
+
     </div>
   );
 }
@@ -168,6 +197,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
+
+
 
 
 

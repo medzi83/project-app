@@ -8,6 +8,7 @@ declare module "next-auth" {
       role?: "ADMIN" | "AGENT" | "CUSTOMER";
       clientId?: string | null;
     };
+    expires?: string | null;
   }
 }
 

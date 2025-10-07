@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload } from "lucide-react";
+import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -104,8 +104,16 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
     ? [
         { label: "Admins", href: "/admin/admins", icon: Shield },
         { label: "Agenten", href: "/admin/agents", icon: Users, badge: counts ? String(counts.agentsActive ?? 0) : undefined },
+        { label: "Statistik", href: "/admin/statistics", icon: BarChart3 },
         { label: "Server", href: "/admin/server", icon: Server },
-        { label: "Import", href: "/admin/import", icon: Upload },
+        { label: "Basisinstallation", href: "/admin/basisinstallation", icon: Package },
+      ]
+    : [];
+
+  const importItems: NavItem[] = user.role === "ADMIN"
+    ? [
+        { label: "Webseitenprojekte", href: "/admin/import", icon: Upload },
+        { label: "Filmprojekte", href: "/admin/film-import", icon: Upload },
       ]
     : [];
 
@@ -132,6 +140,12 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
           {adminItems.length > 0 && (
             <div className="mt-6">
               <NavSection label="Admin" items={adminItems} activePath={pathname} onNavigate={onNavigate} />
+            </div>
+          )}
+
+          {importItems.length > 0 && (
+            <div className="mt-6">
+              <NavSection label="Import" items={importItems} activePath={pathname} onNavigate={onNavigate} />
             </div>
           )}
         </nav>
@@ -218,4 +232,5 @@ function UserPill({ user }: { user: User }) {
     </div>
   );
 }
+
 

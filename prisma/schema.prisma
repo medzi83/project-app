@@ -9,19 +9,22 @@ datasource db {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  email         String?       @unique
-  name          String?
-  password      String
-  role          Role          @default(CUSTOMER)
-  clientId      String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  active        Boolean       @default(true)
-  color         String?
-  projects      Project[]     @relation("AgentProjects")
-  notesAuthored ProjectNote[] @relation("NoteAuthor")
-  client        Client?       @relation(fields: [clientId], references: [id])
+  id                       String         @id @default(cuid())
+  email                    String?        @unique
+  name                     String?
+  password                 String
+  role                     Role           @default(CUSTOMER)
+  clientId                 String?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  active                   Boolean        @default(true)
+  color                    String?
+  categories               AgentCategory[]
+  projects                 Project[]      @relation("AgentProjects")
+  notesAuthored            ProjectNote[]  @relation("NoteAuthor")
+  filmProjectsResponsible  ProjectFilm[]  @relation("FilmProjectFilmer")
+  filmProjectsCutting      ProjectFilm[]  @relation("FilmProjectCutter")
+  client                   Client?        @relation(fields: [clientId], references: [id])
 
   @@index([clientId])
 }
@@ -35,10 +38,13 @@ model Client {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   customerNo String?   @unique
+  serverId   String?
+  server     Server?   @relation(fields: [serverId], references: [id])
   projects   Project[]
   users      User[]
 
   @@index([name])
+  @@index([serverId])
 }
 
 model Project {
@@ -55,6 +61,7 @@ model Project {
   client    Client          @relation(fields: [clientId], references: [id])
   notes     ProjectNote[]
   website   ProjectWebsite?
+  film      ProjectFilm?
 
   @@index([clientId, status])
   @@index([agentId])
@@ -82,6 +89,34 @@ model ProjectWebsite {
   project        Project          @relation(fields: [projectId], references: [id])
 }
 
+model ProjectFilm {
+  projectId        String             @id
+  scope            FilmScope?
+  priority         FilmPriority       @default(NONE)
+  filmerId         String?
+  cutterId         String?
+  contractStart    DateTime?
+  scouting         DateTime?
+  scriptToClient   DateTime?
+  scriptApproved   DateTime?
+  shootDate        DateTime?
+  firstCutToClient DateTime?
+  finalToClient    DateTime?
+  onlineDate       DateTime?
+  lastContact      DateTime?
+  status           FilmProjectStatus  @default(AKTIV)
+  reminderAt       DateTime?
+  note             String?
+  project          Project           @relation(fields: [projectId], references: [id])
+  filmer           User?             @relation("FilmProjectFilmer", fields: [filmerId], references: [id])
+  cutter           User?             @relation("FilmProjectCutter", fields: [cutterId], references: [id])
+
+  @@index([status])
+  @@index([filmerId])
+  @@index([cutterId])
+  @@index([reminderAt])
+}
+
 model ProjectNote {
   id        String   @id @default(cuid())
   projectId String
@@ -95,26 +130,28 @@ model ProjectNote {
 }
 
 model Server {
-  id         String   @id @default(cuid())
-  name       String
-  ip         String
-  froxlorUrl String?
-  mysqlUrl   String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String   @id @default(cuid())
+  name            String
+  hostname        String?
+  ip              String
+  froxlorUrl      String?
+  mysqlUrl        String?
+  froxlorApiKey   String?
+  froxlorApiSecret String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  clients         Client[]
 }
 enum Role {
   ADMIN
   AGENT
   CUSTOMER
 }
-
 enum ProjectType {
   WEBSITE
   FILM
   SOCIAL
 }
-
 enum ProjectStatus {
   WEBTERMIN
   MATERIAL
@@ -122,14 +159,31 @@ enum ProjectStatus {
   DEMO
   ONLINE
 }
-
 enum WebsitePriority {
   NONE
   PRIO_1
   PRIO_2
   PRIO_3
 }
-
+enum FilmScope {
+  FILM
+  DROHNE
+  NACHDREH
+  FILM_UND_DROHNE
+}
+enum FilmPriority {
+  NONE
+  FILM_SOLO
+  PRIO_1
+  PRIO_2
+}
+enum FilmProjectStatus {
+  AKTIV
+  BEENDET
+  WARTEN
+  VERZICHT
+  MMW
+}
 enum CMS {
   SHOPWARE
   WORDPRESS
@@ -139,28 +193,24 @@ enum CMS {
   CUSTOM
   OTHER
 }
-
 enum ProductionStatus {
   NONE
   BEENDET
   MMW
   VOLLST_A_K
 }
-
 enum SEOStatus {
   NEIN
   NEIN_NEIN
   JA_NEIN
   JA_JA
 }
-
 enum TextitStatus {
   NEIN
   NEIN_NEIN
   JA_NEIN
   JA_JA
 }
-
 enum MaterialStatus {
   ANGEFORDERT
   TEILWEISE
@@ -168,4 +218,8 @@ enum MaterialStatus {
   NV
 }
 
-
+enum AgentCategory {
+  WEBSEITE
+  FILM
+  SOCIALMEDIA
+}

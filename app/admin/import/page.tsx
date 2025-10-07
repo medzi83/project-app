@@ -1,11 +1,11 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthSession } from "@/lib/authz";
+
 import { redirect } from "next/navigation";
 import { importProjects } from "./actions";
 import { prisma } from "@/lib/prisma";
 
 export default async function ImportAdminPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/");
 

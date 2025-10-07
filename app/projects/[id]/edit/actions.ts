@@ -1,10 +1,9 @@
-﻿"use server";
+"use server";
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { deriveProjectStatus } from "@/lib/project-status";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireRole } from "@/lib/authz";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -59,8 +58,9 @@ const FormSchema = z.object({
 });
 
 export async function updateWebsite(formData: FormData) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user || !["ADMIN", "AGENT"].includes(session.user.role || "")) {
+  try {
+    await requireRole(["ADMIN", "AGENT"]);
+  } catch {
     throw new Error("FORBIDDEN");
   }
 

@@ -6,14 +6,17 @@ export default function DangerActionButton({
   children,
   confirmText,
   className,
+  id,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   children: React.ReactNode;
   confirmText: string;
   className?: string;
+  id?: string;
 }) {
   return (
     <form action={action}>
+      {id && <input type="hidden" name="id" value={id} />}
       <button
         type="submit"
         onClick={(e) => {

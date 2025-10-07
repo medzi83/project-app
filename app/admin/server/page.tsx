@@ -1,6 +1,6 @@
-﻿import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { prisma } from "@/lib/prisma";
+import { getAuthSession } from "@/lib/authz";
+
 import { redirect } from "next/navigation";
 import { createServer, updateServer, deleteServer } from "./actions";
 
@@ -12,7 +12,7 @@ type Props = {
 const str = (value: string | string[] | undefined) => (typeof value === "string" ? value : undefined);
 
 export default async function ServerAdminPage({ searchParams }: Props) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/");
 
@@ -51,6 +51,12 @@ export default async function ServerAdminPage({ searchParams }: Props) {
               <Field label="MySQL URL">
                 <input name="mysqlUrl" type="url" className="w-full rounded border p-2" placeholder="https://dbadmin.example.com" />
               </Field>
+              <Field label="Froxlor API Key">
+                <input name="froxlorApiKey" className="w-full rounded border p-2" placeholder="API Key" />
+              </Field>
+              <Field label="Froxlor API Secret">
+                <input name="froxlorApiSecret" type="password" className="w-full rounded border p-2" placeholder="API Secret" />
+              </Field>
               <button type="submit" className="w-full rounded bg-black px-4 py-2 text-white">Speichern</button>
             </form>
           </div>
@@ -67,6 +73,7 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                 <th>IP</th>
                 <th>Froxlor</th>
                 <th>MySQL</th>
+                <th>Zugangsdaten</th>
                 <th>Aktionen</th>
               </tr>
             </thead>
@@ -117,6 +124,25 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                         )}
                       </div>
                     </td>
+                    <td>
+                      <div className="space-y-2">
+                        <input
+                          form={formId}
+                          name="froxlorApiKey"
+                          defaultValue={server.froxlorApiKey ?? ""}
+                          className="w-full rounded border p-1 text-xs"
+                          placeholder="API Key"
+                        />
+                        <input
+                          form={formId}
+                          name="froxlorApiSecret"
+                          type="password"
+                          defaultValue={server.froxlorApiSecret ?? ""}
+                          className="w-full rounded border p-1 text-xs"
+                          placeholder="API Secret"
+                        />
+                      </div>
+                    </td>
                     <td className="whitespace-nowrap space-x-2">
                       <form id={formId} action={updateServer} className="hidden">
                         <input type="hidden" name="id" value={server.id} />
@@ -131,7 +157,7 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                 );
               })}
               {servers.length === 0 && (
-                <tr><td colSpan={5} className="py-8 text-center text-sm text-gray-500">Noch keine Server hinterlegt.</td></tr>
+                <tr><td colSpan={6} className="py-8 text-center text-sm text-gray-500">Noch keine Server hinterlegt.</td></tr>
               )}
             </tbody>
           </table>

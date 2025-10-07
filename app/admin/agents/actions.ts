@@ -3,13 +3,12 @@
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthSession } from "@/lib/authz";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 async function requireAdmin() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session?.user || session.user.role !== "ADMIN") {
     redirect("/"); // notfalls raus
   }
@@ -53,19 +52,29 @@ const CreateAgentSchema = z.object({
   email: EmailField,
   password: z.string().min(8, "Mind. 8 Zeichen"),
   color: ColorField,
+  categories: z.array(z.enum(["WEBSEITE", "FILM", "SOCIALMEDIA"])).default([]),
 });
 
 export async function createAgent(formData: FormData) {
   await requireAdmin();
 
   const raw = Object.fromEntries(formData.entries());
-  const parsed = CreateAgentSchema.safeParse(raw);
+  const categoriesRaw = formData.getAll("categories");
+
+  // Ensure categories is always an array and filter valid values
+  const validCategories = (Array.isArray(categoriesRaw) ? categoriesRaw : [categoriesRaw])
+    .filter((cat): cat is string => typeof cat === "string" && ["WEBSEITE", "FILM", "SOCIALMEDIA"].includes(cat));
+
+  const parsed = CreateAgentSchema.safeParse({
+    ...raw,
+    categories: validCategories,
+  });
   if (!parsed.success) {
     const msg = parsed.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("; ");
     redirect(`/admin/agents?agentError=${encodeURIComponent(msg)}`);
   }
 
-  const { name, email, password, color } = parsed.data;
+  const { name, email, password, color, categories } = parsed.data;
   try {
     await prisma.user.create({
       data: {
@@ -74,6 +83,7 @@ export async function createAgent(formData: FormData) {
         password: bcrypt.hashSync(password, 10),
         role: "AGENT",
         color,
+        categories: { set: categories },
       },
     });
   } catch (error: unknown) {
@@ -189,6 +199,34 @@ export async function toggleAgentActive(formData: FormData) {
 
   revalidatePath("/admin/agents");
   redirect("/admin/agents");
+}
+
+/* ---------- Agent-Kategorien aktualisieren ---------- */
+const UpdateAgentCategoriesSchema = z.object({
+  userId: z.string().min(1),
+  categories: z.array(z.enum(["WEBSEITE", "FILM", "SOCIALMEDIA"])).optional().default([]),
+});
+
+export async function updateAgentCategories(formData: FormData) {
+  await requireAdmin();
+
+  const raw = Object.fromEntries(formData.entries());
+  const categoriesRaw = formData.getAll("categories");
+  const parsed = UpdateAgentCategoriesSchema.safeParse({
+    ...raw,
+    categories: categoriesRaw,
+  });
+  if (!parsed.success) redirect(`/admin/agents`);
+
+  const { userId, categories } = parsed.data;
+  await prisma.user.update({
+    where: { id: userId, role: "AGENT" },
+    data: { categories: { set: categories } },
+  });
+
+  revalidatePath("/admin/agents");
+  revalidatePath("/projects");
+  redirect(`/admin/agents`);
 }
 
 /* ---------- Agent löschen ---------- */

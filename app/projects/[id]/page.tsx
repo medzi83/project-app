@@ -1,7 +1,6 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthSession } from "@/lib/authz";
 import { notFound, redirect } from "next/navigation";
 
 const fmtDate = (d?: Date | string | null) =>
@@ -19,7 +18,7 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function ProjectDetail({ params }: Props) {
   const { id } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session) redirect("/login");
 
   const project = await prisma.project.findUnique({
@@ -35,7 +34,7 @@ export default async function ProjectDetail({ params }: Props) {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <Link href="/projects" className="text-sm underline">Zurueck zur Uebersicht</Link>
+        <Link href="/projects" className="text-sm underline">Zurück zur Übersicht</Link>
         {["ADMIN", "AGENT"].includes(session.user.role ?? "") && (
           <Link href={`/projects/${project.id}/edit`} className="text-sm underline">Bearbeiten</Link>
         )}
@@ -73,7 +72,7 @@ export default async function ProjectDetail({ params }: Props) {
             <tr><th>Letzter Materialeingang</th><td className="whitespace-nowrap">{fmtDate(website?.lastMaterialAt)}</td></tr>
             <tr><th>Zeitaufwand Umsetzung</th><td>{mm(website?.effortBuildMin)}</td></tr>
             <tr><th>Zeitaufwand Demo</th><td>{mm(website?.effortDemoMin)}</td></tr>
-            <tr><th>Material vorhanden?</th><td>{yesNo(website?.materialAvailable)}</td></tr>
+            <tr><th>Material vorhanden?</th><td>{yesNo(website?.materialStatus === "VOLLSTAENDIG")}</td></tr>
             <tr><th>SEO (Fragebogen/Analyse)</th><td>{website?.seo ?? "-"}</td></tr>
             <tr><th>Textit</th><td>{website?.textit ?? "-"}</td></tr>
             <tr><th>Barrierefrei?</th><td>{yesNo(website?.accessible)}</td></tr>

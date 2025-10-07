@@ -1,18 +1,20 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
-import type { Prisma } from "@prisma/client";
+import type { CSSProperties, SVGProps } from "react";
+import type { Prisma, MaterialStatus, ProjectStatus, WebsitePriority, CMS as PrismaCMS } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
 import InlineCell from "@/components/InlineCell";
 import DangerActionButton from "@/components/DangerActionButton";
-import { deleteAllProjects } from "./actions";
+import ConfirmSubmit from "@/components/ConfirmSubmit";
+import { deleteAllProjects, deleteProject } from "./actions";
 import {
   buildWebsiteStatusWhere,
   deriveProjectStatus,
   labelForProjectStatus,
   labelForProductionStatus,
+  labelForMaterialStatus,
+  MATERIAL_STATUS_VALUES,
   labelForWebsitePriority,
   labelForSeoStatus,
   labelForTextitStatus,
@@ -31,6 +33,8 @@ type Search = {
   page?: string;
   ps?: string;
   scope?: string;
+  overdue?: string;
+  client?: string;
 };
 
 const STATUSES = ["WEBTERMIN", "MATERIAL", "UMSETZUNG", "DEMO", "ONLINE"] as const;
@@ -80,9 +84,32 @@ const workingDaysBetween = (from: Date, to: Date) => {
   return count;
 };
 
+const TrashIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" {...props}>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M6 7v8m4-8v8m4-8v8M4 5h12m-1 0-.867 10.404A2 2 0 0 1 12.142 17H7.858a2 2 0 0 1-1.991-1.596L5 5m3-2h4a1 1 0 0 1 1 1v1H7V4a1 1 0 0 1 1-1z"
+    />
+  </svg>
+);
+
+
+const subtractWorkingDays = (input: Date, amount: number) => {
+  const result = startOfDay(new Date(input));
+  let remaining = Math.max(0, amount);
+  while (remaining > 0) {
+    result.setDate(result.getDate() - 1);
+    if (isWorkingDay(result)) remaining -= 1;
+  }
+  return result;
+};
+
 const getRemainingWorkdays = (
-  status: Prisma.$Enums.MaterialStatus | null | undefined,
+  status: MaterialStatus | null | undefined,
   lastMaterialAt: Date | string | null | undefined,
+  demoDate: Date | string | null | undefined,
 ) => {
   if (status !== "VOLLSTAENDIG" || !lastMaterialAt) {
     return { display: "-", className: undefined as string | undefined };
@@ -92,7 +119,15 @@ const getRemainingWorkdays = (
     return { display: "-", className: undefined };
   }
   const today = startOfDay(new Date());
-  let days = workingDaysBetween(start, today);
+  let end = today;
+  if (demoDate) {
+    const demo = startOfDay(new Date(demoDate));
+    if (Number.isNaN(demo.getTime())) {
+      return { display: "-", className: undefined };
+    }
+    if (demo < end) end = demo;
+  }
+  let days = workingDaysBetween(start, end);
   if (days < 0) days = 0;
 
   let className: string | undefined;
@@ -105,7 +140,7 @@ const getRemainingWorkdays = (
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function ProjectsPage({ searchParams }: Props) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session) redirect("/login");
 
   const spRaw = await searchParams;
@@ -120,6 +155,8 @@ export default async function ProjectsPage({ searchParams }: Props) {
     page: str(spRaw.page) ?? "1",
     ps: str(spRaw.ps) ?? "50",
     scope: str(spRaw.scope) ?? undefined,
+    overdue: str(spRaw.overdue) ?? undefined,
+    client: str(spRaw.client) ?? undefined,
   };
 
   const standardSortTriggered = str(spRaw.standardSort);
@@ -138,13 +175,28 @@ export default async function ProjectsPage({ searchParams }: Props) {
   const canEdit = ["ADMIN", "AGENT"].includes(role);
   const clientId = session.user.clientId ?? undefined;
 
-  const where: Prisma.ProjectWhereInput = {};
+  const where: Prisma.ProjectWhereInput = {
+    // Only show website projects (type: WEBSITE or has website relation)
+    OR: [
+      { type: "WEBSITE" },
+      { website: { isNot: null } }
+    ]
+  };
+  const ensureAnd = (): Prisma.ProjectWhereInput[] => {
+    if (!where.AND) {
+      where.AND = [];
+    } else if (!Array.isArray(where.AND)) {
+      where.AND = [where.AND];
+    }
+    return where.AND as Prisma.ProjectWhereInput[];
+  };
   if (role === "CUSTOMER") {
     if (!clientId) redirect("/");
     where.clientId = clientId!;
   }
   if (scopeActive) {
-    (where.AND ??= []).push({
+    const andConditions = ensureAnd();
+    andConditions.push({
       OR: [
         {
           type: "WEBSITE",
@@ -157,7 +209,41 @@ export default async function ProjectsPage({ searchParams }: Props) {
     });
   }
   if (sp.q) {
-    where.client = { is: { customerNo: { contains: sp.q, mode: "insensitive" } } };
+    where.client = {
+      is: {
+        OR: [
+          { customerNo: { contains: sp.q, mode: "insensitive" } },
+          { name: { contains: sp.q, mode: "insensitive" } },
+        ],
+      },
+    };
+  }
+    if (sp.client) {
+    const andConditions = ensureAnd();
+    andConditions.push({ clientId: sp.client });
+  }
+  if (sp.overdue === "1") {
+    const now = startOfDay(new Date());
+    const cutoff = subtractWorkingDays(now, 60);
+    const andConditions = ensureAnd();
+    andConditions.push({
+      type: "WEBSITE",
+      status: "UMSETZUNG",
+      website: {
+        is: {
+          AND: [
+            { materialStatus: "VOLLSTAENDIG" },
+            { lastMaterialAt: { not: null, lte: cutoff } },
+            {
+              OR: [
+                { demoDate: null },
+                { demoDate: { gt: now } },
+              ],
+            },
+          ],
+        },
+      },
+    });
   }
   if (sp.status && sp.status.length > 0) {
     const now = new Date();
@@ -192,14 +278,14 @@ export default async function ProjectsPage({ searchParams }: Props) {
         orParts.push({
           AND: [
             { type: { not: "WEBSITE" } },
-            { status: statusValue as Prisma.ProjectStatus },
+            { status: statusValue as ProjectStatus },
           ],
         });
       } else if (statusValue === "BEENDET") {
         orParts.push({
           AND: [
             { type: { not: "WEBSITE" } },
-            { status: "ONLINE" as Prisma.ProjectStatus },
+            { status: "ONLINE" as ProjectStatus },
           ],
         });
       }
@@ -209,17 +295,18 @@ export default async function ProjectsPage({ searchParams }: Props) {
     }
 
     if (statusFilters.length > 0) {
-      (where.AND ??= []).push({ OR: statusFilters });
+      const andConditions = ensureAnd();
+      andConditions.push({ OR: statusFilters });
     }
   }
   const websiteFilters: Prisma.ProjectWebsiteWhereInput = {};
   if (sp.priority && sp.priority.length > 0) {
     const vals = sp.priority.filter((p) => (PRIORITIES as readonly string[]).includes(p));
-    if (vals.length > 0) websiteFilters.priority = { in: vals as Prisma.WebsitePriority[] };
+    if (vals.length > 0) websiteFilters.priority = { in: vals as WebsitePriority[] };
   }
   if (sp.cms && sp.cms.length > 0) {
     const vals = sp.cms.filter((c) => (CMS as readonly string[]).includes(c));
-    if (vals.length > 0) websiteFilters.cms = { in: vals as Prisma.CMS[] };
+    if (vals.length > 0) websiteFilters.cms = { in: vals as PrismaCMS[] };
   }
   if (Object.keys(websiteFilters).length > 0) where.website = { is: websiteFilters };
 
@@ -231,7 +318,10 @@ export default async function ProjectsPage({ searchParams }: Props) {
       const orParts: Prisma.ProjectWhereInput[] = [];
       if (ids.length > 0) orParts.push({ agentId: { in: ids } });
       if (hasNone) orParts.push({ agentId: null });
-      if (orParts.length > 0) (where.AND ??= []).push({ OR: orParts });
+      if (orParts.length > 0) {
+        const andConditions = ensureAnd();
+        andConditions.push({ OR: orParts });
+      }
     }
   }
 
@@ -242,8 +332,16 @@ export default async function ProjectsPage({ searchParams }: Props) {
 
   const [projects, agentsAll, agentsActive, total] = await Promise.all([
     prisma.project.findMany({ where, include: { client: true, website: true, agent: true }, orderBy, skip, take: pageSize }),
-    prisma.user.findMany({ where: { role: "AGENT" }, orderBy: { name: "asc" } }),
-    prisma.user.findMany({ where: { role: "AGENT", active: true }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({
+      where: { role: "AGENT" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true, categories: true }
+    }),
+    prisma.user.findMany({
+      where: { role: "AGENT", active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true, categories: true }
+    }),
     prisma.project.count({ where }),
   ]);
 
@@ -263,7 +361,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
           <Link href={mkPageSizeHref(50)} className={sp.ps !== "100" ? "font-semibold underline" : "underline"}>50/Seite</Link>
           <Link href={mkPageSizeHref(100)} className={sp.ps === "100" ? "font-semibold underline" : "underline"}>100/Seite</Link>
           <span className="mx-2">|</span>
-          <Link href={mkPageHref(Math.max(1, page - 1))} className={page === 1 ? "pointer-events-none opacity-50" : "underline"}>Zurueck</Link>
+          <Link href={mkPageHref(Math.max(1, page - 1))} className={page === 1 ? "pointer-events-none opacity-50" : "underline"}>Zurück</Link>
           <span>Seite {page} / {totalPages}</span>
           <Link href={mkPageHref(Math.min(totalPages, page + 1))} className={page >= totalPages ? "pointer-events-none opacity-50" : "underline"}>Weiter</Link>
         </div>
@@ -271,15 +369,17 @@ export default async function ProjectsPage({ searchParams }: Props) {
     );
   };
 
+  const materialStatusOptions = MATERIAL_STATUS_VALUES.map((value) => ({ value, label: labelForMaterialStatus(value) }));
+
+  // Nur aktive Agenten mit Kategorie WEBSEITE für die Dropdown-Auswahl
+  const websiteAgentsForDropdown = agentsAll.filter(a => a.categories.includes("WEBSEITE") && agentsActive.some(active => active.id === a.id));
+
   const agentOptions = [
     { value: "", label: "- ohne Agent -" },
-    ...agentsAll.flatMap((a) => {
-      const base = a.name ?? a.email;
-      return [
-        { value: a.id, label: base },
-        { value: a.id, label: `${base} WT` },
-      ];
-    }),
+    ...websiteAgentsForDropdown.map((a) => ({
+      value: a.id,
+      label: a.name ?? a.email ?? "",
+    })),
   ];
   const priorityOptions = PRIORITIES.map((p) => ({ value: p, label: labelForWebsitePriority(p) }));
   const cmsOptions = CMS.map((c) => ({ value: c, label: c }));
@@ -304,17 +404,19 @@ export default async function ProjectsPage({ searchParams }: Props) {
     <form method="get" className="flex flex-wrap items-end gap-2 p-4 border rounded-lg">
       <input type="hidden" name="sort" value={sp.sort} />
       {scopeActive && <input type="hidden" name="scope" value="active" />}
+      {sp.client && <input type="hidden" name="client" value={sp.client} />}
+      {sp.overdue === "1" && <input type="hidden" name="overdue" value="1" />}
 
       <div className="flex flex-col gap-1 w-48 shrink-0">
-        <label className="text-[11px] uppercase tracking-wide text-gray-500">Kundennr. suchen</label>
-        <input name="q" defaultValue={sp.q} placeholder="z. B. K1023" className="px-2 py-1 text-xs border rounded" />
+        <label className="text-[11px] uppercase tracking-wide text-gray-500">Kunde suchen</label>
+        <input name="q" defaultValue={sp.q} placeholder="Kundennr. oder Name" className="px-2 py-1 text-xs border rounded" />
       </div>
 
       <details className="relative w-44 shrink-0">
         <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-white cursor-pointer select-none shadow-sm [&::-webkit-details-marker]:hidden">
           <span>Status</span>
           <span className="opacity-70">
-            {sp.status && sp.status.length ? `${sp.status.length} ausgewaehlt` : "Alle"}
+            {sp.status && sp.status.length ? `${sp.status.length} ausgewählt` : "Alle"}
           </span>
         </summary>
         <div className="absolute left-0 z-10 mt-1 w-60 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
@@ -322,7 +424,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
             {STATUSES.map((s) => (
               <label key={s} className="inline-flex items-center gap-2">
                 <input type="checkbox" name="status" value={s} defaultChecked={sp.status?.includes(s)} />
-                <span>{labelForProjectStatus(s as Prisma.ProjectStatus)}</span>
+                <span>{labelForProjectStatus(s as ProjectStatus)}</span>
               </label>
             ))}
             <label className="inline-flex items-center gap-2">
@@ -337,7 +439,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
         <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-white cursor-pointer select-none shadow-sm [&::-webkit-details-marker]:hidden">
           <span>Prio</span>
           <span className="opacity-70">
-            {sp.priority && sp.priority.length ? `${sp.priority.length} ausgewaehlt` : "Alle"}
+            {sp.priority && sp.priority.length ? `${sp.priority.length} ausgewählt` : "Alle"}
           </span>
         </summary>
         <div className="absolute left-0 z-10 mt-1 w-52 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
@@ -356,7 +458,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
         <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-white cursor-pointer select-none shadow-sm [&::-webkit-details-marker]:hidden">
           <span>CMS</span>
           <span className="opacity-70">
-            {sp.cms && sp.cms.length ? `${sp.cms.length} ausgewaehlt` : "Alle"}
+            {sp.cms && sp.cms.length ? `${sp.cms.length} ausgewählt` : "Alle"}
           </span>
         </summary>
         <div className="absolute left-0 z-10 mt-1 w-52 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
@@ -377,7 +479,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
           <span className="opacity-70">
             {!sp.agent || sp.agent.length === 0 || sp.agent.includes("alle")
               ? "Alle"
-              : (sp.agent.length === 1 && sp.agent.includes("none") ? "Ohne Agent" : `${sp.agent.length} ausgewaehlt`)}
+              : (sp.agent.length === 1 && sp.agent.includes("none") ? "Ohne Agent" : `${sp.agent.length} ausgewählt`)}
           </span>
         </summary>
         <div className="absolute left-0 z-10 mt-1 w-64 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
@@ -411,7 +513,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
       <div className="flex flex-wrap gap-2">
         <button type="submit" name="standardSort" value="1" className="px-3 py-1 text-xs rounded border bg-white">Standardsortierung</button>
         <button className="px-3 py-1 text-xs rounded bg-black text-white" type="submit">Anwenden</button>
-        <Link href="/projects" className="px-3 py-1 text-xs rounded border">Zuruecksetzen</Link>
+        <Link href="/projects" className="px-3 py-1 text-xs rounded border">Zurücksetzen</Link>
       </div>
     </form>
   </div>
@@ -425,7 +527,6 @@ export default async function ProjectsPage({ searchParams }: Props) {
               <Th href={mkSort("status")} active={sp.sort==="status"} dir={sp.dir}>Status</Th>
               <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir} width={120}>Kundennr.</Th>
               <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir} width={280}>Kunde</Th>
-              <Th href={mkSort("title")} active={sp.sort==="title"} dir={sp.dir}>Projekt</Th>
               <Th href={mkSort("domain")} active={sp.sort==="domain"} dir={sp.dir}>Domain</Th>
               <Th href={mkSort("priority")} active={sp.sort==="priority"} dir={sp.dir}>Prio</Th>
               <Th href={mkSort("pStatus")} active={sp.sort==="pStatus"} dir={sp.dir}>P-Status</Th>
@@ -442,14 +543,15 @@ export default async function ProjectsPage({ searchParams }: Props) {
               <Th href={mkSort("seo")} active={sp.sort==="seo"} dir={sp.dir}>SEO</Th>
               <Th href={mkSort("textit")} active={sp.sort==="textit"} dir={sp.dir}>Textit</Th>
               <Th href={mkSort("accessible")} active={sp.sort==="accessible"} dir={sp.dir}>Barrierefrei</Th>
+              <Th href={mkSort("note")} active={sp.sort==="note"} dir={sp.dir}>Hinweis</Th>
               <Th href={mkSort("updatedAt")} active={sp.sort==="updatedAt"} dir={sp.dir}>Aktualisiert</Th>
               <Th>Aktionen</Th>
             </tr>
           </thead>
           <tbody className="[&>tr>td]:px-3 [&>tr>td]:py-2">
             {projects.map((p) => {
-              const materialStatus = p.website?.materialStatus ?? "ANGEFORDERT";
-              const workdayInfo = getRemainingWorkdays(materialStatus, p.website?.lastMaterialAt);
+              const materialStatus = (p.website?.materialStatus ?? "ANGEFORDERT") as MaterialStatus;
+              const workdayInfo = getRemainingWorkdays(materialStatus, p.website?.lastMaterialAt, p.website?.demoDate);
               const hasAgent = Boolean(p.agent);
               const badgeClass = hasAgent ? (p.agent?.color ? AGENT_BADGE_BASE_CLASS : AGENT_BADGE_EMPTY_CLASS) : undefined;
               const badgeStyle = hasAgent ? agentBadgeStyle(p.agent?.color) : undefined;
@@ -467,27 +569,41 @@ export default async function ProjectsPage({ searchParams }: Props) {
                   <td>{statusLabel}</td>
                   <td className="whitespace-nowrap">{p.client?.customerNo ?? "-"}</td>
                   <td className="whitespace-nowrap">{p.client?.name ?? "-"}</td>
-                  <td className="font-medium"><Link className="underline" href={`/projects/${p.id}`}>{p.title}</Link></td>
                   <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="domain" type="text" display={p.website?.domain ?? "-"} value={p.website?.domain ?? ""} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="priority" type="select" display={labelForWebsitePriority(p.website?.priority)} value={p.website?.priority ?? "NONE"} options={priorityOptions} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="pStatus" type="select" display={labelForProductionStatus(p.website?.pStatus)} value={p.website?.pStatus ?? "NONE"} options={pStatusOptions} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="cms" type="select" display={p.website?.cms ?? "-"} value={p.website?.cms ?? ""} options={cmsOptions} canEdit={canEdit} /></td>
                   <td><InlineCell target="project" id={p.id} name="agentId" type="select" display={p.agent?.name ?? "-"} value={p.agentId ?? ""} options={agentOptions} canEdit={canEdit} displayClassName={badgeClass} displayStyle={badgeStyle} /></td>
-                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="webDate" type="date" display={fmtDate(p.website?.webDate)} value={p.website?.webDate ?? ""} canEdit={canEdit} /></td>
-                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="demoDate" type="date" display={fmtDate(p.website?.demoDate)} value={p.website?.demoDate ?? ""} canEdit={canEdit} /></td>
-                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="onlineDate" type="date" display={fmtDate(p.website?.onlineDate)} value={p.website?.onlineDate ?? ""} canEdit={canEdit} /></td>
-                  <td><InlineCell target="website" id={p.id} name="materialStatus" type="select" display={p.website?.materialStatus ?? "-"} value={p.website?.materialStatus ?? "ANGEFORDERT"} options={Object.entries({ ANGEFORDERT: "angefordert", TEILWEISE: "teilweise", VOLLSTAENDIG: "Vollst�ndig", NV: "N.V." }).map(([value, label]) => ({ value, label }))} canEdit={canEdit} /></td>
-                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="lastMaterialAt" type="date" display={fmtDate(p.website?.lastMaterialAt)} value={p.website?.lastMaterialAt ?? ""} canEdit={canEdit} /></td>
+                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="webDate" type="date" display={fmtDate(p.website?.webDate)} value={p.website?.webDate ? new Date(p.website.webDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
+                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="demoDate" type="date" display={fmtDate(p.website?.demoDate)} value={p.website?.demoDate ? new Date(p.website.demoDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
+                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="onlineDate" type="date" display={fmtDate(p.website?.onlineDate)} value={p.website?.onlineDate ? new Date(p.website.onlineDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
+                  <td><InlineCell target="website" id={p.id} name="materialStatus" type="select" display={labelForMaterialStatus(materialStatus)} value={materialStatus} options={materialStatusOptions} canEdit={canEdit} /></td>
+                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="lastMaterialAt" type="date" display={fmtDate(p.website?.lastMaterialAt)} value={p.website?.lastMaterialAt ? new Date(p.website.lastMaterialAt).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="effortBuildMin" type="number" display={mm(p.website?.effortBuildMin)} value={p.website?.effortBuildMin != null ? p.website.effortBuildMin / 60 : ""} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="effortDemoMin" type="number" display={mm(p.website?.effortDemoMin)} value={p.website?.effortDemoMin != null ? p.website.effortDemoMin / 60 : ""} canEdit={canEdit} /></td>
                   <td className={workdayInfo.className}>{workdayInfo.display}</td>
                   <td><InlineCell target="website" id={p.id} name="seo" type="select" display={labelForSeoStatus(p.website?.seo)} value={p.website?.seo ?? ""} options={seoOptions} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="textit" type="select" display={labelForTextitStatus(p.website?.textit)} value={p.website?.textit ?? ""} options={textitOptions} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="accessible" type="tri" display={p.website?.accessible == null ? "-" : p.website?.accessible ? "Ja" : "Nein"} value={p.website?.accessible ?? null} canEdit={canEdit} /></td>
+                  <td className="align-top"><InlineCell target="website" id={p.id} name="note" type="textarea" display={p.website?.note ?? ""} value={p.website?.note ?? ""} canEdit={canEdit} displayClassName="block whitespace-pre-wrap" /></td>
                   <td className="whitespace-nowrap">{fmtDate(p.updatedAt)}</td>
                   <td className="whitespace-nowrap">
-                    <Link href={`/projects/${p.id}`} className="underline mr-3">Details</Link>
-                    {canEdit && <Link href={`/projects/${p.id}/edit`} className="underline">Bearbeiten</Link>}
+                    <div className="flex items-center gap-2">
+                      <Link href={`/projects/${p.id}`} className="underline">Details</Link>
+                      {canEdit && <Link href={`/projects/${p.id}/edit`} className="underline">Bearbeiten</Link>}
+                      {role === "ADMIN" && (
+                        <form action={deleteProject}>
+                          <input type="hidden" name="projectId" value={p.id} />
+                          <ConfirmSubmit
+                            confirmText="Dieses Projekt unwiderruflich löschen?"
+                            className="inline-flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                            <span className="sr-only">Projekt löschen</span>
+                          </ConfirmSubmit>
+                        </form>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -541,6 +657,7 @@ function mapOrderBy(sort: string, dir: "asc" | "desc"): Prisma.ProjectOrderByWit
     case "textit": return [{ website: { textit: direction } }, { updatedAt: updatedDesc }];
     case "materialStatus": return [{ website: { materialStatus: direction } }, { updatedAt: updatedDesc }];
     case "accessible": return [{ website: { accessible: direction } }, { updatedAt: updatedDesc }];
+    case "note": return [{ website: { note: direction } }, { updatedAt: updatedDesc }];
     case "updatedAt": return [{ updatedAt: direction }];
     default: return def;
   }
@@ -559,6 +676,8 @@ function makeSortHref({ current, key }: { current: Search; key: string }) {
   if (current.ps) p.set("ps", current.ps);
   if (current.page) p.set("page", current.page);
   if (current.scope) p.set("scope", current.scope);
+  if (current.client) p.set("client", current.client);
+  if (current.overdue === "1") p.set("overdue", "1");
   return `/projects?${p.toString()}`;
 }
 
@@ -573,6 +692,8 @@ function makePageHref({ current, page }: { current: Search; page: number }) {
   if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);
   if (current.ps) p.set("ps", current.ps);
   if (current.scope) p.set("scope", current.scope);
+  if (current.client) p.set("client", current.client);
+  if (current.overdue === "1") p.set("overdue", "1");
   p.set("page", String(page));
   return `/projects?${p.toString()}`;
 }
@@ -587,11 +708,12 @@ function makePageSizeHref({ current, size }: { current: Search; size: number }) 
   if (current.cms && current.cms.length) for (const v of current.cms) p.append("cms", v);
   if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);
   if (current.scope) p.set("scope", current.scope);
+  if (current.client) p.set("client", current.client);
+  if (current.overdue === "1") p.set("overdue", "1");
   p.set("ps", String(size));
   p.set("page", "1");
   return `/projects?${p.toString()}`;
 }
-
 function Th(props: { href?: string; active?: boolean; dir?: "asc" | "desc"; children: React.ReactNode; width?: number }) {
   const { href, active, dir, children, width } = props;
   const arrow = active ? (dir === "desc" ? "v" : "^") : "";
@@ -603,6 +725,32 @@ function Th(props: { href?: string; active?: boolean; dir?: "asc" | "desc"; chil
     </th>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

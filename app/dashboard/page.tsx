@@ -1,13 +1,11 @@
-﻿// /app/dashboard/page.tsx
+// /app/dashboard/page.tsx
 import Link from "next/link";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, ProjectStatus, ProjectType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { buildWebsiteStatusWhere, DONE_PRODUCTION_STATUSES } from "@/lib/project-status";
 
 export const metadata = { title: "Dashboard" };
 
-type ProjectStatus = Prisma.$Enums.ProjectStatus;
-type ProjectType = Prisma.$Enums.ProjectType;
 
 const STATUSES: ProjectStatus[] = ["WEBTERMIN", "MATERIAL", "UMSETZUNG", "DEMO", "ONLINE"];
 const STATUS_LABELS: Record<ProjectStatus, string> = {
@@ -19,9 +17,9 @@ const STATUS_LABELS: Record<ProjectStatus, string> = {
 };
 
 const PROJECT_TYPES: Array<{ key: ProjectType; label: string; href: string }> = [
-  { key: "WEBSITE", label: "Webseitenprojekte", href: "/projects?type=WEBSITE" },
-  { key: "FILM", label: "Filmprojekte", href: "/projects?type=FILM" },
-  { key: "SOCIAL", label: "Social Media Projekte", href: "/projects?type=SOCIAL" },
+  { key: "WEBSITE", label: "Webseitenprojekte", href: "/projects" },
+  { key: "FILM", label: "Filmprojekte", href: "/film-projects" },
+  { key: "SOCIAL", label: "Social Media Projekte", href: "/social-projects" },
 ];
 
 function formatDate(d?: Date | null) {
@@ -63,11 +61,21 @@ const workingDaysBetween = (from: Date, to: Date) => {
   return count;
 };
 
-const workingDaysSince = (lastMaterialAt: Date | string) => {
+const workingDaysSince = (
+  lastMaterialAt: Date | string,
+  demoDate?: Date | string | null,
+) => {
   const start = startOfDay(new Date(lastMaterialAt));
   if (Number.isNaN(start.getTime())) return null;
   const today = startOfDay(new Date());
-  let days = workingDaysBetween(start, today);
+  let end = today;
+  if (demoDate) {
+    const demo = startOfDay(new Date(demoDate));
+    if (!Number.isNaN(demo.getTime()) && demo < end) {
+      end = demo;
+    }
+  }
+  let days = workingDaysBetween(start, end);
   if (days < 0) days = 0;
   return days;
 };
@@ -107,15 +115,27 @@ export default async function DashboardPage({
 
   const [
     totalProjects,
-    typeCountsRaw,
+    websiteCount,
+    filmCount,
+    socialCount,
     nonWebsiteStatusCountsRaw,
     overdueCandidates,
   ] = await Promise.all([
     prisma.project.count({ where: activeProjectWhere }),
-    prisma.project.groupBy({
-      by: ["type"],
-      _count: { _all: true },
-      where: activeProjectWhere,
+    prisma.project.count({
+      where: activeProjectWhere
+        ? { AND: [activeProjectWhere, { website: { isNot: null } }] }
+        : { website: { isNot: null } },
+    }),
+    prisma.project.count({
+      where: activeProjectWhere
+        ? { AND: [activeProjectWhere, { film: { isNot: null } }] }
+        : { film: { isNot: null } },
+    }),
+    prisma.project.count({
+      where: activeProjectWhere
+        ? { AND: [activeProjectWhere, { type: "SOCIAL" }] }
+        : { type: "SOCIAL" },
     }),
     prisma.project.groupBy({
       by: ["type", "status"],
@@ -127,7 +147,7 @@ export default async function DashboardPage({
     prisma.project.findMany({
       where: {
         type: "WEBSITE",
-        status: { not: "ONLINE" },
+        status: "UMSETZUNG",
         website: {
           is: {
             materialStatus: "VOLLSTAENDIG",
@@ -137,7 +157,8 @@ export default async function DashboardPage({
       },
       select: {
         id: true,
-        website: { select: { lastMaterialAt: true } },
+        status: true,
+        website: { select: { lastMaterialAt: true, demoDate: true } },
       },
     }),
   ]);
@@ -157,9 +178,69 @@ export default async function DashboardPage({
     })
   );
 
-  const typeCountMap = new Map<ProjectType, number>(
-    typeCountsRaw.map((entry) => [entry.type as ProjectType, entry._count._all])
-  );
+  // Film-spezifische Kacheln basierend auf Daten
+  const filmActiveWhere = activeEnabled
+    ? { film: { isNot: null, is: { status: { not: "BEENDET" } } } }
+    : { film: { isNot: null } };
+
+  // Load all film projects and derive their status
+  const filmProjects = await prisma.project.findMany({
+    where: filmActiveWhere,
+    select: {
+      film: {
+        select: {
+          status: true,
+          onlineDate: true,
+          finalToClient: true,
+          shootDate: true,
+          scriptApproved: true,
+          scriptToClient: true,
+          scouting: true,
+        }
+      }
+    }
+  });
+
+  // Helper function to check if date is in the past
+  const isInPast = (date: Date | null | undefined) => {
+    if (!date) return false;
+    return new Date(date).getTime() < Date.now();
+  };
+
+  // Derive status for each film project (same logic as in film-projects/page.tsx)
+  const deriveFilmStatus = (film: any) => {
+    if (!film) return "SCOUTING";
+    if (film.status === "BEENDET") return "BEENDET";
+    if (film.onlineDate) return "ONLINE";
+    if (film.finalToClient) return "FINALVERSION";
+    if (isInPast(film.shootDate)) return "SCHNITT";
+    if (film.scriptApproved) return "DREH";
+    if (film.scriptToClient) return "SKRIPTFREIGABE";
+    if (isInPast(film.scouting)) return "SKRIPT";
+    return "SCOUTING";
+  };
+
+  // Count projects by derived status
+  const filmStatusCounts = filmProjects.reduce((acc, project) => {
+    const status = deriveFilmStatus(project.film);
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const filmScoutingCount = filmStatusCounts["SCOUTING"] || 0;
+  const filmScriptCount = filmStatusCounts["SKRIPT"] || 0;
+  const filmScriptApprovalCount = filmStatusCounts["SKRIPTFREIGABE"] || 0;
+  const filmShootCount = filmStatusCounts["DREH"] || 0;
+  const filmCutCount = filmStatusCounts["SCHNITT"] || 0;
+  const filmPreviewCount = filmStatusCounts["FINALVERSION"] || 0;
+  const filmOnlineCount = filmStatusCounts["ONLINE"] || 0;
+  const filmBeendetCount = filmStatusCounts["BEENDET"] || 0;
+
+  const typeCountMap = new Map<ProjectType, number>([
+    ["WEBSITE", websiteCount],
+    ["FILM", filmCount],
+    ["SOCIAL", socialCount],
+  ]);
 
   const nonWebsiteStatusMap = new Map<ProjectType, Map<ProjectStatus, number>>();
   for (const entry of nonWebsiteStatusCountsRaw) {
@@ -192,9 +273,11 @@ export default async function DashboardPage({
   ];
 
   const overdueProjectsCount = overdueCandidates.reduce((count, project) => {
+    if (project.status !== "UMSETZUNG") return count;
     const last = project.website?.lastMaterialAt;
     if (!last) return count;
-    const days = workingDaysSince(last);
+    const demo = project.website?.demoDate;
+    const days = workingDaysSince(last, demo);
     return days !== null && days >= 60 ? count + 1 : count;
   }, 0);
   const statusSections = PROJECT_TYPES.map((type) => {
@@ -211,6 +294,60 @@ export default async function DashboardPage({
           label: "\u00DCberf\u00E4llige Projekte (60+ Tage)",
           count: overdueProjectsCount,
           href: withScope(`${type.href}&overdue=1`),
+        },
+      ];
+      return { ...type, tiles };
+    }
+
+    if (type.key === "FILM") {
+      const tiles = [
+        {
+          key: "SCOUTING",
+          label: "Scouting",
+          count: filmScoutingCount,
+          href: withScope("/film-projects?status=SCOUTING"),
+        },
+        {
+          key: "SCRIPT",
+          label: "Skript",
+          count: filmScriptCount,
+          href: withScope("/film-projects?status=SKRIPT"),
+        },
+        {
+          key: "SCRIPT_APPROVAL",
+          label: "Skriptfreigabe",
+          count: filmScriptApprovalCount,
+          href: withScope("/film-projects?status=SKRIPTFREIGABE"),
+        },
+        {
+          key: "SHOOT",
+          label: "Dreh",
+          count: filmShootCount,
+          href: withScope("/film-projects?status=DREH"),
+        },
+        {
+          key: "CUT",
+          label: "Schnitt",
+          count: filmCutCount,
+          href: withScope("/film-projects?status=SCHNITT"),
+        },
+        {
+          key: "PREVIEW",
+          label: "Finalversion",
+          count: filmPreviewCount,
+          href: withScope("/film-projects?status=FINALVERSION"),
+        },
+        {
+          key: "ONLINE",
+          label: "Online",
+          count: filmOnlineCount,
+          href: withScope("/film-projects?status=ONLINE"),
+        },
+        {
+          key: "BEENDET",
+          label: "Beendet",
+          count: filmBeendetCount,
+          href: withScope("/film-projects?status=BEENDET"),
         },
       ];
       return { ...type, tiles };
@@ -381,6 +518,11 @@ export default async function DashboardPage({
     </main>
   );
 }
+
+
+
+
+
 
 
 

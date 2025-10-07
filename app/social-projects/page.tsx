@@ -1,9 +1,8 @@
-import { getServerSession } from "next-auth";
+import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export default async function SocialProjectsPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session) redirect("/login");
   if (!session.user.role || !["ADMIN", "AGENT"].includes(session.user.role)) {
     redirect("/");

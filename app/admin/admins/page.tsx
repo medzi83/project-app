@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { ReactNode } from "react";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
 import { createAdmin, resetAdminPassword, toggleAdminActive, updateAdminName } from "./actions";
 
@@ -13,7 +12,7 @@ const fmtDate = (d?: Date | string | null) =>
   d ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(d)) : "-";
 
 export default async function AdminManagementPage({ searchParams }: Props) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/");
 
