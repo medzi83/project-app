@@ -1,8 +1,10 @@
-import { prisma } from "@/lib/prisma";
+﻿import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 
 import { redirect } from "next/navigation";
-import { createServer, updateServer, deleteServer } from "./actions";
+import { createServer, updateServer, deleteServer, createMailServer, updateMailServer, deleteMailServer } from "./actions";
+import { TestConnectionButton } from "./TestConnectionButton";
+import { MailServerSection } from "./MailServerSection";
 
 
 type Props = {
@@ -19,10 +21,24 @@ export default async function ServerAdminPage({ searchParams }: Props) {
   const sp = await searchParams;
   const error = str(sp.error);
   const ok = sp.ok === "1";
+  const mailError = str(sp.mailError);
+  const mailOk = sp.mailOk === "1";
 
-  const servers = await prisma.server.findMany({
-    orderBy: { name: "asc" },
-  });
+  const [servers, mailServers, agencies] = await Promise.all([
+    prisma.server.findMany({
+      orderBy: { name: "asc" },
+    }),
+    prisma.mailServer.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        agency: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.agency.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   return (
     <div className="space-y-8 p-6">
@@ -33,7 +49,7 @@ export default async function ServerAdminPage({ searchParams }: Props) {
         </div>
         <details className="relative" open={Boolean(error)}>
           <summary className="cursor-pointer rounded-lg bg-black px-4 py-2 text-sm font-medium text-white shadow hover:bg-black/90">
-            Server hinzufuegen
+            Server hinzufügen
           </summary>
           <div className="absolute right-0 mt-2 w-[360px] space-y-4 rounded-lg border bg-white p-4 shadow-lg">
             {error && <p className="text-sm text-red-600">{error}</p>}
@@ -74,6 +90,7 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                 <th>Froxlor</th>
                 <th>MySQL</th>
                 <th>Zugangsdaten</th>
+                <th>Test</th>
                 <th>Aktionen</th>
               </tr>
             </thead>
@@ -143,6 +160,13 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                         />
                       </div>
                     </td>
+                    <td>
+                      <TestConnectionButton
+                        froxlorUrl={server.froxlorUrl}
+                        froxlorApiKey={server.froxlorApiKey}
+                        froxlorApiSecret={server.froxlorApiSecret}
+                      />
+                    </td>
                     <td className="whitespace-nowrap space-x-2">
                       <form id={formId} action={updateServer} className="hidden">
                         <input type="hidden" name="id" value={server.id} />
@@ -157,12 +181,22 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                 );
               })}
               {servers.length === 0 && (
-                <tr><td colSpan={6} className="py-8 text-center text-sm text-gray-500">Noch keine Server hinterlegt.</td></tr>
+                <tr><td colSpan={7} className="py-8 text-center text-sm text-gray-500">Noch keine Server hinterlegt.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </section>
+
+      <MailServerSection
+        mailServers={mailServers}
+        agencies={agencies}
+        mailError={mailError}
+        mailOk={mailOk}
+        updateMailServer={updateMailServer}
+        deleteMailServer={deleteMailServer}
+        createMailServer={createMailServer}
+      />
     </div>
   );
 }

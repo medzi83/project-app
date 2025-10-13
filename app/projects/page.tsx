@@ -39,7 +39,7 @@ type Search = {
 
 const STATUSES = ["WEBTERMIN", "MATERIAL", "UMSETZUNG", "DEMO", "ONLINE"] as const;
 const PRIORITIES = ["NONE", "PRIO_1", "PRIO_2", "PRIO_3"] as const;
-const CMS = ["SHOPWARE", "WORDPRESS", "JOOMLA", "LOGO", "PRINT", "CUSTOM", "OTHER"] as const;
+const CMS = ["SHOPWARE", "JOOMLA", "LOGO", "PRINT", "OTHER"] as const;
 
 const fmtDate = (d?: Date | string | null) =>
   d ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(d)) : "-";
@@ -82,6 +82,49 @@ const workingDaysBetween = (from: Date, to: Date) => {
     if (isWorkingDay(current)) count += step;
   }
   return count;
+};
+
+const toDate = (value?: Date | string | null) => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const isOlderThan4Weeks = (value: Date | null | undefined) => {
+  if (!value) return false;
+  const fourWeeksAgo = new Date();
+  fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+  return value.getTime() < fourWeeksAgo.getTime();
+};
+
+const relevantWebsiteDate = (
+  status: ProjectStatus,
+  website?: {
+    webDate?: Date | null;
+    demoDate?: Date | null;
+    onlineDate?: Date | null;
+    lastMaterialAt?: Date | null;
+  },
+) => {
+  if (!website) return null;
+  switch (status) {
+    case "WEBTERMIN":
+      return toDate(website.webDate);
+    case "MATERIAL":
+      return toDate(website.lastMaterialAt) ?? toDate(website.webDate);
+    case "UMSETZUNG":
+      return toDate(website.lastMaterialAt) ?? toDate(website.webDate);
+    case "DEMO":
+      return (
+        toDate(website.demoDate) ??
+        toDate(website.lastMaterialAt) ??
+        toDate(website.webDate)
+      );
+    case "ONLINE":
+      return toDate(website.onlineDate);
+    default:
+      return null;
+  }
 };
 
 const TrashIcon = (props: SVGProps<SVGSVGElement>) => (
@@ -249,6 +292,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
     const now = new Date();
     const statusFilters: Prisma.ProjectWhereInput[] = [];
     const uniqueStatuses = Array.from(new Set(sp.status));
+    const includesBeendet = uniqueStatuses.includes("BEENDET");
 
     for (const statusValue of uniqueStatuses) {
       if (statusValue !== "BEENDET" && !(STATUSES as readonly string[]).includes(statusValue)) continue;
@@ -259,19 +303,19 @@ export default async function ProjectsPage({ searchParams }: Props) {
       const websiteWhere = buildWebsiteStatusWhere(statusKey, now);
       const orParts: Prisma.ProjectWhereInput[] = [];
       if (websiteWhere) {
-        orParts.push(
-          scopeActive
-            ? {
-                AND: [
-                  websiteWhere,
-                  {
-                    type: "WEBSITE",
-                    website: { is: { pStatus: { notIn: DONE_PRODUCTION_STATUSES } } },
-                  },
-                ],
-              }
-            : websiteWhere,
-        );
+        const shouldExcludeDone = scopeActive || (statusValue === "ONLINE" && !includesBeendet);
+        const websiteCondition = shouldExcludeDone
+          ? {
+              AND: [
+                websiteWhere,
+                {
+                  type: "WEBSITE",
+                  website: { is: { pStatus: { notIn: DONE_PRODUCTION_STATUSES } } },
+                },
+              ],
+            }
+          : websiteWhere;
+        orParts.push(websiteCondition);
       }
 
       if ((STATUSES as readonly string[]).includes(statusValue)) {
@@ -335,12 +379,12 @@ export default async function ProjectsPage({ searchParams }: Props) {
     prisma.user.findMany({
       where: { role: "AGENT" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, email: true, categories: true }
+      select: { id: true, name: true, email: true, categories: true, color: true }
     }),
     prisma.user.findMany({
       where: { role: "AGENT", active: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, email: true, categories: true }
+      select: { id: true, name: true, email: true, categories: true, color: true }
     }),
     prisma.project.count({ where }),
   ]);
@@ -374,15 +418,21 @@ export default async function ProjectsPage({ searchParams }: Props) {
   // Nur aktive Agenten mit Kategorie WEBSEITE für die Dropdown-Auswahl
   const websiteAgentsForDropdown = agentsAll.filter(a => a.categories.includes("WEBSEITE") && agentsActive.some(active => active.id === a.id));
 
+  // Import agent helpers
+  const { expandAgentsWithWTAliases, getAgentDisplayName, getEffectiveAgentId } = await import("@/lib/agent-helpers");
+
+  // Expand with WT aliases for web projects
+  const websiteAgentsExpanded = expandAgentsWithWTAliases(websiteAgentsForDropdown);
+
   const agentOptions = [
     { value: "", label: "- ohne Agent -" },
-    ...websiteAgentsForDropdown.map((a) => ({
+    ...websiteAgentsExpanded.map((a) => ({
       value: a.id,
       label: a.name ?? a.email ?? "",
     })),
   ];
   const priorityOptions = PRIORITIES.map((p) => ({ value: p, label: labelForWebsitePriority(p) }));
-  const cmsOptions = CMS.map((c) => ({ value: c, label: c }));
+  const cmsOptions = CMS.map((c) => ({ value: c, label: c === "SHOPWARE" ? "Shop" : c }));
   const pStatusOptions = ["NONE", "BEENDET", "MMW", "VOLLST_A_K"].map((v) => ({ value: v, label: labelForProductionStatus(v) }));
   const seoOptions = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"].map((v) => ({ value: v, label: labelForSeoStatus(v) }));
   const textitOptions = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"].map((v) => ({ value: v, label: labelForTextitStatus(v) }));
@@ -466,7 +516,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
             {CMS.map((c) => (
               <label key={c} className="inline-flex items-center gap-2">
                 <input type="checkbox" name="cms" value={c} defaultChecked={sp.cms?.includes(c)} />
-                <span>{c}</span>
+                <span>{c === "SHOPWARE" ? "Shop" : c}</span>
               </label>
             ))}
           </div>
@@ -492,7 +542,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
               <input type="checkbox" name="agent" value="none" defaultChecked={sp.agent?.includes("none")} />
               <span>Ohne Agent</span>
             </label>
-            {agentsActive.map((a) => (
+            {agentsActive.filter(a => a.categories.includes("WEBSEITE")).map((a) => (
               <label key={a.id} className="inline-flex items-center gap-2">
                 <input type="checkbox" name="agent" value={a.id} defaultChecked={sp.agent?.includes(a.id)} />
                 <span>{a.name ?? a.email}</span>
@@ -555,6 +605,12 @@ export default async function ProjectsPage({ searchParams }: Props) {
               const hasAgent = Boolean(p.agent);
               const badgeClass = hasAgent ? (p.agent?.color ? AGENT_BADGE_BASE_CLASS : AGENT_BADGE_EMPTY_CLASS) : undefined;
               const badgeStyle = hasAgent ? agentBadgeStyle(p.agent?.color) : undefined;
+
+              // Determine agent display name and effective ID based on isWTAssignment
+              const isWTAssignment = p.website?.isWTAssignment ?? false;
+              const agentDisplayName = getAgentDisplayName(p.agentId, isWTAssignment, agentsAll);
+              const effectiveAgentId = getEffectiveAgentId(p.agentId, isWTAssignment);
+
               const ended = (p.website?.pStatus ?? "") === "BEENDET";
               const derivedStatus = deriveProjectStatus({
                 pStatus: p.website?.pStatus,
@@ -564,16 +620,43 @@ export default async function ProjectsPage({ searchParams }: Props) {
                 materialStatus: p.website?.materialStatus,
               });
               const statusLabel = labelForProjectStatus(derivedStatus, { pStatus: p.website?.pStatus });
+              const clientInactive = p.client?.workStopped || p.client?.finished;
+              const isOnline = derivedStatus === "ONLINE";
+              const relevantDate = relevantWebsiteDate(derivedStatus, p.website ?? undefined);
+              const isStale =
+                !ended &&
+                !clientInactive &&
+                !isOnline &&
+                isOlderThan4Weeks(relevantDate);
+
+              // Check if status should have green background
+              const isUmsetzung = derivedStatus === "UMSETZUNG";
+              const textitReady = p.website?.textit === "JA_JA" || p.website?.textit === "NEIN";
+              const seoReady = p.website?.seo === "NEIN" || p.website?.seo === "JA_NEIN" || p.website?.seo === "JA_JA";
+              const statusGreen = isUmsetzung && textitReady && seoReady;
+
+              const rowClasses = ["border-t"];
+              if (isStale) rowClasses.push("bg-red-50");
+              if (ended) rowClasses.push("opacity-60");
               return (
-                <tr key={p.id} className={"border-t " + (ended ? "opacity-60" : "")}>
-                  <td>{statusLabel}</td>
-                  <td className="whitespace-nowrap">{p.client?.customerNo ?? "-"}</td>
+                <tr key={p.id} className={rowClasses.join(" ")}>
+                  <td className={statusGreen ? "bg-green-100 font-semibold" : ""}>{statusLabel}</td>
+                  <td className="whitespace-nowrap">
+                    <div className="flex flex-col gap-1">
+                      <span>{p.client?.customerNo ?? "-"}</span>
+                      {p.client?.workStopped && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-600 text-white">
+                          ARBEITSSTOPP
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="whitespace-nowrap">{p.client?.name ?? "-"}</td>
                   <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="domain" type="text" display={p.website?.domain ?? "-"} value={p.website?.domain ?? ""} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="priority" type="select" display={labelForWebsitePriority(p.website?.priority)} value={p.website?.priority ?? "NONE"} options={priorityOptions} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="pStatus" type="select" display={labelForProductionStatus(p.website?.pStatus)} value={p.website?.pStatus ?? "NONE"} options={pStatusOptions} canEdit={canEdit} /></td>
-                  <td><InlineCell target="website" id={p.id} name="cms" type="select" display={p.website?.cms ?? "-"} value={p.website?.cms ?? ""} options={cmsOptions} canEdit={canEdit} /></td>
-                  <td><InlineCell target="project" id={p.id} name="agentId" type="select" display={p.agent?.name ?? "-"} value={p.agentId ?? ""} options={agentOptions} canEdit={canEdit} displayClassName={badgeClass} displayStyle={badgeStyle} /></td>
+                  <td><InlineCell target="website" id={p.id} name="cms" type="select" display={p.website?.cms === "SHOPWARE" ? "Shop" : p.website?.cms ?? "-"} value={p.website?.cms ?? ""} options={cmsOptions} canEdit={canEdit} /></td>
+                  <td><InlineCell target="project" id={p.id} name="agentId" type="select" display={agentDisplayName} value={effectiveAgentId} options={agentOptions} canEdit={canEdit} displayClassName={badgeClass} displayStyle={badgeStyle} /></td>
                   <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="webDate" type="date" display={fmtDate(p.website?.webDate)} value={p.website?.webDate ? new Date(p.website.webDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
                   <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="demoDate" type="date" display={fmtDate(p.website?.demoDate)} value={p.website?.demoDate ? new Date(p.website.demoDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
                   <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="onlineDate" type="date" display={fmtDate(p.website?.onlineDate)} value={p.website?.onlineDate ? new Date(p.website.onlineDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
@@ -665,7 +748,10 @@ function mapOrderBy(sort: string, dir: "asc" | "desc"): Prisma.ProjectOrderByWit
 
 function makeSortHref({ current, key }: { current: Search; key: string }) {
   const p = new URLSearchParams();
-  const nextDir: "asc" | "desc" = current.sort === key ? (current.dir === "asc" ? "desc" : "asc") : "asc";
+  // Date columns should default to desc (newest first), others to asc
+  const dateColumns = ["webDate", "demoDate", "onlineDate", "lastMaterialAt", "updatedAt", "createdAt"];
+  const defaultDir: "asc" | "desc" = dateColumns.includes(key) ? "desc" : "asc";
+  const nextDir: "asc" | "desc" = current.sort === key ? (current.dir === "asc" ? "desc" : "asc") : defaultDir;
   p.set("sort", key);
   p.set("dir", nextDir);
   if (current.q) p.set("q", current.q);
@@ -716,7 +802,7 @@ function makePageSizeHref({ current, size }: { current: Search; size: number }) 
 }
 function Th(props: { href?: string; active?: boolean; dir?: "asc" | "desc"; children: React.ReactNode; width?: number }) {
   const { href, active, dir, children, width } = props;
-  const arrow = active ? (dir === "desc" ? "v" : "^") : "";
+const arrow = active ? (dir === "desc" ? " ↓" : " ↑") : "";
   const className = "px-3 py-2 text-left";
   if (!href) return <th style={width ? { width } : undefined} className={className}>{children}</th>;
   return (

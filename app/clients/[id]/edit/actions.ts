@@ -17,6 +17,9 @@ export async function updateClient(formData: FormData) {
   const phone = formData.get("phone") as string;
   const serverId = formData.get("serverId") as string;
   const notes = formData.get("notes") as string;
+  const agencyId = formData.get("agencyId") as string;
+  const workStopped = formData.get("workStopped") === "on";
+  const finished = formData.get("finished") === "on";
 
   await prisma.client.update({
     where: { id: clientId },
@@ -27,6 +30,9 @@ export async function updateClient(formData: FormData) {
       phone: phone || null,
       serverId: serverId || null,
       notes: notes || null,
+      agencyId: agencyId || null,
+      workStopped,
+      finished,
     },
   });
 

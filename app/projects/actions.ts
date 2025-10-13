@@ -13,10 +13,24 @@ async function requireAdmin() {
 
 export async function deleteAllProjects() {
   await requireAdmin();
+
+  // Only delete WEBSITE projects, not FILM projects
+  const websiteProjects = await prisma.project.findMany({
+    where: {
+      OR: [
+        { type: "WEBSITE" },
+        { website: { isNot: null } }
+      ]
+    },
+    select: { id: true }
+  });
+
+  const projectIds = websiteProjects.map(p => p.id);
+
   await prisma.$transaction([
-    prisma.projectNote.deleteMany({}),
-    prisma.projectWebsite.deleteMany({}),
-    prisma.project.deleteMany({}),
+    prisma.projectNote.deleteMany({ where: { projectId: { in: projectIds } } }),
+    prisma.projectWebsite.deleteMany({ where: { projectId: { in: projectIds } } }),
+    prisma.project.deleteMany({ where: { id: { in: projectIds } } }),
   ]);
   revalidatePath("/projects");
 }

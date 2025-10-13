@@ -82,12 +82,11 @@ const mapProjectStatus = (val: string | undefined): ProjectStatus => {
 };
 const mapCMS = (val: string | undefined) => {
   const v = normUC(val);
-  if (["WORDPRESS", "WP"].includes(v)) return { cms: "WORDPRESS" as const, other: undefined };
+  if (["WORDPRESS", "WP", "CUSTOM"].includes(v)) return { cms: "OTHER" as const, other: v === "WORDPRESS" || v === "WP" ? "WordPress" : v === "CUSTOM" ? "Custom" : undefined };
   if (["JOOMLA"].includes(v)) return { cms: "JOOMLA" as const, other: undefined };
-  if (["SHOPWARE", "SW"].includes(v)) return { cms: "SHOPWARE" as const, other: undefined };
+  if (["SHOPWARE", "SW", "SHOP"].includes(v)) return { cms: "SHOPWARE" as const, other: undefined };
   if (["LOGO"].includes(v)) return { cms: "LOGO" as const, other: undefined };
   if (["PRINT"].includes(v)) return { cms: "PRINT" as const, other: undefined };
-  if (["CUSTOM"].includes(v)) return { cms: "CUSTOM" as const, other: undefined };
   if (!v) return { cms: "OTHER" as const, other: undefined };
   return { cms: "OTHER" as const, other: norm(val) };
 };
@@ -108,11 +107,11 @@ const mapPStatus = (val: string | undefined) => {
   return "NONE" as const;
 };
 const mapYN4 = (val: string | undefined) => {
-  const v = normUC(val);
+  const v = normUC(val).replace(/\s+/g, ""); // Remove all whitespace
   if (["NEIN", "N", "NO"].includes(v)) return "NEIN" as const;
-  if (["NEIN/NEIN", "NEIN_NEIN", "N/N"].includes(v)) return "NEIN_NEIN" as const;
-  if (["JA/NEIN", "JA_NEIN", "J/N", "FRAGEBOGEN"].includes(v)) return "JA_NEIN" as const;
-  if (["JA/JA", "JA_JA", "J/J", "ANALYSE", "FERTIG"].includes(v)) return "JA_JA" as const;
+  if (["NEIN/NEIN", "NEIN_NEIN", "NEINNEIN", "N/N", "NN"].includes(v)) return "NEIN_NEIN" as const;
+  if (["JA/NEIN", "JA_NEIN", "JANEIN", "J/N", "JN", "FRAGEBOGEN"].includes(v)) return "JA_NEIN" as const;
+  if (["JA/JA", "JA_JA", "JAJA", "J/J", "JJ", "ANALYSE", "FERTIG"].includes(v)) return "JA_JA" as const;
   if (!v) return undefined;
   return undefined;
 };
@@ -149,7 +148,12 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
   if (!file) return { imported: 0, skipped: 0, errors: [{ row: 0, reason: "Keine Datei hochgeladen" }] };
   const text = await file.text();
   const { headers, rows } = parseCSV(text);
-  const col = (name: string) => headers.findIndex((h) => h.trim().toLowerCase() === name.trim().toLowerCase());
+  // Normalize header names: replace newlines and multiple spaces with single space
+  const normalizedHeaders = headers.map(h => h.replace(/\s+/g, ' ').trim());
+  const col = (name: string) => {
+    const normalized = name.replace(/\s+/g, ' ').trim().toLowerCase();
+    return normalizedHeaders.findIndex((h) => h.toLowerCase() === normalized);
+  };
   const idx = {
     prio: col("Prio"),
     status: col("Status"),
@@ -166,9 +170,17 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
     material: col("Material vorhanden?"),
     lastMat: col("4. letzter Materialeingang"),
     arbeitstage: col("Arbeitstage"),
-    seo: col("SEO  (Fragebogen /Analyse)"),
+    seo: (() => {
+      let idx = col("SEO (Fragebogen /Analyse)");
+      if (idx === -1) idx = col("SEO");
+      return idx;
+    })(),
     textit: col("Textit (raus / fertig)"),
-    accessible: col("Barrierefrei (ja/nein)"),
+    accessible: (() => {
+      let idx = col("Barrierefrei (ja/nein)");
+      if (idx === -1) idx = col("Barrierefrei ♿");
+      return idx;
+    })(),
     note: col("Hinweis"),
   };
   const requiredCols: (keyof typeof idx)[] = ["status", "partner", "nameFirma"];
@@ -335,8 +347,8 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
           lastMaterialAt: lastMaterialAt ?? null,
           effortBuildMin: Number.isFinite(effortBuildMin) ? effortBuildMin : null,
           effortDemoMin: Number.isFinite(effortDemoMin) ? effortDemoMin : null,
-          seo: seo ?? undefined,
-          textit: textit ?? undefined,
+          seo: seo ?? "NEIN",
+          textit: textit ?? "NEIN",
           accessible: accessible ?? null,
           note: note || null,
           materialStatus: materialStatus ?? undefined,
@@ -352,8 +364,8 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
           lastMaterialAt: lastMaterialAt ?? null,
           effortBuildMin: Number.isFinite(effortBuildMin) ? effortBuildMin : null,
           effortDemoMin: Number.isFinite(effortDemoMin) ? effortDemoMin : null,
-          seo: seo ?? undefined,
-          textit: textit ?? undefined,
+          seo: seo ?? "NEIN",
+          textit: textit ?? "NEIN",
           accessible: accessible ?? null,
           note: note || null,
           materialStatus: materialStatus ?? undefined,

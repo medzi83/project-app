@@ -1,9 +1,18 @@
 "use client";
-import { CSSProperties, useEffect, useRef, useState, useTransition } from "react";
+import { CSSProperties, useEffect, useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateFilmInlineField } from "@/app/film-projects/inline-actions";
 
 type Option = { value: string; label: string };
+
+type ExtraFieldConfig = {
+  name: string;
+  label?: string;
+  placeholder?: string;
+  type?: "text" | "url";
+  value?: string | null;
+  required?: boolean;
+};
 
 type Props = {
   id: string; // projectId
@@ -15,6 +24,9 @@ type Props = {
   canEdit: boolean;
   displayClassName?: string;
   displayStyle?: CSSProperties;
+  secondaryDisplay?: string;
+  secondaryHref?: string;
+  extraField?: ExtraFieldConfig;
 };
 
 export default function FilmInlineCell({
@@ -27,12 +39,16 @@ export default function FilmInlineCell({
   canEdit,
   displayClassName,
   displayStyle,
+  secondaryDisplay,
+  secondaryHref,
+  extraField,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null>(null);
+  const extraInputId = useId();
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -44,11 +60,41 @@ export default function FilmInlineCell({
   }, [editing]);
 
   const fallbackDisplay = display && display.trim() !== "" ? display : "";
+  const fallbackSecondary = secondaryDisplay && secondaryDisplay.trim() !== "" ? secondaryDisplay : "";
+  const fallbackSecondaryHref = secondaryHref && secondaryHref.trim() !== "" ? secondaryHref : fallbackSecondary;
+
+  const renderSecondary = () => {
+    if (!fallbackSecondary) return null;
+    if (extraField?.type === "url") {
+      if (!fallbackSecondaryHref) return null;
+      const href = /^https?:\/\//i.test(fallbackSecondaryHref) ? fallbackSecondaryHref : `https://${fallbackSecondaryHref}`;
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-blue-600 underline decoration-dotted decoration-1 text-xs"
+          onClick={(e) => e.stopPropagation()}
+          title="Zum Link"
+        >
+          {fallbackSecondary}
+        </a>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-blue-600 underline decoration-dotted decoration-1">
+        {fallbackSecondary}
+      </span>
+    );
+  };
 
   if (!canEdit) {
     return (
       <span className={displayClassName} style={displayStyle}>
-        {fallbackDisplay}
+        <span>{fallbackDisplay}</span>
+        {renderSecondary() && (
+          <span className="ml-1 inline-flex items-center align-middle">{renderSecondary()}</span>
+        )}
       </span>
     );
   }
@@ -68,7 +114,10 @@ export default function FilmInlineCell({
   if (!editing) {
     const displayNode = (
       <span className={displayClassName} style={displayStyle}>
-        {fallbackDisplay}
+        <span>{fallbackDisplay}</span>
+        {renderSecondary() && (
+          <span className="ml-1 inline-flex items-center align-middle">{renderSecondary()}</span>
+        )}
       </span>
     );
 
@@ -94,13 +143,14 @@ export default function FilmInlineCell({
   // EDIT MODE
   const vStr = value ?? "";
   const vDate = type === "date" && vStr ? new Date(vStr).toISOString().slice(0, 10) : vStr;
+  const extraDefaultValue = extraField?.value ?? "";
+  const shouldAutoSubmit = !extraField;
 
   return (
     <form ref={formRef} action={submitForm} className="inline">
       <input type="hidden" name="target" value="film" />
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="key" value={name} />
-
       {type === "select" && (
         <select
           name="value"
@@ -109,13 +159,15 @@ export default function FilmInlineCell({
             inputRef.current = el;
           }}
           className="p-1 border rounded"
-          onBlur={() => formRef.current?.requestSubmit()}
+          onBlur={() => {
+            if (shouldAutoSubmit) formRef.current?.requestSubmit();
+          }}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               e.preventDefault();
               cancel();
             }
-            if (e.key === "Enter") {
+            if (e.key === "Enter" && shouldAutoSubmit) {
               e.preventDefault();
               formRef.current?.requestSubmit();
             }
@@ -138,13 +190,15 @@ export default function FilmInlineCell({
             inputRef.current = el;
           }}
           className="p-1 border rounded"
-          onBlur={() => formRef.current?.requestSubmit()}
+          onBlur={() => {
+            if (shouldAutoSubmit) formRef.current?.requestSubmit();
+          }}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               e.preventDefault();
               cancel();
             }
-            if (e.key === "Enter") {
+            if (e.key === "Enter" && shouldAutoSubmit) {
               e.preventDefault();
               formRef.current?.requestSubmit();
             }
@@ -184,7 +238,9 @@ export default function FilmInlineCell({
           }}
           className="w-56 p-1 border rounded"
           rows={4}
-          onBlur={() => formRef.current?.requestSubmit()}
+          onBlur={() => {
+            if (shouldAutoSubmit) formRef.current?.requestSubmit();
+          }}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               e.preventDefault();
@@ -196,6 +252,43 @@ export default function FilmInlineCell({
             }
           }}
         />
+      )}
+
+      {extraField && (
+        <div className="mt-2 flex flex-col gap-1">
+          {extraField.label && (
+            <label htmlFor={extraInputId} className="text-xs uppercase tracking-wide text-gray-500">
+              {extraField.label}
+            </label>
+          )}
+          <input
+            id={extraInputId}
+            name={extraField.name}
+            type={extraField.type ?? "text"}
+            defaultValue={extraDefaultValue}
+            placeholder={extraField.placeholder}
+            required={extraField.required}
+            className="p-1 border rounded"
+          />
+        </div>
+      )}
+
+      {extraField && (
+        <div className="mt-2 flex gap-2 text-xs">
+          <button
+            type="submit"
+            className="rounded bg-black px-2 py-1 text-white hover:bg-gray-800"
+          >
+            Speichern
+          </button>
+          <button
+            type="button"
+            onClick={cancel}
+            className="rounded border px-2 py-1 hover:bg-gray-50"
+          >
+            Abbrechen
+          </button>
+        </div>
       )}
       {isPending && <span className="ml-2 text-xs opacity-60">...speichere</span>}
     </form>

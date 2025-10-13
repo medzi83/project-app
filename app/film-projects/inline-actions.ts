@@ -23,7 +23,9 @@ const FilmKey = z.enum([
   "shootDate",
   "firstCutToClient",
   "finalToClient",
+  "finalLink",
   "onlineDate",
+  "onlineLink",
   "lastContact",
   "status",
   "reminderAt",
@@ -35,6 +37,8 @@ const FormSchema = z.object({
   id: z.string().min(1), // projectId
   key: z.string().min(1),
   value: z.string().optional(),
+  finalLink: z.string().optional(),
+  onlineLink: z.string().optional(),
 });
 
 const dateKeys = new Set([
@@ -58,6 +62,13 @@ function coerce(key: string, v: string | undefined) {
   return s;
 }
 
+function normalizeLink(raw?: string | null) {
+  if (raw === undefined || raw === null) return undefined;
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  return trimmed;
+}
+
 export async function updateFilmInlineField(formData: FormData) {
   const session = await getAuthSession();
   if (!session?.user || !["ADMIN", "AGENT"].includes(session.user.role || "")) {
@@ -67,10 +78,20 @@ export async function updateFilmInlineField(formData: FormData) {
   const raw = Object.fromEntries(formData.entries());
   const parsed = FormSchema.safeParse(raw);
   if (!parsed.success) throw new Error("Bad request");
-  const { id, key, value } = parsed.data;
+  const { id, key, value, finalLink: finalLinkRaw, onlineLink: onlineLinkRaw } = parsed.data;
 
   const filmKey = FilmKey.parse(key);
   const parsedValue = coerce(filmKey, value);
+  const normalizedFinalLinkInput = normalizeLink(finalLinkRaw);
+  const normalizedOnlineLinkInput = normalizeLink(onlineLinkRaw);
+  const existingFilm = await prisma.projectFilm.findUnique({
+    where: { projectId: id },
+    select: {
+      finalLink: true,
+      onlineDate: true,
+      onlineLink: true,
+    },
+  });
   const updateData: Prisma.ProjectFilmUncheckedUpdateInput = {};
   const createData: Prisma.ProjectFilmUncheckedCreateInput = { projectId: id };
 
@@ -105,13 +126,95 @@ export async function updateFilmInlineField(formData: FormData) {
     case "scriptApproved":
     case "shootDate":
     case "firstCutToClient":
-    case "finalToClient":
     case "onlineDate":
     case "lastContact":
     case "reminderAt": {
       const nextValue = parsedValue instanceof Date ? parsedValue : null;
       updateData[filmKey] = nextValue;
       createData[filmKey] = nextValue;
+      break;
+    }
+    case "finalToClient": {
+      const nextValue = parsedValue instanceof Date ? parsedValue : null;
+      const incomingLink = normalizedFinalLinkInput !== undefined ? normalizedFinalLinkInput : existingFilm?.finalLink;
+      if (nextValue && !incomingLink) {
+        throw new Error("Bitte zuerst einen Finalversion-Link hinterlegen.");
+      }
+      updateData.finalToClient = nextValue;
+      createData.finalToClient = nextValue;
+      if (incomingLink !== undefined) {
+        updateData.finalLink = incomingLink ?? null;
+        createData.finalLink = incomingLink ?? undefined;
+      }
+      if (!nextValue && normalizedFinalLinkInput === null) {
+        updateData.finalLink = null;
+        createData.finalLink = undefined;
+      }
+      if (nextValue) {
+        const linkForOnline =
+          incomingLink !== undefined
+            ? incomingLink
+            : existingFilm?.finalLink ?? existingFilm?.onlineLink ?? null;
+        if (existingFilm?.onlineDate && linkForOnline) {
+          updateData.onlineLink = linkForOnline;
+          createData.onlineLink = linkForOnline;
+        }
+      }
+      break;
+    }
+    case "finalLink": {
+      const linkValue =
+        typeof parsedValue === "string"
+          ? parsedValue
+          : normalizedFinalLinkInput !== undefined
+            ? normalizedFinalLinkInput
+            : null;
+      updateData.finalLink = linkValue;
+      createData.finalLink = linkValue ?? undefined;
+      if (existingFilm?.onlineDate) {
+        updateData.onlineLink = linkValue;
+        createData.onlineLink = linkValue ?? undefined;
+      }
+      break;
+    }
+    case "onlineDate": {
+      const nextValue = parsedValue instanceof Date ? parsedValue : null;
+      updateData.onlineDate = nextValue;
+      createData.onlineDate = nextValue;
+      if (nextValue) {
+        const linkCandidate =
+          normalizedOnlineLinkInput !== undefined
+            ? normalizedOnlineLinkInput
+            : normalizedFinalLinkInput !== undefined
+              ? normalizedFinalLinkInput
+              : updateData.finalLink && typeof updateData.finalLink === "string"
+                ? updateData.finalLink
+                : existingFilm?.finalLink ?? existingFilm?.onlineLink ?? null;
+        if (!linkCandidate) {
+          throw new Error("Bitte den Finalversion-Link hinterlegen, bevor ein Online-Datum gesetzt wird.");
+        }
+        updateData.onlineLink = linkCandidate;
+        createData.onlineLink = linkCandidate;
+      } else {
+        if (normalizedOnlineLinkInput !== undefined) {
+          updateData.onlineLink = normalizedOnlineLinkInput;
+          createData.onlineLink = normalizedOnlineLinkInput ?? undefined;
+        } else {
+          updateData.onlineLink = null;
+          createData.onlineLink = undefined;
+        }
+      }
+      break;
+    }
+    case "onlineLink": {
+      const linkValue =
+        typeof parsedValue === "string"
+          ? parsedValue
+          : normalizedOnlineLinkInput !== undefined
+            ? normalizedOnlineLinkInput
+            : null;
+      updateData.onlineLink = linkValue;
+      createData.onlineLink = linkValue ?? undefined;
       break;
     }
     case "status": {
@@ -132,6 +235,49 @@ export async function updateFilmInlineField(formData: FormData) {
     where: { projectId: id },
     update: updateData,
     create: createData,
+  });
+
+  revalidatePath("/film-projects");
+  revalidatePath(`/film-projects/${id}`);
+  revalidatePath(`/film-projects/${id}/edit`);
+}
+
+const PreviewVersionSchema = z.object({
+  projectId: z.string().min(1),
+  version: z.coerce.number().int().positive(),
+  sentDate: z.string().min(1),
+  link: z.string().url("Link muss eine gültige URL sein").min(1, "Link ist erforderlich"),
+});
+
+export async function addPreviewVersion(formData: FormData) {
+  const session = await getAuthSession();
+  if (!session?.user || !["ADMIN", "AGENT"].includes(session.user.role || "")) {
+    throw new Error("FORBIDDEN");
+  }
+
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = PreviewVersionSchema.safeParse(raw);
+  if (!parsed.success) throw new Error("Bad request");
+
+  const { projectId, version, sentDate, link } = parsed.data;
+
+  await prisma.filmPreviewVersion.upsert({
+    where: {
+      projectId_version: {
+        projectId,
+        version,
+      },
+    },
+    update: {
+      sentDate: new Date(sentDate),
+      link,
+    },
+    create: {
+      projectId,
+      version,
+      sentDate: new Date(sentDate),
+      link,
+    },
   });
 
   revalidatePath("/film-projects");

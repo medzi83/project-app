@@ -82,10 +82,11 @@ export default async function ClientDetailPage({ params }: Props) {
 
   const { id } = await params;
 
-  const client = await prisma.client.findUnique({
+  let client = await prisma.client.findUnique({
     where: { id },
     include: {
       server: true,
+      agency: true,
       projects: {
         include: {
           website: true,
@@ -98,6 +99,75 @@ export default async function ClientDetailPage({ params }: Props) {
 
   if (!client) {
     notFound();
+  }
+
+  // Automatic server assignment if no server is assigned yet
+  if (!client.serverId && client.customerNo) {
+    try {
+      // Get all servers with valid Froxlor credentials
+      const servers = await prisma.server.findMany({
+        where: {
+          froxlorUrl: { not: null },
+          froxlorApiKey: { not: null },
+          froxlorApiSecret: { not: null },
+        },
+      });
+
+      // Search for customer on each server
+      for (const server of servers) {
+        if (!server.froxlorUrl || !server.froxlorApiKey || !server.froxlorApiSecret) {
+          continue;
+        }
+
+        try {
+          const froxlorClient = new FroxlorClient({
+            url: server.froxlorUrl,
+            apiKey: server.froxlorApiKey,
+            apiSecret: server.froxlorApiSecret,
+          });
+
+          const froxlorCustomer = await froxlorClient.findCustomerByNumber(client.customerNo);
+
+          if (froxlorCustomer) {
+            // Found the customer on this server! Assign it.
+            await prisma.client.update({
+              where: { id: client.id },
+              data: { serverId: server.id },
+            });
+
+            console.log(`Auto-assigned server ${server.name} to client ${client.name} (${client.customerNo})`);
+
+            // Reload client with updated server info
+          client = await prisma.client.findUnique({
+            where: { id },
+            include: {
+              server: true,
+              agency: true,
+              projects: {
+                include: {
+                  website: true,
+                  film: true,
+                },
+                  orderBy: { createdAt: "desc" },
+                },
+              },
+            });
+
+            if (!client) {
+              notFound();
+            }
+
+            break; // Stop searching after finding the first match
+          }
+        } catch (error) {
+          console.error(`Error checking server ${server.name} for customer ${client.customerNo}:`, error);
+          // Continue with next server
+        }
+      }
+    } catch (error) {
+      console.error('Error during automatic server assignment:', error);
+      // Continue without server assignment
+    }
   }
 
   // Fetch Froxlor customer data if server is available
@@ -142,6 +212,11 @@ export default async function ClientDetailPage({ params }: Props) {
           {client.customerNo && (
             <p className="text-sm text-gray-500">Kundennummer: {client.customerNo}</p>
           )}
+          {client.agency && (
+            <p className="text-sm text-gray-500">
+              Agentur: {client.agency.name}
+            </p>
+          )}
         </div>
         {isAdmin && (
           <Link
@@ -184,6 +259,26 @@ export default async function ClientDetailPage({ params }: Props) {
           <div>
             <div className="text-xs text-gray-500">Angelegt</div>
             <div className="text-xs">{formatDate(client.createdAt)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">Arbeitsstopp</div>
+            <div>
+              {client.workStopped ? (
+                <Badge variant="destructive" className="text-xs">Ja</Badge>
+              ) : (
+                <span className="text-gray-600">Nein</span>
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">Beendet</div>
+            <div>
+              {client.finished ? (
+                <Badge className="bg-gray-600 hover:bg-gray-700 text-xs">Ja</Badge>
+              ) : (
+                <span className="text-gray-600">Nein</span>
+              )}
+            </div>
           </div>
           {client.notes && (
             <div className="md:col-span-4">

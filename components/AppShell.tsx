@@ -4,12 +4,13 @@ import React from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package } from "lucide-react";
+import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import DevModeToggle from "@/components/DevModeToggle";
 
 export type Role = "ADMIN" | "AGENT";
 
@@ -24,14 +25,27 @@ type Counts = {
   agentsActive?: number;
 };
 
+type DevModeData = {
+  isDevMode: boolean;
+  currentViewUserId?: string | null;
+  currentViewUserName?: string | null;
+  availableAgents: Array<{ id: string; name: string | null; categories: string[] }>;
+};
+
 type AppShellProps = {
   user: User;
   counts?: Counts;
+  devMode?: DevModeData;
   children: React.ReactNode;
 };
 
-export default function AppShell({ user, counts, children }: AppShellProps) {
+export default function AppShell({ user, counts, devMode, children }: AppShellProps) {
   const [open, setOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -55,6 +69,13 @@ export default function AppShell({ user, counts, children }: AppShellProps) {
           <Link href="/" className="font-semibold tracking-tight">Projektverwaltung</Link>
 
           <div className="ml-auto flex items-center gap-2">
+            {mounted && devMode && devMode.availableAgents.length > 0 && (
+              <DevModeToggle
+                currentUserId={devMode.currentViewUserId}
+                currentUserName={devMode.currentViewUserName}
+                agents={devMode.availableAgents}
+              />
+            )}
             <UserPill user={user} />
             <Button
               variant="outline"
@@ -104,8 +125,11 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
     ? [
         { label: "Admins", href: "/admin/admins", icon: Shield },
         { label: "Agenten", href: "/admin/agents", icon: Users, badge: counts ? String(counts.agentsActive ?? 0) : undefined },
+        { label: "Agenturen", href: "/admin/agencies", icon: Landmark },
         { label: "Statistik", href: "/admin/statistics", icon: BarChart3 },
         { label: "Server", href: "/admin/server", icon: Server },
+        { label: "Emailvorlagen", href: "/admin/email-templates", icon: Mail },
+        { label: "E-Mail Trigger", href: "/admin/email-triggers", icon: Zap },
         { label: "Basisinstallation", href: "/admin/basisinstallation", icon: Package },
       ]
     : [];

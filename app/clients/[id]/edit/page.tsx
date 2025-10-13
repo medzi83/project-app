@@ -15,13 +15,17 @@ export default async function EditClientPage({ params }: Props) {
 
   const { id } = await params;
 
-  const [client, servers] = await Promise.all([
+  const [client, servers, agencies] = await Promise.all([
     prisma.client.findUnique({
       where: { id },
-      include: { server: true },
+      include: { server: true, agency: { select: { id: true, name: true } } },
     }),
     prisma.server.findMany({
       orderBy: { name: "asc" },
+    }),
+    prisma.agency.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -114,6 +118,27 @@ export default async function EditClientPage({ params }: Props) {
                 Wird automatisch gesetzt, wenn Kunde in Froxlor gefunden wird
               </p>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Agentur
+              </label>
+              <select
+                name="agencyId"
+                defaultValue={client.agency?.id ?? ""}
+                className="w-full rounded border p-2"
+              >
+                <option value="">Keine Agentur zugeordnet</option>
+                {agencies.map((agency) => (
+                  <option key={agency.id} value={agency.id}>
+                    {agency.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Wird fuer Kundenuebersicht, Projekte und Statistiken genutzt.
+              </p>
+            </div>
           </div>
 
           <div>
@@ -126,6 +151,34 @@ export default async function EditClientPage({ params }: Props) {
               rows={4}
               className="w-full rounded border p-2"
             />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="workStopped"
+                id="workStopped"
+                defaultChecked={client.workStopped}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <label htmlFor="workStopped" className="text-sm font-medium cursor-pointer">
+                Arbeitsstopp
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="finished"
+                id="finished"
+                defaultChecked={client.finished}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <label htmlFor="finished" className="text-sm font-medium cursor-pointer">
+                Beendet
+              </label>
+            </div>
           </div>
 
           <div className="flex gap-3">

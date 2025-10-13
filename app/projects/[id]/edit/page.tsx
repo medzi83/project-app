@@ -28,14 +28,14 @@ export default async function EditProjectPage({ params }: Props) {
     prisma.user.findMany({
       where: { role: "AGENT" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, email: true, categories: true }
+      select: { id: true, name: true, email: true, categories: true, color: true }
     }),
   ]);
 
   if (!project) notFound();
 
   // Filter agents based on project type
-  const agents = allAgents.filter(a => {
+  const filteredAgents = allAgents.filter(a => {
     if (project.type === "WEBSITE") {
       return a.categories.includes("WEBSEITE");
     } else if (project.type === "FILM") {
@@ -45,6 +45,16 @@ export default async function EditProjectPage({ params }: Props) {
     }
     return true; // fallback: show all agents
   });
+
+  // For website projects, expand with WT aliases
+  const { expandAgentsWithWTAliases, getEffectiveAgentId } = await import("@/lib/agent-helpers");
+  const agents = project.type === "WEBSITE"
+    ? expandAgentsWithWTAliases(filteredAgents)
+    : filteredAgents;
+
+  // Determine the effective agent ID to show in the dropdown
+  const isWTAssignment = project.website?.isWTAssignment ?? false;
+  const effectiveAgentId = getEffectiveAgentId(project.agentId, isWTAssignment);
 
   const w = project.website;
 
@@ -71,7 +81,7 @@ export default async function EditProjectPage({ params }: Props) {
           </Field>
 
           <Field label="Umsetzer (Agent)">
-            <select name="agentId" defaultValue={project.agentId ?? ""} className="w-full p-2 border rounded">
+            <select name="agentId" defaultValue={effectiveAgentId} className="w-full p-2 border rounded">
               <option value=""> keiner </option>
               {agents.map(a => (<option key={a.id} value={a.id}>{a.name ?? a.email}</option>))}
             </select>
@@ -92,7 +102,7 @@ export default async function EditProjectPage({ params }: Props) {
 
           <Field label="CMS">
             <select name="cms" defaultValue={w?.cms ?? "SHOPWARE"} className="w-full p-2 border rounded">
-              {["SHOPWARE","WORDPRESS","JOOMLA","LOGO","PRINT","CUSTOM","OTHER"].map(v=> <option key={v} value={v}>{v}</option>)}
+              {["SHOPWARE","JOOMLA","LOGO","PRINT","OTHER"].map(v=> <option key={v} value={v}>{v === "SHOPWARE" ? "Shop" : v}</option>)}
             </select>
           </Field>
 

@@ -18,7 +18,6 @@ export async function deleteFilmProject(formData: FormData) {
 
   await prisma.$transaction([
     prisma.projectNote.deleteMany({ where: { projectId: id } }),
-    prisma.projectWebsite.deleteMany({ where: { projectId: id } }),
     prisma.projectFilm.deleteMany({ where: { projectId: id } }),
     prisma.project.delete({ where: { id } }),
   ]);
@@ -34,12 +33,13 @@ export async function deleteAllFilmProjects() {
     throw new Error("FORBIDDEN");
   }
 
-  // Find all film project IDs first
+  // Only delete FILM projects, not WEBSITE projects
   const filmProjects = await prisma.project.findMany({
     where: {
-      film: {
-        isNot: null
-      }
+      OR: [
+        { type: "FILM" },
+        { film: { isNot: null } }
+      ]
     },
     select: { id: true }
   });
@@ -49,7 +49,6 @@ export async function deleteAllFilmProjects() {
   // Delete all related data in transaction
   await prisma.$transaction([
     prisma.projectNote.deleteMany({ where: { projectId: { in: projectIds } } }),
-    prisma.projectWebsite.deleteMany({ where: { projectId: { in: projectIds } } }),
     prisma.projectFilm.deleteMany({ where: { projectId: { in: projectIds } } }),
     prisma.project.deleteMany({ where: { id: { in: projectIds } } }),
   ]);

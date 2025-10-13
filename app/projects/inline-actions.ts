@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { deriveProjectStatus } from "@/lib/project-status";
+import { normalizeAgentIdForDB } from "@/lib/agent-helpers";
 import type {
   Prisma,
   WebsitePriority,
@@ -64,7 +65,17 @@ export async function updateInlineField(formData: FormData) {
     const projectKey = ProjectKey.parse(key);
     const nextAgentId = value && value !== "" ? value : null;
     if (projectKey === "agentId") {
-      await prisma.project.update({ where: { id }, data: { agentId: nextAgentId } });
+      const { baseAgentId, isWTAssignment } = normalizeAgentIdForDB(nextAgentId);
+
+      // Update both the project's agentId and the website's isWTAssignment flag
+      await prisma.$transaction([
+        prisma.project.update({ where: { id }, data: { agentId: baseAgentId } }),
+        prisma.projectWebsite.upsert({
+          where: { projectId: id },
+          update: { isWTAssignment },
+          create: { projectId: id, isWTAssignment },
+        }),
+      ]);
     }
   } else {
     const websiteKey = WebsiteKey.parse(key);

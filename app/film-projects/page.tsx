@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import FilmInlineCell from "@/components/FilmInlineCell";
+import FilmPreviewCell from "@/components/FilmPreviewCell";
 import DangerActionButton from "@/components/DangerActionButton";
 import { deleteFilmProject, deleteAllFilmProjects } from "./actions";
 
@@ -16,6 +17,7 @@ type Search = {
   agent?: string[];
   cutter?: string[];
   status?: string[];
+  pstatus?: string[];
   page?: string;
   ps?: string;
 };
@@ -53,12 +55,13 @@ const P_STATUS_LABELS: Record<FilmProjectStatus, string> = {
   MMW: "MMW",
 };
 
-type FilmStatus = "BEENDET" | "ONLINE" | "FINALVERSION" | "SCHNITT" | "DREH" | "SKRIPTFREIGABE" | "SKRIPT" | "SCOUTING";
+type FilmStatus = "BEENDET" | "ONLINE" | "FINALVERSION" | "VORABVERSION" | "SCHNITT" | "DREH" | "SKRIPTFREIGABE" | "SKRIPT" | "SCOUTING";
 
 const FILM_STATUS_LABELS: Record<FilmStatus, string> = {
   BEENDET: "Beendet",
   ONLINE: "Online",
   FINALVERSION: "Finalversion",
+  VORABVERSION: "Vorabversion",
   SCHNITT: "Schnitt",
   DREH: "Dreh",
   SKRIPTFREIGABE: "Skriptfreigabe",
@@ -104,12 +107,13 @@ const deriveFilmStatus = (film: {
   status?: FilmProjectStatus | null;
   onlineDate?: Date | string | null;
   finalToClient?: Date | string | null;
+  firstCutToClient?: Date | string | null;
   shootDate?: Date | string | null;
   scriptApproved?: Date | string | null;
   scriptToClient?: Date | string | null;
   scouting?: Date | string | null;
 }): FilmStatus => {
-  // Hierarchie: Beendet > Online > Finalversion > Schnitt > Dreh > Skriptfreigabe > Skript > Scouting
+  // Hierarchie: Beendet > Online > Finalversion > Vorabversion > Schnitt > Dreh > Skriptfreigabe > Skript > Scouting
 
   // Beendet - P-Status auf beendet
   if (film.status === "BEENDET") return "BEENDET";
@@ -119,6 +123,9 @@ const deriveFilmStatus = (film: {
 
   // Finalversion - Finalversion an Kunden
   if (film.finalToClient) return "FINALVERSION";
+
+  // Vorabversion - Datum bei Vorabversion an Kunden
+  if (film.firstCutToClient) return "VORABVERSION";
 
   // Schnitt - Drehtermin-Datum in Vergangenheit
   if (isInPast(film.shootDate)) return "SCHNITT";
@@ -151,6 +158,48 @@ const labelForPStatus = (value?: FilmProjectStatus | null) => {
   return P_STATUS_LABELS[value] ?? value;
 };
 
+const toDate = (value?: Date | string | null) => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const isOlderThan4Weeks = (value: Date | null | undefined) => {
+  if (!value) return false;
+  const fourWeeksAgo = new Date();
+  fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+  return value.getTime() < fourWeeksAgo.getTime();
+};
+
+const relevantDateForStatus = (
+  film: NonNullable<Awaited<ReturnType<typeof loadFilmProjects>>[number]["film"]>,
+  status: FilmStatus,
+  previewDate?: Date | null,
+) => {
+  switch (status) {
+    case "SCOUTING":
+      return toDate(film.scouting) ?? toDate(film.contractStart);
+    case "SKRIPT":
+      return toDate(film.scouting);
+    case "SKRIPTFREIGABE":
+      return toDate(film.scriptToClient);
+    case "DREH":
+      return toDate(film.scriptApproved);
+    case "SCHNITT":
+      return toDate(film.shootDate);
+    case "VORABVERSION":
+      return toDate(previewDate);
+    case "FINALVERSION":
+      return toDate(film.finalToClient);
+    case "ONLINE":
+      return toDate(film.onlineDate);
+    case "BEENDET":
+      return toDate(film.onlineDate) ?? toDate(film.lastContact);
+    default:
+      return null;
+  }
+};
+
 const SCOPE_OPTIONS = (Object.keys(SCOPE_LABELS) as FilmScope[]).map((value) => ({
   value,
   label: SCOPE_LABELS[value],
@@ -181,12 +230,26 @@ type FilmProjectRow = {
   shootDate: string;
   firstCutToClient: string;
   finalToClient: string;
+  finalLinkLabel: string;
+  finalLinkHref: string;
   onlineDate: string;
+  primaryLinkHref: string;
+  primaryLinkLabel: string;
   lastContact: string;
   filmStatus: string;
+  filmStatusKey: FilmStatus;
   pStatus: string;
   reminderAt: string;
   note: string;
+  isStale: boolean;
+};
+
+const mkLinkInfo = (value?: string | null, label?: string) => {
+  if (!value) return { label: "", href: "" };
+  const trimmed = value.trim();
+  if (!trimmed) return { label: "", href: "" };
+  const href = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return { label: label ?? trimmed.replace(/^https?:\/\//i, "").trim(), href };
 };
 
 const buildRows = (projects: Awaited<ReturnType<typeof loadFilmProjects>>): FilmProjectRow[] => {
@@ -196,15 +259,37 @@ const buildRows = (projects: Awaited<ReturnType<typeof loadFilmProjects>>): Film
     const cutterName = film?.cutter?.name?.trim();
     const noteText = film?.note?.trim() ?? project.important?.trim();
 
-    const derivedStatus = film ? deriveFilmStatus({
+    // Get latest preview version or fall back to firstCutToClient
+    const latestPreview = film?.previewVersions?.[0];
+    const previewDate = latestPreview?.sentDate ?? film?.firstCutToClient;
+    const previewDisplay = latestPreview
+      ? `${formatDate(latestPreview.sentDate)} (v${latestPreview.version})`
+      : formatDate(film?.firstCutToClient ?? undefined);
+
+    const derivedStatus: FilmStatus = film ? deriveFilmStatus({
       status: film.status,
       onlineDate: film.onlineDate,
       finalToClient: film.finalToClient,
+      firstCutToClient: previewDate,
       shootDate: film.shootDate,
       scriptApproved: film.scriptApproved,
       scriptToClient: film.scriptToClient,
       scouting: film.scouting,
     }) : "SCOUTING";
+
+    const statusDate =
+      film ? relevantDateForStatus(film, derivedStatus, toDate(previewDate)) : null;
+    const lastContactDate = toDate(film?.lastContact);
+    const effectiveDate =
+      lastContactDate && (!statusDate || lastContactDate > statusDate)
+        ? lastContactDate
+        : statusDate;
+    const isActiveFilm = !film?.status || film.status === "AKTIV";
+    const isStale = isActiveFilm && isOlderThan4Weeks(effectiveDate);
+
+    const finalLinkInfo = mkLinkInfo(film?.finalLink, film?.finalLink ? "🎬" : undefined);
+    const onlineLinkSource = film?.onlineLink || (film?.onlineDate ? film?.finalLink : null);
+    const onlineLinkInfo = mkLinkInfo(onlineLinkSource, onlineLinkSource ? "🎬" : undefined);
 
     return {
       id: project.id,
@@ -219,14 +304,20 @@ const buildRows = (projects: Awaited<ReturnType<typeof loadFilmProjects>>): Film
       scriptToClient: formatDate(film?.scriptToClient ?? undefined),
       scriptApproved: formatDate(film?.scriptApproved ?? undefined),
       shootDate: formatDate(film?.shootDate ?? undefined),
-      firstCutToClient: formatDate(film?.firstCutToClient ?? undefined),
+      firstCutToClient: previewDisplay,
       finalToClient: formatDate(film?.finalToClient ?? undefined),
+      finalLinkLabel: finalLinkInfo.label,
+      finalLinkHref: finalLinkInfo.href,
       onlineDate: formatDate(film?.onlineDate ?? undefined),
+      primaryLinkLabel: onlineLinkInfo.label,
+      primaryLinkHref: onlineLinkInfo.href,
       lastContact: formatDate(film?.lastContact ?? undefined),
       filmStatus: FILM_STATUS_LABELS[derivedStatus],
+      filmStatusKey: derivedStatus,
       pStatus: labelForPStatus(film?.status ?? undefined),
       reminderAt: formatDate(film?.reminderAt ?? undefined),
       note: noteText && noteText.length > 0 ? noteText : "-",
+      isStale,
     };
   });
 };
@@ -236,6 +327,7 @@ async function loadFilmProjects(
   agents?: string[],
   cutters?: string[],
   filmStatuses?: string[],
+  pStatuses?: string[],
   orderBy?: Prisma.ProjectOrderByWithRelationInput[]
 ) {
   const whereConditions: Prisma.ProjectWhereInput[] = [
@@ -279,6 +371,16 @@ async function loadFilmProjects(
     }
   }
 
+  if (pStatuses && pStatuses.length > 0) {
+    whereConditions.push({
+      film: {
+        is: {
+          status: { in: pStatuses as FilmProjectStatus[] }
+        }
+      }
+    });
+  }
+
   const where: Prisma.ProjectWhereInput = whereConditions.length === 1
     ? whereConditions[0]
     : { AND: whereConditions };
@@ -288,11 +390,15 @@ async function loadFilmProjects(
     where,
     orderBy: orderBy ?? [{ client: { name: "asc" } }, { title: "asc" }],
     include: {
-      client: { select: { id: true, name: true, customerNo: true } },
+      client: { select: { id: true, name: true, customerNo: true, workStopped: true, finished: true } },
       film: {
         include: {
           filmer: { select: { id: true, name: true, color: true } },
           cutter: { select: { id: true, name: true, color: true } },
+          previewVersions: {
+            orderBy: { sentDate: 'desc' },
+            take: 1,
+          },
         },
       },
     },
@@ -301,10 +407,14 @@ async function loadFilmProjects(
   // Filter by derived film status if requested
   if (filmStatuses && filmStatuses.length > 0) {
     projects = projects.filter((project) => {
+      const latestPreview = project.film?.previewVersions?.[0];
+      const previewDate = latestPreview?.sentDate ?? project.film?.firstCutToClient;
+
       const derivedStatus = deriveFilmStatus({
         status: project.film?.status,
         onlineDate: project.film?.onlineDate,
         finalToClient: project.film?.finalToClient,
+        firstCutToClient: previewDate,
         shootDate: project.film?.shootDate,
         scriptApproved: project.film?.scriptApproved,
         scriptToClient: project.film?.scriptToClient,
@@ -378,6 +488,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
     agent: arr(spRaw.agent),
     cutter: arr(spRaw.cutter),
     status: arr(spRaw.status),
+    pstatus: arr(spRaw.pstatus),
     page: str(spRaw.page) ?? "1",
     ps: str(spRaw.ps) ?? "50",
   };
@@ -397,7 +508,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
 
   // Load all matching film projects (with status filter applied)
   const [allFilmProjects, allAgents] = await Promise.all([
-    loadFilmProjects(sp.q, sp.agent, sp.cutter, sp.status, orderBy),
+    loadFilmProjects(sp.q, sp.agent, sp.cutter, sp.status, sp.pstatus, orderBy),
     prisma.user.findMany({
       where: { role: "AGENT", active: true },
       orderBy: { name: "asc" },
@@ -429,7 +540,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
   const mkPageHref = (p: number) => makePageHref({ current: sp, page: p });
   const mkPageSizeHref = (s: number) => makePageSizeHref({ current: sp, size: s });
 
-  const FILM_STATUSES: FilmStatus[] = ["SCOUTING", "SKRIPT", "SKRIPTFREIGABE", "DREH", "SCHNITT", "FINALVERSION", "ONLINE", "BEENDET"];
+  const FILM_STATUSES: FilmStatus[] = ["SCOUTING", "SKRIPT", "SKRIPTFREIGABE", "DREH", "SCHNITT", "VORABVERSION", "FINALVERSION", "ONLINE", "BEENDET"];
 
   const renderPagination = (extraClass?: string) => {
     const className = ["flex flex-wrap items-center gap-3 text-sm text-gray-600", extraClass].filter(Boolean).join(" ");
@@ -542,6 +653,25 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
               </div>
             </details>
 
+            <details className="relative w-44">
+              <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-white cursor-pointer select-none shadow-sm [&::-webkit-details-marker]:hidden">
+                <span>P-Status</span>
+                <span className="opacity-70">
+                  {sp.pstatus && sp.pstatus.length ? `${sp.pstatus.length} ausgewählt` : "Alle"}
+                </span>
+              </summary>
+              <div className="absolute left-0 z-10 mt-1 w-52 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  {P_STATUS_OPTIONS.map((option) => (
+                    <label key={option.value} className="inline-flex items-center gap-2">
+                      <input type="checkbox" name="pstatus" value={option.value} defaultChecked={sp.pstatus?.includes(option.value)} />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </details>
+
             <div className="flex flex-col gap-1 w-36 shrink-0">
               <label className="text-xs uppercase tracking-wide text-gray-500">Reihenfolge</label>
               <select name="dir" defaultValue={sp.dir} className="px-2 py-1 text-xs border rounded">
@@ -602,10 +732,44 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 const cutterBadgeClass = hasCutter ? (film?.cutter?.color ? AGENT_BADGE_BASE_CLASS : AGENT_BADGE_EMPTY_CLASS) : undefined;
                 const cutterBadgeStyle = hasCutter ? agentBadgeStyle(film?.cutter?.color) : undefined;
 
+                const isNotActive = film?.status && film.status !== "AKTIV" && film.status !== "BEENDET";
+
+                const rowClasses = ["border-t"];
+                if (row.isStale) rowClasses.push("bg-red-50");
+
                 return (
-                  <tr key={project.id} className="border-t">
-                    <td className="font-semibold text-gray-900">{row.filmStatus}</td>
-                    <td className="font-mono text-xs text-gray-600">{row.customerNo}</td>
+                  <tr key={project.id} className={rowClasses.join(" ")}>
+                    <td className="font-semibold text-gray-900">
+                      <span className="inline-flex items-center gap-1">
+                        {row.primaryLinkHref && (
+                          <a
+                            href={row.primaryLinkHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-50 text-xs hover:bg-blue-100"
+                            title="Zum Film"
+                          >
+                            {row.primaryLinkLabel || "🎬"}
+                          </a>
+                        )}
+                        {row.filmStatus}
+                        {isNotActive && (
+                          <span className="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-yellow-800 bg-yellow-200 rounded-full cursor-help" title="Achtung, Projektstatus beachten">
+                            !
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="font-mono text-xs text-gray-600">
+                      <div className="flex flex-col gap-1">
+                        <span>{row.customerNo}</span>
+                        {project.client?.workStopped && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-600 text-white">
+                            ARBEITSSTOPP
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="font-medium text-gray-900">{row.clientName}</td>
                     <td>
                       <FilmInlineCell
@@ -706,12 +870,11 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                       />
                     </td>
                     <td>
-                      <FilmInlineCell
-                        id={project.id}
-                        name="firstCutToClient"
-                        type="date"
+                      <FilmPreviewCell
+                        projectId={project.id}
                         display={row.firstCutToClient}
-                        value={film?.firstCutToClient?.toISOString() ?? null}
+                        currentVersion={film?.previewVersions?.[0]?.version ?? null}
+                        currentLink={film?.previewVersions?.[0]?.link ?? null}
                         canEdit={canEdit}
                       />
                     </td>
@@ -722,6 +885,15 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         type="date"
                         display={row.finalToClient}
                         value={film?.finalToClient?.toISOString() ?? null}
+                        secondaryDisplay={row.finalLinkLabel}
+                        secondaryHref={row.finalLinkHref}
+                        extraField={{
+                          name: "finalLink",
+                          type: "url",
+                          value: film?.finalLink ?? "",
+                          label: "Finalversion-Link",
+                          placeholder: "https://domain.tld/film",
+                        }}
                         canEdit={canEdit}
                       />
                     </td>
@@ -732,6 +904,13 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         type="date"
                         display={row.onlineDate}
                         value={film?.onlineDate?.toISOString() ?? null}
+                        extraField={{
+                          name: "onlineLink",
+                          type: "url",
+                          value: film?.onlineLink ?? film?.finalLink ?? "",
+                          label: "Hauptlink (Online)",
+                          placeholder: "https://domain.tld/film",
+                        }}
                         canEdit={canEdit}
                       />
                     </td>
@@ -779,7 +958,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                       />
                     </td>
                     <td>
-                      <Link href={`/projects/${project.id}`} className="text-blue-600 underline">
+                      <Link href={`/film-projects/${project.id}`} className="text-blue-600 underline">
                         Details
                       </Link>
                     </td>
@@ -817,13 +996,17 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
 
 function makeSortHref({ current, key }: { current: Search; key: string }) {
   const p = new URLSearchParams();
-  const nextDir: "asc" | "desc" = current.sort === key ? (current.dir === "asc" ? "desc" : "asc") : "asc";
+  // Date columns should default to desc (newest first), others to asc
+  const dateColumns = ["contractStart", "scouting", "scriptToClient", "scriptApproved", "shootDate", "firstCutToClient", "finalToClient", "onlineDate", "lastContact", "reminderAt", "updatedAt", "createdAt"];
+  const defaultDir: "asc" | "desc" = dateColumns.includes(key) ? "desc" : "asc";
+  const nextDir: "asc" | "desc" = current.sort === key ? (current.dir === "asc" ? "desc" : "asc") : defaultDir;
   p.set("sort", key);
   p.set("dir", nextDir);
   if (current.q) p.set("q", current.q);
   if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);
   if (current.cutter && current.cutter.length) for (const v of current.cutter) p.append("cutter", v);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
+  if (current.pstatus && current.pstatus.length) for (const v of current.pstatus) p.append("pstatus", v);
   if (current.ps) p.set("ps", current.ps);
   if (current.page) p.set("page", current.page);
   return `/film-projects?${p.toString()}`;
@@ -837,6 +1020,7 @@ function makePageHref({ current, page }: { current: Search; page: number }) {
   if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);
   if (current.cutter && current.cutter.length) for (const v of current.cutter) p.append("cutter", v);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
+  if (current.pstatus && current.pstatus.length) for (const v of current.pstatus) p.append("pstatus", v);
   if (current.ps) p.set("ps", current.ps);
   p.set("page", String(page));
   return `/film-projects?${p.toString()}`;
@@ -850,6 +1034,7 @@ function makePageSizeHref({ current, size }: { current: Search; size: number }) 
   if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);
   if (current.cutter && current.cutter.length) for (const v of current.cutter) p.append("cutter", v);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
+  if (current.pstatus && current.pstatus.length) for (const v of current.pstatus) p.append("pstatus", v);
   p.set("ps", String(size));
   // Reset to page 1 when changing page size
   return `/film-projects?${p.toString()}`;

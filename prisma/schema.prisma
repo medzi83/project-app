@@ -30,21 +30,46 @@ model User {
 }
 
 model Client {
-  id         String    @id @default(cuid())
-  name       String
-  contact    String?
-  phone      String?
-  notes      String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  customerNo String?   @unique
-  serverId   String?
-  server     Server?   @relation(fields: [serverId], references: [id])
-  projects   Project[]
-  users      User[]
+  id          String    @id @default(cuid())
+  name        String
+  contact     String?
+  phone       String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  customerNo  String?   @unique
+  agencyId    String?
+  serverId    String?
+  workStopped Boolean   @default(false)
+  finished    Boolean   @default(false)
+  server      Server?   @relation(fields: [serverId], references: [id])
+  agency      Agency?   @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  projects    Project[]
+  users       User[]
 
   @@index([name])
+  @@index([agencyId])
   @@index([serverId])
+}
+
+model Agency {
+  id            String           @id @default(cuid())
+  name          String
+  contactName   String?
+  contactEmail  String?
+  contactPhone  String?
+  street        String?
+  postalCode    String?
+  city          String?
+  country       String?
+  website       String?
+  notes         String?
+  logoPath      String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  clients       Client[]
+  emailSignatures EmailSignature[]
+  mailServers   MailServer[]
 }
 
 model Project {
@@ -62,6 +87,8 @@ model Project {
   notes     ProjectNote[]
   website   ProjectWebsite?
   film      ProjectFilm?
+  emailQueue EmailQueue[]
+  emailLogs  EmailLog[]
 
   @@index([clientId, status])
   @@index([agentId])
@@ -86,6 +113,7 @@ model ProjectWebsite {
   note           String?
   demoLink       String?
   materialStatus MaterialStatus   @default(ANGEFORDERT)
+  isWTAssignment Boolean          @default(false)
   project        Project          @relation(fields: [projectId], references: [id])
 }
 
@@ -102,19 +130,35 @@ model ProjectFilm {
   shootDate        DateTime?
   firstCutToClient DateTime?
   finalToClient    DateTime?
+  finalLink        String?
   onlineDate       DateTime?
+  onlineLink       String?
   lastContact      DateTime?
   status           FilmProjectStatus  @default(AKTIV)
   reminderAt       DateTime?
   note             String?
-  project          Project           @relation(fields: [projectId], references: [id])
-  filmer           User?             @relation("FilmProjectFilmer", fields: [filmerId], references: [id])
-  cutter           User?             @relation("FilmProjectCutter", fields: [cutterId], references: [id])
+  project          Project            @relation(fields: [projectId], references: [id])
+  filmer           User?              @relation("FilmProjectFilmer", fields: [filmerId], references: [id])
+  cutter           User?              @relation("FilmProjectCutter", fields: [cutterId], references: [id])
+  previewVersions  FilmPreviewVersion[]
 
   @@index([status])
   @@index([filmerId])
   @@index([cutterId])
   @@index([reminderAt])
+}
+
+model FilmPreviewVersion {
+  id          String      @id @default(cuid())
+  projectId   String
+  version     Int
+  sentDate    DateTime
+  link        String      @default("")
+  createdAt   DateTime    @default(now())
+  project     ProjectFilm @relation(fields: [projectId], references: [projectId], onDelete: Cascade)
+
+  @@unique([projectId, version])
+  @@index([projectId, sentDate])
 }
 
 model ProjectNote {
@@ -141,6 +185,119 @@ model Server {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   clients         Client[]
+}
+
+model MailServer {
+  id         String       @id @default(cuid())
+  name       String
+  host       String
+  port       Int          @default(587)
+  username   String?
+  password   String?
+  fromEmail  String
+  fromName   String?
+  useTls     Boolean      @default(true)
+  notes      String?
+  agencyId   String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  agency     Agency?      @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  emailQueue EmailQueue[]
+  emailLogs  EmailLog[]
+
+  @@index([agencyId])
+  @@index([name])
+}
+
+model EmailTemplate {
+  id        String         @id @default(cuid())
+  title     String
+  subject   String
+  body      String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  triggers  EmailTrigger[]
+
+  @@unique([title])
+  @@index([createdAt])
+}
+
+model EmailSignature {
+  key       String   @id
+  agencyId  String?
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  agency    Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+}
+
+model EmailTrigger {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  active      Boolean           @default(true)
+  triggerType EmailTriggerType
+  projectType ProjectType?
+  conditions  Json
+  delayDays   Int?
+  delayType   DelayType?
+  templateId  String
+  template    EmailTemplate     @relation(fields: [templateId], references: [id])
+  recipientConfig Json
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  queuedEmails EmailQueue[]
+  sentLogs     EmailLog[]
+
+  @@index([active, triggerType])
+  @@index([templateId])
+}
+
+model EmailQueue {
+  id          String        @id @default(cuid())
+  triggerId   String
+  trigger     EmailTrigger  @relation(fields: [triggerId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scheduledFor DateTime
+  status       QueueStatus   @default(PENDING)
+  toEmail     String
+  ccEmails    String?
+  subject     String
+  body        String
+  mailServerId String?
+  mailServer   MailServer?   @relation(fields: [mailServerId], references: [id], onDelete: SetNull)
+  attempts    Int           @default(0)
+  lastAttempt DateTime?
+  sentAt      DateTime?
+  error       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, scheduledFor])
+  @@index([projectId])
+  @@index([triggerId])
+}
+
+model EmailLog {
+  id          String        @id @default(cuid())
+  triggerId   String?
+  trigger     EmailTrigger? @relation(fields: [triggerId], references: [id], onDelete: SetNull)
+  projectId   String?
+  project     Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  toEmail     String
+  ccEmails    String?
+  subject     String
+  body        String
+  sentAt      DateTime      @default(now())
+  success     Boolean       @default(true)
+  error       String?
+  mailServerId String?
+  mailServer   MailServer?  @relation(fields: [mailServerId], references: [id], onDelete: SetNull)
+
+  @@index([sentAt])
+  @@index([projectId])
+  @@index([triggerId])
 }
 enum Role {
   ADMIN
@@ -222,4 +379,25 @@ enum AgentCategory {
   WEBSEITE
   FILM
   SOCIALMEDIA
+}
+
+enum EmailTriggerType {
+  DATE_FIELD_SET
+  DATE_REACHED
+  CONDITION_MET
+  MANUAL
+}
+
+enum DelayType {
+  BEFORE
+  AFTER
+  EXACT
+}
+
+enum QueueStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  CANCELLED
 }

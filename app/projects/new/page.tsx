@@ -1,4 +1,4 @@
-Ôªøimport Link from "next/link";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
@@ -24,7 +24,7 @@ export default async function NewProjectPage({ searchParams }: Props) {
   const clientIdFromQuery = str(params.cid);
   const clientSearch = str(params.clientSearch);
 
-  const [clients, agents] = await Promise.all([
+  const [clients, agents, agencies] = await Promise.all([
     prisma.client.findMany({
       where: clientSearch
         ? {
@@ -39,7 +39,11 @@ export default async function NewProjectPage({ searchParams }: Props) {
     prisma.user.findMany({
       where: { role: "AGENT", active: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, email: true, categories: true }
+      select: { id: true, name: true, email: true, categories: true, color: true }
+    }),
+    prisma.agency.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -51,11 +55,16 @@ export default async function NewProjectPage({ searchParams }: Props) {
   const websiteAgents = agents.filter(a => a.categories.includes("WEBSEITE"));
   const filmAgents = agents.filter(a => a.categories.includes("FILM"));
 
+  // For website projects: Include WT aliases
+  const { expandAgentsWithWTAliases } = await import("@/lib/agent-helpers");
+  const websiteAgentsExpanded = expandAgentsWithWTAliases(websiteAgents);
+
   const websiteAgentOptions: Option[] = [
     { value: "", label: "- kein Agent -" },
-    ...websiteAgents.map((a) => ({ value: a.id, label: a.name ?? a.email ?? "" })),
+    ...websiteAgentsExpanded.map((a) => ({ value: a.id, label: a.name ?? a.email ?? "" })),
   ];
 
+  // For film projects: Only base agents (no WT aliases)
   const filmAgentOptions: Option[] = [
     { value: "", label: "- kein Agent -" },
     ...filmAgents.map((a) => ({ value: a.id, label: a.name ?? a.email ?? "" })),
@@ -72,7 +81,7 @@ export default async function NewProjectPage({ searchParams }: Props) {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Projekt anlegen</h1>
         <p className="text-sm text-muted-foreground">
-          Lege bei Bedarf zuerst einen Kunden an, w√§hle ihn anschlie√üend aus und erstelle danach das gew√ºnschte Projekt.
+          Lege bei Bedarf zuerst einen Kunden an, w‰hle ihn anschlieﬂend aus und erstelle danach das gew¸nschte Projekt.
         </p>
       </header>
 
@@ -105,6 +114,17 @@ export default async function NewProjectPage({ searchParams }: Props) {
               <span className="text-xs uppercase tracking-wide text-muted-foreground">Telefon</span>
               <input name="phone" className="rounded border p-2" placeholder="optional" />
             </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Agentur</span>
+              <select name="agencyId" className="rounded border p-2">
+                <option value="">Keine Agentur</option>
+                {agencies.map((agency) => (
+                  <option key={agency.id} value={agency.id}>
+                    {agency.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="flex flex-col gap-1 md:col-span-2">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">Notiz</span>
               <textarea name="notes" rows={3} className="rounded border p-2" placeholder="optional" />
@@ -120,7 +140,7 @@ export default async function NewProjectPage({ searchParams }: Props) {
         <div className="border-b px-6 py-5">
           <h2 className="text-lg font-semibold">Projekt erfassen</h2>
           <p className="text-sm text-muted-foreground">
-            Kunde ausw√§hlen oder suchen und Projekttyp festlegen.
+            Kunde ausw‰hlen oder suchen und Projekttyp festlegen.
           </p>
         </div>
 
@@ -145,7 +165,7 @@ export default async function NewProjectPage({ searchParams }: Props) {
                 href={`/projects/new?${new URLSearchParams(clientIdFromQuery ? { cid: clientIdFromQuery } : {}).toString()}`}
                 className="text-sm underline"
               >
-                Zur√ºcksetzen
+                Zur¸cksetzen
               </Link>
             )}
           </form>
@@ -168,4 +188,3 @@ export default async function NewProjectPage({ searchParams }: Props) {
     </div>
   );
 }
-

@@ -6,7 +6,7 @@ import { createProject } from "./actions";
 type Option = { value: string; label: string };
 
 const PRIORITIES = ["NONE", "PRIO_1", "PRIO_2", "PRIO_3"] as const;
-const CMS = ["SHOPWARE", "WORDPRESS", "JOOMLA", "LOGO", "PRINT", "CUSTOM", "OTHER"] as const;
+const CMS = ["SHOPWARE", "JOOMLA", "LOGO", "PRINT", "OTHER"] as const;
 const PRODUCTION = ["NONE", "BEENDET", "MMW", "VOLLST_A_K"] as const;
 const SEO = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"] as const;
 const TEXTIT = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"] as const;
@@ -38,7 +38,7 @@ const PRIORITY_OPTIONS: Option[] = PRIORITIES.map((value) => ({
 }));
 const CMS_OPTIONS: Option[] = CMS.map((value) => ({
   value,
-  label: value,
+  label: value === "SHOPWARE" ? "Shop" : value,
 }));
 const PRODUCTION_OPTIONS: Option[] = PRODUCTION.map((value) => ({
   value,
@@ -290,6 +290,17 @@ export function UnifiedProjectForm({
           <DateField name="filmOnlineDate" label="Online" />
           <DateField name="lastContact" label="Letzter Kontakt" />
           <DateField name="reminderAt" label="Wiedervorlage am" />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">Finalversion-Link</span>
+            <input type="url" name="finalLink" className="rounded border p-2" placeholder="https://domain.tld/film" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">Hauptlink (Online)</span>
+            <input type="url" name="onlineLink" className="rounded border p-2" placeholder="https://domain.tld/live" />
+          </label>
         </div>
 
         <div className="grid gap-4">

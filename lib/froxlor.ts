@@ -71,28 +71,50 @@ export class FroxlorClient {
   ): Promise<FroxlorResponse<T>> {
     const apiUrl = `${this.config.url.replace(/\/$/, '')}/api.php`;
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        header: {
-          apikey: this.config.apiKey,
-          secret: this.config.apiSecret,
-        },
-        body: {
-          command,
-          params,
-        },
-      }),
-    });
+    // Create an AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          header: {
+            apikey: this.config.apiKey,
+            secret: this.config.apiSecret,
+          },
+          body: {
+            command,
+            params,
+          },
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('Froxlor API request timeout (10s)');
+        }
+        if (error.message.includes('fetch failed')) {
+          throw new Error(`Connection to ${apiUrl} failed - check URL and network`);
+        }
+      }
+      throw error;
     }
-
-    return await response.json();
   }
 
   /**

@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { deriveProjectStatus } from "@/lib/project-status";
+import { normalizeAgentIdForDB } from "@/lib/agent-helpers";
 import { requireRole } from "@/lib/authz";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -83,13 +84,16 @@ export async function updateWebsite(formData: FormData) {
   // cmsOther nur speichern, wenn cms OTHER oder CUSTOM ist
   const cmsOther = ["OTHER", "CUSTOM"].includes(data.cms) ? data.cmsOther : null;
 
+  // Normalize agent ID and get WT assignment flag
+  const { baseAgentId, isWTAssignment } = normalizeAgentIdForDB(data.agentId);
+
   // 1) Project (Titel/Status/Agent)
   await prisma.project.update({
     where: { id: data.projectId },
     data: {
       title: data.title,
       status: nextStatus,
-      agentId: data.agentId,
+      agentId: baseAgentId,
     },
   });
 
@@ -114,6 +118,7 @@ export async function updateWebsite(formData: FormData) {
       accessible: data.accessible,
       note: data.note,
       demoLink: data.demoLink,
+      isWTAssignment,
     },
     create: {
       projectId: data.projectId,
@@ -134,6 +139,7 @@ export async function updateWebsite(formData: FormData) {
       accessible: data.accessible,
       note: data.note,
       demoLink: data.demoLink,
+      isWTAssignment,
     },
   });
 

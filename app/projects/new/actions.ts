@@ -5,6 +5,7 @@ import type { FilmProjectStatus, ProjectStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { deriveProjectStatus } from "@/lib/project-status";
 import { getAuthSession } from "@/lib/authz";
+import { normalizeAgentIdForDB } from "@/lib/agent-helpers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -67,6 +68,7 @@ const ClientSchema = z.object({
   customerNo: z.string().optional().transform((v) => v?.trim() || null),
   contact: z.string().optional().transform((v) => v?.trim() || null),
   phone: z.string().optional().transform((v) => v?.trim() || null),
+  agencyId: z.string().optional().transform((v) => v?.trim() || null),
   notes: z.string().optional().transform((v) => v?.trim() || null),
 });
 
@@ -85,7 +87,13 @@ export async function createClient(formData: FormData) {
 
   let clientId: string;
   try {
-    const client = await prisma.client.create({ data: parsed.data });
+    const { agencyId, ...clientData } = parsed.data;
+    const client = await prisma.client.create({
+      data: {
+        ...clientData,
+        agencyId: agencyId || null,
+      },
+    });
     clientId = client.id;
   } catch (error: unknown) {
     const code = getPrismaErrorCode(error);
@@ -162,13 +170,15 @@ export async function createWebsiteProject(formData: FormData) {
     redirect(`${redirectBase}&projectError=${encodeURIComponent("Ausgewählter Kunde existiert nicht.")}`);
   }
 
+  const { baseAgentId, isWTAssignment } = normalizeAgentIdForDB(data.agentId);
+
   const project = await prisma.project.create({
     data: {
       title: data.title || "",
       type: "WEBSITE",
       status: nextStatus,
       clientId: data.clientId,
-      agentId: data.agentId,
+      agentId: baseAgentId,
       website: {
         create: {
           domain: data.domain,
@@ -188,6 +198,7 @@ export async function createWebsiteProject(formData: FormData) {
           accessible: data.accessible,
           note: data.note,
           demoLink: data.demoLink,
+          isWTAssignment,
         },
       },
     },
@@ -214,7 +225,9 @@ const FilmProjectSchema = z.object({
   shootDate: z.string().optional().transform(toDate),
   firstCutToClient: z.string().optional().transform(toDate),
   finalToClient: z.string().optional().transform(toDate),
+  finalLink: z.string().optional().transform((v) => v?.trim() || null),
   onlineDate: z.string().optional().transform(toDate),
+  onlineLink: z.string().optional().transform((v) => v?.trim() || null),
   lastContact: z.string().optional().transform(toDate),
   status: FilmStatus.default("AKTIV"),
   reminderAt: z.string().optional().transform(toDate),
@@ -239,6 +252,16 @@ export async function createFilmProject(formData: FormData) {
     redirect(`${redirectBase}&projectError=${encodeURIComponent(msg)}`);
   }
   const data = parsed.data;
+  const finalLink = data.finalLink ?? null;
+  if (data.finalToClient && !finalLink) {
+    const msg = "Finalversion-Link ist erforderlich, wenn eine Finalversion gesetzt wird.";
+    redirect(`${redirectBase}&projectError=${encodeURIComponent(msg)}`);
+  }
+  const resolvedOnlineLink = data.onlineLink ?? (data.onlineDate ? finalLink : null);
+  if (data.onlineDate && !resolvedOnlineLink) {
+    const msg = "Bitte einen Hauptlink hinterlegen, wenn ein Online-Datum gesetzt wird.";
+    redirect(`${redirectBase}&projectError=${encodeURIComponent(msg)}`);
+  }
 
   const client = await prisma.client.findUnique({ where: { id: data.clientId } });
   if (!client) {
@@ -247,13 +270,15 @@ export async function createFilmProject(formData: FormData) {
 
   const projectStatus = mapFilmStatusToProjectStatus(data.status);
 
+  const { baseAgentId } = normalizeAgentIdForDB(data.agentId);
+
   const project = await prisma.project.create({
     data: {
       title: data.title || "",
       type: "FILM",
       status: projectStatus,
       clientId: data.clientId,
-      agentId: data.agentId,
+      agentId: baseAgentId,
       film: {
         create: {
           scope: data.scope,
@@ -267,7 +292,9 @@ export async function createFilmProject(formData: FormData) {
           shootDate: data.shootDate,
           firstCutToClient: data.firstCutToClient,
           finalToClient: data.finalToClient,
+          finalLink,
           onlineDate: data.onlineDate,
+          onlineLink: resolvedOnlineLink,
           lastContact: data.lastContact,
           status: data.status,
           reminderAt: data.reminderAt,
@@ -321,7 +348,9 @@ const UnifiedProjectSchema = z.object({
   shootDate: z.string().optional().transform(toDate),
   firstCutToClient: z.string().optional().transform(toDate),
   finalToClient: z.string().optional().transform(toDate),
+  finalLink: z.string().optional().transform((v) => v?.trim() || null),
   filmOnlineDate: z.string().optional().transform(toDate),
+  onlineLink: z.string().optional().transform((v) => v?.trim() || null),
   lastContact: z.string().optional().transform(toDate),
   status: FilmStatus.optional(),
   reminderAt: z.string().optional().transform(toDate),
@@ -336,24 +365,29 @@ export async function createProject(formData: FormData) {
 
   const entries = Object.fromEntries(formData.entries());
   const cid = typeof entries.clientId === "string" ? entries.clientId : undefined;
+  type TabKey = "website" | "film" | "both";
+  const requestedTypeRaw = typeof entries.projectType === "string" ? entries.projectType : undefined;
+  const defaultTab: TabKey =
+    requestedTypeRaw === "FILM" ? "film" : requestedTypeRaw === "BOTH" ? "both" : "website";
+  const sendError = (msg: string, tab: "website" | "film" | "both") => {
+    const params = new URLSearchParams();
+    params.set("tab", tab);
+    if (cid) params.set("cid", cid);
+    params.set("projectError", msg);
+    redirect(`/projects/new?${params.toString()}`);
+  };
 
   const parsed = UnifiedProjectSchema.safeParse(entries);
   if (!parsed.success) {
     const msg = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
-    const params = new URLSearchParams();
-    if (cid) params.set("cid", cid);
-    params.set("projectError", msg);
-    redirect(`/projects/new?${params.toString()}`);
+    sendError(msg, defaultTab);
   }
 
   const data = parsed.data;
 
   const client = await prisma.client.findUnique({ where: { id: data.clientId } });
   if (!client) {
-    const params = new URLSearchParams();
-    if (cid) params.set("cid", cid);
-    params.set("projectError", "Ausgewählter Kunde existiert nicht.");
-    redirect(`/projects/new?${params.toString()}`);
+    sendError("Ausgewählter Kunde existiert nicht.", defaultTab);
   }
 
   const projectType = data.projectType;
@@ -368,6 +402,7 @@ export async function createProject(formData: FormData) {
     });
 
     const cmsOther = (data.cms && ["OTHER", "CUSTOM"].includes(data.cms)) ? data.cmsOther : null;
+    const { baseAgentId, isWTAssignment } = normalizeAgentIdForDB(data.agentId);
 
     const project = await prisma.project.create({
       data: {
@@ -375,7 +410,7 @@ export async function createProject(formData: FormData) {
         type: "WEBSITE",
         status: nextStatus,
         clientId: data.clientId,
-        agentId: data.agentId,
+        agentId: baseAgentId,
         website: {
           create: {
             domain: data.domain,
@@ -395,6 +430,7 @@ export async function createProject(formData: FormData) {
             accessible: data.accessible ?? null,
             note: data.websiteNote,
             demoLink: data.demoLink,
+            isWTAssignment,
           },
         },
       },
@@ -402,9 +438,22 @@ export async function createProject(formData: FormData) {
 
     revalidatePath("/projects");
     revalidatePath(`/projects/${project.id}`);
-    redirect(`/projects/${project.id}`);
+    revalidatePath(`/clients/${project.clientId}`);
+    redirect(`/clients/${project.clientId}`);
   } else if (projectType === "FILM") {
     const projectStatus = mapFilmStatusToProjectStatus(data.status ?? "AKTIV");
+
+    const { baseAgentId } = normalizeAgentIdForDB(data.agentId);
+    // Wenn kein Filmer explizit angegeben ist, verwende den Agent als Filmer
+    const filmerId = data.filmerId || baseAgentId;
+    const filmFinalLink = data.finalLink ?? null;
+    if (data.finalToClient && !filmFinalLink) {
+      sendError("Finalversion-Link ist erforderlich, wenn eine Finalversion gesetzt wird.", "film");
+    }
+    const filmOnlineLink = data.onlineLink ?? (data.filmOnlineDate ? filmFinalLink : null);
+    if (data.filmOnlineDate && !filmOnlineLink) {
+      sendError("Bitte einen Hauptlink hinterlegen, wenn ein Online-Datum gesetzt wird.", "film");
+    }
 
     const project = await prisma.project.create({
       data: {
@@ -412,12 +461,12 @@ export async function createProject(formData: FormData) {
         type: "FILM",
         status: projectStatus,
         clientId: data.clientId,
-        agentId: data.agentId,
+        agentId: baseAgentId,
         film: {
           create: {
             scope: data.scope ?? "FILM",
             priority: data.filmPriority ?? "NONE",
-            filmerId: data.filmerId,
+            filmerId: filmerId,
             cutterId: data.cutterId,
             contractStart: data.contractStart,
             scouting: data.scouting,
@@ -426,7 +475,9 @@ export async function createProject(formData: FormData) {
             shootDate: data.shootDate,
             firstCutToClient: data.firstCutToClient,
             finalToClient: data.finalToClient,
+            finalLink: filmFinalLink,
             onlineDate: data.filmOnlineDate,
+            onlineLink: filmOnlineLink,
             lastContact: data.lastContact,
             status: data.status ?? "AKTIV",
             reminderAt: data.reminderAt,
@@ -439,7 +490,8 @@ export async function createProject(formData: FormData) {
     revalidatePath("/projects");
     revalidatePath("/film-projects");
     revalidatePath(`/projects/${project.id}`);
-    redirect(`/projects/${project.id}`);
+    revalidatePath(`/clients/${project.clientId}`);
+    redirect(`/clients/${project.clientId}`);
   } else if (projectType === "BOTH") {
     // Bestimme den Status basierend auf Website-Daten, da das Projekt primär als Website geführt wird
     const nextStatus = deriveProjectStatus({
@@ -451,6 +503,18 @@ export async function createProject(formData: FormData) {
     });
 
     const cmsOther = (data.cms && ["OTHER", "CUSTOM"].includes(data.cms)) ? data.cmsOther : null;
+    const { baseAgentId, isWTAssignment } = normalizeAgentIdForDB(data.agentId);
+
+    // Wenn kein Filmer explizit angegeben ist, verwende den Agent als Filmer
+    const filmerId = data.filmerId || baseAgentId;
+    const filmFinalLink = data.finalLink ?? null;
+    if (data.finalToClient && !filmFinalLink) {
+      sendError("Finalversion-Link ist erforderlich, wenn eine Finalversion gesetzt wird.", "both");
+    }
+    const filmOnlineLink = data.onlineLink ?? (data.filmOnlineDate ? filmFinalLink : null);
+    if (data.filmOnlineDate && !filmOnlineLink) {
+      sendError("Bitte einen Hauptlink hinterlegen, wenn ein Online-Datum gesetzt wird.", "both");
+    }
 
     const project = await prisma.project.create({
       data: {
@@ -458,7 +522,7 @@ export async function createProject(formData: FormData) {
         type: "WEBSITE",
         status: nextStatus,
         clientId: data.clientId,
-        agentId: data.agentId,
+        agentId: baseAgentId,
         website: {
           create: {
             domain: data.domain,
@@ -478,13 +542,14 @@ export async function createProject(formData: FormData) {
             accessible: data.accessible ?? null,
             note: data.websiteNote,
             demoLink: data.demoLink,
+            isWTAssignment,
           },
         },
         film: {
           create: {
             scope: data.scope ?? "FILM",
             priority: data.filmPriority ?? "NONE",
-            filmerId: data.filmerId,
+            filmerId: filmerId,
             cutterId: data.cutterId,
             contractStart: data.contractStart,
             scouting: data.scouting,
@@ -493,7 +558,9 @@ export async function createProject(formData: FormData) {
             shootDate: data.shootDate,
             firstCutToClient: data.firstCutToClient,
             finalToClient: data.finalToClient,
+            finalLink: filmFinalLink,
             onlineDate: data.filmOnlineDate,
+            onlineLink: filmOnlineLink,
             lastContact: data.lastContact,
             status: data.status ?? "AKTIV",
             reminderAt: data.reminderAt,
@@ -506,10 +573,9 @@ export async function createProject(formData: FormData) {
     revalidatePath("/projects");
     revalidatePath("/film-projects");
     revalidatePath(`/projects/${project.id}`);
-    redirect(`/projects/${project.id}`);
+    revalidatePath(`/clients/${project.clientId}`);
+    redirect(`/clients/${project.clientId}`);
   }
 
   redirect("/projects");
 }
-
-

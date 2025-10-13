@@ -1,54 +1,44 @@
 import "./globals.css";
 import AppShell from "@/components/AppShell";
 import AuthSessionProvider from "@/components/AuthSessionProvider";
-import { getAuthSession } from "@/lib/authz";
+import { getAuthSession, getEffectiveUser } from "@/lib/authz";
 
 import { prisma } from "@/lib/prisma";
 import type { ReactNode } from "react";
-
-type ShellRole = "ADMIN" | "AGENT";
 
 type RootLayoutProps = {
   children: ReactNode;
 };
 
-type SessionUser = {
-  name?: string | null;
-  email?: string | null;
-  role?: string | null;
-  clientId?: string | null;
-};
-
-type AppSession = {
-  user: SessionUser;
-};
-
-function resolveShellRole(session?: AppSession | null): ShellRole | null {
-  if (!session?.user?.role) return null;
-  return session.user.role === "ADMIN" ? "ADMIN" : "AGENT";
-}
-
 export default async function RootLayout({ children }: RootLayoutProps) {
   const session = await getAuthSession();
   const hasSession = Boolean(session);
-  const resolvedRole = hasSession ? resolveShellRole(session as AppSession) ?? "AGENT" : null;
 
-  const shell = resolvedRole
+  // Get effective user (might be an agent in dev mode)
+  const effectiveUser = await getEffectiveUser();
+
+  // Use effective user role for shell (respects dev mode)
+  const effectiveRole = effectiveUser?.role === "ADMIN" ? "ADMIN" : effectiveUser?.role === "AGENT" ? "AGENT" : null;
+
+  const shell = effectiveRole
     ? {
-        name: session?.user?.name ?? session?.user?.email ?? "Unbekannt",
-        role: resolvedRole,
+        name: effectiveUser?.name ?? session?.user?.name ?? session?.user?.email ?? "Unbekannt",
+        role: effectiveRole,
       }
     : null;
 
-  const isPrivileged = resolvedRole === "ADMIN" || resolvedRole === "AGENT";
+  const isPrivileged = effectiveRole === "ADMIN" || effectiveRole === "AGENT";
   const counts = isPrivileged ? await loadCounts() : undefined;
+
+  // Load dev mode data if actual session user is admin (not effective user)
+  const devMode = session?.user?.role === "ADMIN" ? await loadDevModeData(effectiveUser) : undefined;
 
   return (
     <html lang="de">
       <body>
         <AuthSessionProvider session={session}>
           {shell ? (
-            <AppShell user={shell} counts={counts}>{children}</AppShell>
+            <AppShell user={shell} counts={counts} devMode={devMode}>{children}</AppShell>
           ) : (
             children
           )}
@@ -66,4 +56,27 @@ async function loadCounts() {
   ]);
 
   return { projectsOpen, projectsAll, agentsActive };
+}
+
+async function loadDevModeData(effectiveUser: Awaited<ReturnType<typeof getEffectiveUser>>) {
+  const agents = await prisma.user.findMany({
+    where: { role: "AGENT", active: true },
+    select: {
+      id: true,
+      name: true,
+      categories: true,
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return {
+    isDevMode: effectiveUser?.isDevMode ?? false,
+    currentViewUserId: effectiveUser?.isDevMode ? effectiveUser.id : null,
+    currentViewUserName: effectiveUser?.isDevMode ? effectiveUser.name : null,
+    availableAgents: agents.map((a) => ({
+      id: a.id,
+      name: a.name,
+      categories: a.categories,
+    })),
+  };
 }

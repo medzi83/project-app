@@ -46,6 +46,8 @@ export const authOptions = {
     async jwt({ token, user }: { token: Record<string, unknown>; user?: unknown }) {
       if (user) {
         const details = extractRoleAndClient(user);
+        const userId = typeof (user as { id?: unknown }).id === "string" ? (user as { id: string }).id : undefined;
+        if (userId) token.id = userId;
         if (details.role) {
           token.role = details.role;
         }
@@ -56,7 +58,9 @@ export const authOptions = {
     async session(params: { session: Session; token: Record<string, unknown> } & Record<string, unknown>): Promise<Session> {
       const { session, token } = params;
       const details = extractRoleAndClient(token);
+      const userId = typeof token.id === "string" ? token.id : undefined;
       if (session.user) {
+        if (userId) session.user.id = userId;
         session.user.role = details.role;
         session.user.clientId = details.clientId;
       }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 
@@ -49,17 +50,22 @@ export default async function ClientsPage({ searchParams }: Props) {
   const pageSize = psRaw === "100" ? 100 : 50;
   const skip = (page - 1) * pageSize;
   const searchQuery = typeof spRaw.search === "string" ? spRaw.search.trim() : "";
+  const agencyFilter = typeof spRaw.agency === "string" ? spRaw.agency : "";
 
-  const whereClause = searchQuery
-    ? {
-        OR: [
-          { name: { contains: searchQuery, mode: "insensitive" as const } },
-          { customerNo: { contains: searchQuery, mode: "insensitive" as const } },
-        ],
-      }
-    : undefined;
+  const filters: Prisma.ClientWhereInput = {};
+  if (searchQuery) {
+    filters.OR = [
+      { name: { contains: searchQuery, mode: "insensitive" } },
+      { customerNo: { contains: searchQuery, mode: "insensitive" } },
+    ];
+  }
+  if (agencyFilter) {
+    filters.agencyId = agencyFilter;
+  }
 
-  const [clients, total] = await Promise.all([
+  const whereClause = Object.keys(filters).length > 0 ? filters : undefined;
+
+  const [clients, total, agencies] = await Promise.all([
     prisma.client.findMany({
       where: whereClause,
       orderBy: { name: "asc" },
@@ -68,6 +74,7 @@ export default async function ClientsPage({ searchParams }: Props) {
       include: {
         _count: { select: { projects: true } },
         server: { select: { id: true, name: true, hostname: true } },
+        agency: { select: { id: true, name: true } },
         projects: {
           select: {
             type: true,
@@ -78,6 +85,10 @@ export default async function ClientsPage({ searchParams }: Props) {
       },
     }),
     prisma.client.count({ where: whereClause }),
+    prisma.agency.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
   ]);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : skip + 1;
@@ -99,7 +110,7 @@ export default async function ClientsPage({ searchParams }: Props) {
           </div>
         )}
         <div className="p-3 border-b">
-          <form method="get" className="flex items-center gap-3">
+          <form method="get" className="flex flex-wrap items-center gap-3">
             <input
               type="search"
               name="search"
@@ -107,13 +118,25 @@ export default async function ClientsPage({ searchParams }: Props) {
               placeholder="Suche nach Name oder Kundennummer..."
               className="flex-1 rounded border px-3 py-2 text-sm"
             />
+            <select
+              name="agency"
+              defaultValue={agencyFilter}
+              className="rounded border px-3 py-2 text-sm"
+            >
+              <option value="">Alle Agenturen</option>
+              {agencies.map((agency) => (
+                <option key={agency.id} value={agency.id}>
+                  {agency.name}
+                </option>
+              ))}
+            </select>
             <input type="hidden" name="ps" value={pageSize} />
             <button type="submit" className="rounded bg-black px-4 py-2 text-sm text-white">
               Suchen
             </button>
-            {searchQuery && (
+            {(searchQuery || agencyFilter) && (
               <a href="/clients" className="text-sm underline">
-                Zurücksetzen
+                Zuruecksetzen
               </a>
             )}
           </form>
@@ -121,12 +144,12 @@ export default async function ClientsPage({ searchParams }: Props) {
         <div className="flex items-center justify-between gap-2 p-3 border-b text-sm">
           <div className="text-gray-600">Zeige {from}–{to} von {total}</div>
           <div className="flex items-center gap-3">
-            <a className={pageSize===50?"font-semibold underline":"underline"} href={`?ps=50&page=1${searchQuery?`&search=${encodeURIComponent(searchQuery)}`:''}`}>50/Seite</a>
-            <a className={pageSize===100?"font-semibold underline":"underline"} href={`?ps=100&page=1${searchQuery?`&search=${encodeURIComponent(searchQuery)}`:''}`}>100/Seite</a>
+            <a className={pageSize===50?"font-semibold underline":"underline"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</a>
+            <a className={pageSize===100?"font-semibold underline":"underline"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</a>
             <span className="mx-2">|</span>
-            <a className={page===1?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery?`&search=${encodeURIComponent(searchQuery)}`:''}`}>Zurück</a>
+            <a className={page===1?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Zurueck</a>
             <span>Seite {page} / {totalPages}</span>
-            <a className={page>=totalPages?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery?`&search=${encodeURIComponent(searchQuery)}`:''}`}>Weiter</a>
+            <a className={page>=totalPages?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter</a>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -141,6 +164,7 @@ export default async function ClientsPage({ searchParams }: Props) {
                 )}
                 <th>Kd.-Nr.</th>
                 <th>Kunde</th>
+                <th>Agentur</th>
                 <th>Server</th>
                 <th>Kontakt</th>
                 <th>Telefon</th>
@@ -154,7 +178,7 @@ export default async function ClientsPage({ searchParams }: Props) {
             <tbody className="[&>tr>td]:px-3 [&>tr>td]:py-2">
               {clients.map((client) => {
                 const serviceState: Record<ServiceKey, boolean> = {
-                  website: client.projects.some((p) => p.website !== null),
+                  website: client.projects.some((p) => p.website !== null && p.website.cms !== "SHOPWARE"),
                   film: client.projects.some((p) => p.film !== null),
                   texte: client.projects.some((p) => hasContentService(p.website?.textit)),
                   seo: client.projects.some((p) => hasContentService(p.website?.seo)),
@@ -175,7 +199,24 @@ export default async function ClientsPage({ searchParams }: Props) {
                       </td>
                     )}
                     <td className="font-mono text-xs text-gray-600">{client.customerNo ?? "-"}</td>
-                    <td className="font-medium">{client.name}</td>
+                    <td className="font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        {client.name}
+                        {client.workStopped && (
+                          <Badge variant="destructive" className="text-xs">Arbeitsstopp</Badge>
+                        )}
+                        {client.finished && (
+                          <Badge className="bg-gray-600 hover:bg-gray-700 text-xs">Beendet</Badge>
+                        )}
+                      </span>
+                    </td>
+                    <td className="text-xs text-gray-600">
+                      {client.agency ? (
+                        <span>{client.agency.name}</span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
                     <td className="text-xs">
                       {client.server ? (
                         <Badge variant="outline" className="font-mono">
@@ -195,13 +236,33 @@ export default async function ClientsPage({ searchParams }: Props) {
                         phoneLabel
                       )
                     }</td>
-                    <td className="whitespace-nowrap">{
-                      client._count.projects === 0 ? (
+                    <td className="whitespace-nowrap">
+                      {client._count.projects === 0 ? (
                         <span>0</span>
                       ) : (
-                        <Link href={`/projects?client=${client.id}`} className="text-blue-600 hover:underline">
-                          {client._count.projects}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link href={`/projects?client=${client.id}`} className="text-blue-600 hover:underline">
+                            {client._count.projects}
+                          </Link>
+                          {client.projects.some(p => p.website) && (
+                            <Link
+                              href={`/projects?client=${client.id}`}
+                              className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 hover:bg-blue-200"
+                              title="Webseiten-Projekte"
+                            >
+                              W
+                            </Link>
+                          )}
+                          {client.projects.some(p => p.film) && (
+                            <Link
+                              href={`/film-projects?q=${encodeURIComponent(client.customerNo || client.name)}`}
+                              className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 hover:bg-purple-200"
+                              title="Film-Projekte"
+                            >
+                              F
+                            </Link>
+                          )}
+                        </div>
                       )
                     }</td>
                     <td className="space-y-1">
@@ -232,7 +293,7 @@ export default async function ClientsPage({ searchParams }: Props) {
               })}
               {clients.length === 0 && (
                 <tr>
-                  <td colSpan={isAdmin ? 11 : 10} className="py-8 text-center text-sm text-gray-500">
+                  <td colSpan={isAdmin ? 12 : 11} className="py-8 text-center text-sm text-gray-500">
                     Keine Kunden gefunden.
                   </td>
                 </tr>
@@ -244,12 +305,12 @@ export default async function ClientsPage({ searchParams }: Props) {
               Zeige {from}–{to} von {total}
             </div>
             <div className="flex items-center gap-3">
-              <a className={pageSize===50?"font-semibold underline":"underline"} href={`?ps=50&page=1${searchQuery?`&search=${encodeURIComponent(searchQuery)}`:''}`}>50/Seite</a>
-              <a className={pageSize===100?"font-semibold underline":"underline"} href={`?ps=100&page=1${searchQuery?`&search=${encodeURIComponent(searchQuery)}`:''}`}>100/Seite</a>
+              <a className={pageSize===50?"font-semibold underline":"underline"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</a>
+              <a className={pageSize===100?"font-semibold underline":"underline"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</a>
               <span className="mx-2">|</span>
-              <a className={page===1?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery?`&search=${encodeURIComponent(searchQuery)}`:''}`}>Zurück</a>
+              <a className={page===1?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Zurueck</a>
               <span>Seite {page} / {totalPages}</span>
-              <a className={page>=totalPages?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery?`&search=${encodeURIComponent(searchQuery)}`:''}`}>Weiter</a>
+              <a className={page>=totalPages?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter</a>
             </div>
             {isAdmin && (
               <ConfirmSubmit confirmText="Ausgewählte Kunden unwiderruflich löschen?" className="px-3 py-1.5 rounded border border-red-300 text-red-700 bg-red-50 hover:bg-red-100">
@@ -263,5 +324,3 @@ export default async function ClientsPage({ searchParams }: Props) {
     </div>
   );
 }
-
-
