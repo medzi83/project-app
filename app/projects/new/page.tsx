@@ -81,7 +81,7 @@ export default async function NewProjectPage({ searchParams }: Props) {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Projekt anlegen</h1>
         <p className="text-sm text-muted-foreground">
-          Lege bei Bedarf zuerst einen Kunden an, w‰hle ihn anschlieﬂend aus und erstelle danach das gew¸nschte Projekt.
+          Lege bei Bedarf zuerst einen Kunden an, w√§hle ihn anschlie√üend aus und erstelle danach das gew√ºnschte Projekt.
         </p>
       </header>
 
@@ -140,7 +140,7 @@ export default async function NewProjectPage({ searchParams }: Props) {
         <div className="border-b px-6 py-5">
           <h2 className="text-lg font-semibold">Projekt erfassen</h2>
           <p className="text-sm text-muted-foreground">
-            Kunde ausw‰hlen oder suchen und Projekttyp festlegen.
+            Kunde ausw√§hlen oder suchen und Projekttyp festlegen.
           </p>
         </div>
 
@@ -165,7 +165,7 @@ export default async function NewProjectPage({ searchParams }: Props) {
                 href={`/projects/new?${new URLSearchParams(clientIdFromQuery ? { cid: clientIdFromQuery } : {}).toString()}`}
                 className="text-sm underline"
               >
-                Zur¸cksetzen
+                Zur√ºcksetzen
               </Link>
             )}
           </form>
