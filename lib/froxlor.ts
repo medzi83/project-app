@@ -53,6 +53,7 @@ export type FroxlorDomain = {
   letsencrypt: string;
   phpsettingid: string;
   ssl_enabled: string;
+  deactivated?: string;
   // Add more fields as needed
 };
 
