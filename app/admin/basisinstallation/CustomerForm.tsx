@@ -52,6 +52,28 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
   const [submitting, setSubmitting] = useState(false);
   const [submittingDomain, setSubmittingDomain] = useState(false);
 
+  const loadCustomerDomains = useCallback(async (customerId: number) => {
+    setLoadingDomains(true);
+    const response = await getCustomerDomains(serverId, customerId);
+    setLoadingDomains(false);
+
+    if (response.success && response.domains) {
+      setAllDomains(response.domains);
+
+      // Initialize form data for each domain
+      const initialFormData: Record<string, DomainFormValues> = {};
+      response.domains.forEach((domain: FroxlorDomain) => {
+        initialFormData[domain.id] = {
+          documentroot: domain.documentroot || "",
+          ssl_redirect: domain.ssl_redirect === "1",
+          letsencrypt: domain.letsencrypt === "1",
+          phpsettingid: domain.phpsettingid || "1",
+        };
+      });
+      setDomainFormData(initialFormData);
+    }
+  }, [serverId]);
+
   // Load PHP configurations on mount
   useEffect(() => {
     if (serverId) {
@@ -132,28 +154,6 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
       autoCheck();
     }
   }, [clientCustomerNo, clientName, serverId, loadCustomerDomains]);
-
-  const loadCustomerDomains = useCallback(async (customerId: number) => {
-    setLoadingDomains(true);
-    const response = await getCustomerDomains(serverId, customerId);
-    setLoadingDomains(false);
-
-    if (response.success && response.domains) {
-      setAllDomains(response.domains);
-
-      // Initialize form data for each domain
-      const initialFormData: Record<string, DomainFormValues> = {};
-      response.domains.forEach((domain: FroxlorDomain) => {
-        initialFormData[domain.id] = {
-          documentroot: domain.documentroot || "",
-          ssl_redirect: domain.ssl_redirect === "1",
-          letsencrypt: domain.letsencrypt === "1",
-          phpsettingid: domain.phpsettingid || "1",
-        };
-      });
-      setDomainFormData(initialFormData);
-    }
-  }, [serverId]);
 
   const handleCheckCustomer = async () => {
     if (!customerNumber.trim()) return;
