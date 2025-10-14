@@ -6,6 +6,7 @@ import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { ProjectType, EmailTriggerType, DelayType } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 // Turbopack sometimes tree-shakes Prisma enums in server bundles; provide fallbacks so z.nativeEnum always receives values.
 const EmailTriggerTypeEnum =
@@ -104,8 +105,8 @@ export async function createTrigger(formData: FormData) {
       templateId: data.templateId,
       delayDays: data.delayDays || null,
       delayType: data.delayType || null,
-      conditions,
-      recipientConfig,
+      conditions: conditions as Prisma.JsonObject,
+      recipientConfig: recipientConfig as Prisma.JsonObject,
     },
   });
 
@@ -159,8 +160,8 @@ export async function updateTrigger(formData: FormData) {
       templateId: data.templateId,
       delayDays: data.delayDays || null,
       delayType: data.delayType || null,
-      conditions,
-      recipientConfig,
+      conditions: conditions as Prisma.JsonObject,
+      recipientConfig: recipientConfig as Prisma.JsonObject,
     },
   });
 
