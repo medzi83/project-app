@@ -3,6 +3,7 @@
 import { getAuthSession } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { FroxlorClient } from "@/lib/froxlor";
+import type { FroxlorCustomerCreateInput, FroxlorCustomerUpdateInput } from "@/lib/froxlor";
 import { redirect } from "next/navigation";
 
 export async function testFroxlorConnection(serverId: string) {
@@ -247,15 +248,15 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
 
   // Update existing customer
   if (existingCustomerId) {
-    const updateData: any = {
+    const updateData: FroxlorCustomerUpdateInput = {
       customernumber: customerNumber,
       firstname,
       name,
       company,
       email,
       diskspace: diskspaceKB,
-      mysqls: parseInt(mysqls),
-      ftps: parseInt(ftps),
+      mysqls: Number.parseInt(mysqls, 10) || 0,
+      ftps: Number.parseInt(ftps, 10) || 0,
       deactivated: deactivated ? 1 : 0,
       allowed_phpconfigs,
       leregistered: leregistered ? 1 : 0,
@@ -271,7 +272,7 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
 
   // Create new customer
   // In this system, loginname = customerNumber
-  const createData: any = {
+  const createData: FroxlorCustomerCreateInput = {
     customernumber: customerNumber,
     firstname,
     name,
@@ -280,8 +281,8 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
     loginname: loginname || customerNumber,
     password,
     diskspace: diskspaceKB,
-    mysqls: parseInt(mysqls),
-    ftps: parseInt(ftps),
+    mysqls: Number.parseInt(mysqls, 10) || 0,
+    ftps: Number.parseInt(ftps, 10) || 0,
     deactivated: deactivated ? 1 : 0,
     allowed_phpconfigs,
     leregistered: leregistered ? 1 : 0,

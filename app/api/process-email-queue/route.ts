@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 /**
  * GET endpoint für Status-Abfrage
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   const session = await getAuthSession();
   if (!session?.user || session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

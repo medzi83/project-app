@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { Badge } from "@/components/ui/badge";
 import { FroxlorClient } from "@/lib/froxlor";
+import type { FroxlorCustomer, FroxlorDomain } from "@/lib/froxlor";
 import { deriveProjectStatus, labelForProjectStatus } from "@/lib/project-status";
 
 type Props = {
@@ -171,8 +172,8 @@ export default async function ClientDetailPage({ params }: Props) {
   }
 
   // Fetch Froxlor customer data if server is available
-  let froxlorCustomer = null;
-  let froxlorDomains = [];
+  let froxlorCustomer: FroxlorCustomer | null = null;
+  let froxlorDomains: FroxlorDomain[] = [];
   if (
     client.server &&
     client.customerNo &&
@@ -362,8 +363,11 @@ export default async function ClientDetailPage({ params }: Props) {
           <section className="rounded-lg border bg-white p-4">
             <h2 className="text-base font-medium mb-3">Domains ({froxlorDomains.length})</h2>
             <div className="space-y-2">
-              {froxlorDomains.map((domain: any) => {
-                const isStandard = froxlorCustomer && parseInt(domain.id) === parseInt(froxlorCustomer.standardsubdomain);
+              {froxlorDomains.map((domain) => {
+                const isStandard =
+                  froxlorCustomer?.standardsubdomain != null
+                    ? Number.parseInt(domain.id, 10) === Number.parseInt(froxlorCustomer.standardsubdomain, 10)
+                    : false;
                 return (
                   <div key={domain.id} className="rounded border p-3">
                     <div className="flex items-center gap-2 mb-1">

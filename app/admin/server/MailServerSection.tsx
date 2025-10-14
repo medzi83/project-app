@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { TestMailButton } from "./TestMailButton";
@@ -53,7 +53,7 @@ export function MailServerSection({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">Mailserver</h2>
-          <p className="text-sm text-gray-500">Hinterlege SMTP-Zugänge und ordne sie Agenturen zu.</p>
+          <p className="text-sm text-gray-500">Hinterlege SMTP-ZugÃ¤nge und ordne sie Agenturen zu.</p>
           {mailOk && <p className="text-sm text-green-600">Mailserver gespeichert.</p>}
         </div>
         <details className="relative" open={Boolean(mailError)}>
@@ -79,10 +79,10 @@ export function MailServerSection({
                 <Field label="Port *">
                   <input name="port" type="number" min={1} max={65535} defaultValue={587} className="w-full rounded border p-2 text-sm" />
                 </Field>
-                <Field label="Verschlüsselung">
+                <Field label="VerschlÃ¼sselung">
                   <select name="useTls" defaultValue="yes" className="w-full rounded border p-2 text-sm">
                     <option value="yes">TLS / STARTTLS</option>
-                    <option value="no">Keine Verschlüsselung</option>
+                    <option value="no">Keine VerschlÃ¼sselung</option>
                   </select>
                 </Field>
               </div>
@@ -114,7 +114,7 @@ export function MailServerSection({
       {mailServers.length === 0 ? (
         <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
           <p className="text-gray-500">Noch keine Mailserver hinterlegt.</p>
-          <p className="text-sm text-gray-400 mt-1">Klicken Sie auf "Mailserver hinzufügen", um einen neuen Mailserver anzulegen.</p>
+          <p className="text-sm text-gray-400 mt-1">Klicken Sie auf &quot;Mailserver hinzufügen&quot;, um einen neuen Mailserver anzulegen.</p>
         </div>
       ) : (
         <>
@@ -174,12 +174,12 @@ export function MailServerSection({
                       type="submit"
                       className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
                       onClick={(e) => {
-                        if (!confirm(`Möchten Sie den Mailserver "${activeMailServer.name}" wirklich löschen?`)) {
+                        if (!confirm(`MÃ¶chten Sie den Mailserver "${activeMailServer.name}" wirklich lÃ¶schen?`)) {
                           e.preventDefault();
                         }
                       }}
                     >
-                      Löschen
+                      LÃ¶schen
                     </button>
                   </form>
                 </div>
@@ -251,7 +251,7 @@ export function MailServerSection({
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                          Verschlüsselung
+                          VerschlÃ¼sselung
                         </label>
                         <select
                           form={`update-form-${activeMailServer.id}`}
@@ -290,7 +290,7 @@ export function MailServerSection({
                         name="password"
                         type="password"
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-black focus:ring-1 focus:ring-black focus:outline-none"
-                        placeholder="••••••••"
+                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                       />
                       <p className="mt-1 text-xs text-gray-500">Leer lassen, um bestehendes Passwort beizubehalten</p>
                     </div>

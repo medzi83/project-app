@@ -12,8 +12,6 @@ type RootLayoutProps = {
 
 export default async function RootLayout({ children }: RootLayoutProps) {
   const session = await getAuthSession();
-  const hasSession = Boolean(session);
-
   // Get effective user (might be an agent in dev mode)
   const effectiveUser = await getEffectiveUser();
 

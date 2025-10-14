@@ -146,7 +146,8 @@ export async function createWebsiteProject(formData: FormData) {
   const tab = entries.tab === "film" ? "film" : "website";
   const cid = typeof entries.clientId === "string" ? entries.clientId : undefined;
   const redirectBase = buildProjectRedirectBase(tab, cid);
-  const { tab: _tab, ...raw } = entries;
+  const { tab: ignoredTab, ...raw } = entries;
+  void ignoredTab;
 
   const parsed = WebsiteProjectSchema.safeParse(raw);
   if (!parsed.success) {
@@ -241,10 +242,10 @@ export async function createFilmProject(formData: FormData) {
   }
 
   const entries = Object.fromEntries(formData.entries());
-  const tab = entries.tab === "website" ? "website" : "film";
   const cid = typeof entries.clientId === "string" ? entries.clientId : undefined;
   const redirectBase = buildProjectRedirectBase("film", cid);
-  const { tab: _tab, ...raw } = entries;
+  const { tab: ignoredTab, ...raw } = entries;
+  void ignoredTab;
 
   const parsed = FilmProjectSchema.safeParse(raw);
   if (!parsed.success) {

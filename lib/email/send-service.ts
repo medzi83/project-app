@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { prisma } from "@/lib/prisma";
 import { getMailServerForProject } from "./mailserver-service";
 
@@ -21,7 +22,7 @@ export async function sendProjectEmail(options: SendEmailOptions) {
   const mailServer = await getMailServerForProject(projectId);
 
   // Konfiguriere nodemailer Transport
-  const transportConfig: any = {
+  const transportConfig: SMTPTransport.Options = {
     host: mailServer.host,
     port: mailServer.port,
     secure: mailServer.port === 465,
@@ -155,7 +156,7 @@ export async function processEmailQueue() {
       const mailServer = email.mailServer || (await getMailServerForProject(email.projectId));
 
       // Configure transport
-      const transportConfig: any = {
+      const transportConfig: SMTPTransport.Options = {
         host: mailServer.host,
         port: mailServer.port,
         secure: mailServer.port === 465,

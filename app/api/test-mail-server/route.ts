@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import nodemailer from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 
 export async function POST(request: NextRequest) {
   // Check authentication and admin role
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Configure nodemailer transporter
-    const transportConfig: any = {
+    const transportConfig: SMTPTransport.Options = {
       host: mailServer.host,
       port: mailServer.port,
       secure: mailServer.port === 465, // Use SSL for port 465
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
             </ul>
           </div>
 
-          <p style="color: #28a745;">✓ Wenn Sie diese E-Mail erhalten haben, funktioniert die Mailserver-Konfiguration korrekt.</p>
+          <p style="color: #28a745;">Wenn Sie diese E-Mail erhalten haben, funktioniert die Mailserver-Konfiguration korrekt.</p>
 
           <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
           <p style="font-size: 12px; color: #999;">Diese E-Mail wurde automatisch vom Admin-Bereich der Projektverwaltung generiert.</p>

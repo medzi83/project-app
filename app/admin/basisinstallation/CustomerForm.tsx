@@ -1,8 +1,21 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect } from "react";
-import { checkCustomerNumber, createOrUpdateFroxlorCustomer, getPhpConfigs, getCustomerDomains, updateStandardDomain } from "./actions";
+import { useState, useEffect, useCallback } from "react";
+import {
+  checkCustomerNumber,
+  createOrUpdateFroxlorCustomer,
+  getPhpConfigs,
+  getCustomerDomains,
+  updateStandardDomain,
+} from "./actions";
 import type { FroxlorCustomer, FroxlorPhpConfig, FroxlorDomain } from "@/lib/froxlor";
+
+type DomainFormValues = {
+  documentroot: string;
+  ssl_redirect: boolean;
+  letsencrypt: boolean;
+  phpsettingid: string;
+};
 
 type Props = {
   serverId: string;
@@ -19,7 +32,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
   const [allDomains, setAllDomains] = useState<FroxlorDomain[]>([]);
   const [loadingDomains, setLoadingDomains] = useState(false);
   const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set());
-  const [domainFormData, setDomainFormData] = useState<Record<string, { documentroot: string; ssl_redirect: boolean; letsencrypt: boolean; phpsettingid: string }>>({});
+  const [domainFormData, setDomainFormData] = useState<Record<string, DomainFormValues>>({});
   const [formData, setFormData] = useState({
     firstname: "",
     name: "",
@@ -118,9 +131,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
       };
       autoCheck();
     }
-  }, [clientCustomerNo, clientName, serverId]);
+  }, [clientCustomerNo, clientName, serverId, loadCustomerDomains]);
 
-  const loadCustomerDomains = async (customerId: number) => {
+  const loadCustomerDomains = useCallback(async (customerId: number) => {
     setLoadingDomains(true);
     const response = await getCustomerDomains(serverId, customerId);
     setLoadingDomains(false);
@@ -129,7 +142,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
       setAllDomains(response.domains);
 
       // Initialize form data for each domain
-      const initialFormData: Record<string, any> = {};
+      const initialFormData: Record<string, DomainFormValues> = {};
       response.domains.forEach((domain: FroxlorDomain) => {
         initialFormData[domain.id] = {
           documentroot: domain.documentroot || "",
@@ -140,7 +153,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
       });
       setDomainFormData(initialFormData);
     }
-  };
+  }, [serverId]);
 
   const handleCheckCustomer = async () => {
     if (!customerNumber.trim()) return;
@@ -270,7 +283,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="mb-4 font-medium">Schritt 1: Kundennummer prüfen</h3>
+        <h3 className="mb-4 font-medium">Schritt 1: Kundennummer prÃ¼fen</h3>
         <div className="flex gap-3">
           <input
             type="text"
@@ -286,13 +299,13 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
             disabled={checking || !customerNumber.trim()}
             className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
           >
-            {checking ? "Prüfe..." : "Prüfen"}
+            {checking ? "PrÃ¼fe..." : "PrÃ¼fen"}
           </button>
         </div>
 
         {existingCustomer && (
           <div className="mt-3 rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
-            <div className="font-medium">✓ Kunde gefunden (ID: {existingCustomer.customerid})</div>
+            <div className="font-medium">âœ“ Kunde gefunden (ID: {existingCustomer.customerid})</div>
             <div className="mt-1">
               Kundennummer: {existingCustomer.customernumber} | Login: {existingCustomer.loginname}
             </div>
@@ -371,7 +384,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
                 disabled={existingCustomer ? true : false}
               />
               <span className="text-xs text-gray-500 mt-1">
-                {existingCustomer ? "Login-Name kann nicht geändert werden" : "Empfohlen: VWxxxxx Format"}
+                {existingCustomer ? "Login-Name kann nicht geÃ¤ndert werden" : "Empfohlen: VWxxxxx Format"}
               </span>
             </Field>
 
@@ -434,7 +447,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
                 placeholder="/var/customers/webs/VWxxxxx/"
               />
               <span className="text-xs text-gray-500 mt-1">
-                Leer lassen für automatische Generierung
+                Leer lassen fÃ¼r automatische Generierung
               </span>
             </Field>
           </div>
@@ -476,8 +489,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-
-            <Field label="Let's Encrypt">
+            <Field label="Let&apos;s Encrypt">
               <label className="flex items-center gap-2">
                 <input
                   name="leregistered"
@@ -486,7 +498,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
                   onChange={(e) => setFormData({ ...formData, leregistered: e.target.checked })}
                   className="rounded border"
                 />
-                <span>Let's Encrypt aktiviert</span>
+                <span>Let&apos;s Encrypt aktiviert</span>
               </label>
             </Field>
 
@@ -506,8 +518,11 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
 
           {!existingCustomer && (
             <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-800">
-              <strong>Hinweis:</strong> Wenn kein Login-Name angegeben wird, generiert Froxlor automatisch einen (z.B. "web1", "web2", etc.).
-              Empfohlen wird das Format "VWxxxxx" (z.B. "VW33061"). Die Kundennummer "<strong>{customerNumber}</strong>" wird als eindeutige Referenz gespeichert.
+              <strong>Hinweis:</strong>{" "}
+              Wenn kein Login-Name angegeben wird, generiert Froxlor automatisch einen (z.B.{" "}
+              <code>&quot;web1&quot;</code>, <code>&quot;web2&quot;</code>, etc.). Empfohlen wird das Format{" "}
+              <code>&quot;VWxxxxx&quot;</code> (z.B. <code>&quot;VW33061&quot;</code>). Die Kundennummer{" "}
+              <strong>{customerNumber}</strong> wird als eindeutige Referenz gespeichert.
             </div>
           )}
 
@@ -561,7 +576,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          {isStandard && <span className="text-yellow-500 text-lg">★</span>}
+                          {isStandard && <span className="text-yellow-500 text-lg">â˜…</span>}
                           <span className="font-medium">{domain.domain}</span>
                           {domain.deactivated === "1" && (
                             <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">Deaktiviert</span>
@@ -569,12 +584,12 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
                         </div>
                         <div className="mt-1 text-xs text-gray-500 space-x-4">
                           <span>PHP: {phpConfigs.find(c => c.id.toString() === domain.phpsettingid)?.description || domain.phpsettingid}</span>
-                          <span>SSL: {domain.ssl_redirect === "1" ? "✓" : "✗"}</span>
-                          <span>LE: {domain.letsencrypt === "1" ? "✓" : "✗"}</span>
+                          <span>SSL: {domain.ssl_redirect === "1" ? "âœ“" : "âœ—"}</span>
+                          <span>LE: {domain.letsencrypt === "1" ? "âœ“" : "âœ—"}</span>
                         </div>
                       </div>
                       <div className="ml-4 text-gray-400">
-                        {isExpanded ? "▼" : "▶"}
+                        {isExpanded ? "â–¼" : "â–¶"}
                       </div>
                     </button>
 
@@ -623,7 +638,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
                                   })}
                                   className="rounded border"
                                 />
-                                <span className="text-sm">SSL Redirect (HTTP → HTTPS)</span>
+                                <span className="text-sm">SSL Redirect (HTTP -&gt; HTTPS)</span>
                               </label>
                               <label className="flex items-center gap-2">
                                 <input
@@ -635,7 +650,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
                                   })}
                                   className="rounded border"
                                 />
-                                <span className="text-sm">Let's Encrypt aktiviert</span>
+                                <span className="text-sm">Let&apos;s Encrypt aktiviert</span>
                               </label>
                             </div>
                           </Field>

@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/prisma";
+﻿import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
-import { createTrigger, updateTrigger, deleteTrigger, toggleTrigger } from "./actions";
+import { createTrigger, deleteTrigger, toggleTrigger } from "./actions";
 import { TriggerForm } from "./TriggerForm";
 
 type Props = {
@@ -63,7 +63,7 @@ export default async function EmailTriggersPage({ searchParams }: Props) {
         <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
           {success === "created" && "Trigger erfolgreich erstellt"}
           {success === "updated" && "Trigger erfolgreich aktualisiert"}
-          {success === "deleted" && "Trigger erfolgreich gelöscht"}
+          {success === "deleted" && "Trigger erfolgreich gelÃ¶scht"}
         </div>
       )}
 
@@ -121,12 +121,12 @@ export default async function EmailTriggersPage({ searchParams }: Props) {
                       type="submit"
                       className="rounded border border-red-300 px-3 py-1 text-sm text-red-600 hover:bg-red-50"
                       onClick={(e) => {
-                        if (!confirm(`Trigger "${trigger.name}" wirklich löschen?`)) {
+                        if (!confirm(`Trigger "${trigger.name}" wirklich lÃ¶schen?`)) {
                           e.preventDefault();
                         }
                       }}
                     >
-                      Löschen
+                      LÃ¶schen
                     </button>
                   </form>
                 </div>
@@ -138,7 +138,7 @@ export default async function EmailTriggersPage({ searchParams }: Props) {
                   <span>{trigger.template.title}</span>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-500">Verzögerung:</span>{" "}
+                  <span className="font-medium text-gray-500">VerzÃ¶gerung:</span>{" "}
                   <span>
                     {trigger.delayDays != null
                       ? `${trigger.delayDays} Tage ${trigger.delayType === "BEFORE" ? "vorher" : trigger.delayType === "AFTER" ? "nachher" : "genau"}`
@@ -152,7 +152,7 @@ export default async function EmailTriggersPage({ searchParams }: Props) {
                   </span>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-500">Empfänger:</span>{" "}
+                  <span className="font-medium text-gray-500">EmpfÃ¤nger:</span>{" "}
                   <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
                     {JSON.stringify(recipientConfig)}
                   </span>
@@ -174,7 +174,7 @@ export default async function EmailTriggersPage({ searchParams }: Props) {
           <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
             <p className="text-gray-500">Noch keine E-Mail-Trigger konfiguriert.</p>
             <p className="text-sm text-gray-400 mt-1">
-              Klicken Sie auf "Neuer Trigger", um einen Trigger anzulegen.
+              Klicken Sie auf &quot;Neuer Trigger&quot;, um einen Trigger anzulegen.
             </p>
           </div>
         )}

@@ -135,21 +135,21 @@ export default async function ClientsPage({ searchParams }: Props) {
               Suchen
             </button>
             {(searchQuery || agencyFilter) && (
-              <a href="/clients" className="text-sm underline">
-                Zuruecksetzen
-              </a>
+              <Link href="/clients" className="text-sm underline">
+                Zurücksetzen
+              </Link>
             )}
           </form>
         </div>
         <div className="flex items-center justify-between gap-2 p-3 border-b text-sm">
           <div className="text-gray-600">Zeige {from}–{to} von {total}</div>
           <div className="flex items-center gap-3">
-            <a className={pageSize===50?"font-semibold underline":"underline"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</a>
-            <a className={pageSize===100?"font-semibold underline":"underline"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</a>
+            <Link className={pageSize===50?"font-semibold underline":"underline"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</Link>
+            <Link className={pageSize===100?"font-semibold underline":"underline"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</Link>
             <span className="mx-2">|</span>
-            <a className={page===1?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Zurueck</a>
+            <Link className={page===1?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Zurück</Link>
             <span>Seite {page} / {totalPages}</span>
-            <a className={page>=totalPages?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter</a>
+            <Link className={page>=totalPages?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter</Link>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -305,12 +305,12 @@ export default async function ClientsPage({ searchParams }: Props) {
               Zeige {from}–{to} von {total}
             </div>
             <div className="flex items-center gap-3">
-              <a className={pageSize===50?"font-semibold underline":"underline"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</a>
-              <a className={pageSize===100?"font-semibold underline":"underline"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</a>
+              <Link className={pageSize===50?"font-semibold underline":"underline"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</Link>
+              <Link className={pageSize===100?"font-semibold underline":"underline"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</Link>
               <span className="mx-2">|</span>
-              <a className={page===1?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Zurueck</a>
+              <Link className={page===1?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Zurück</Link>
               <span>Seite {page} / {totalPages}</span>
-              <a className={page>=totalPages?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter</a>
+              <Link className={page>=totalPages?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter</Link>
             </div>
             {isAdmin && (
               <ConfirmSubmit confirmText="Ausgewählte Kunden unwiderruflich löschen?" className="px-3 py-1.5 rounded border border-red-300 text-red-700 bg-red-50 hover:bg-red-100">
