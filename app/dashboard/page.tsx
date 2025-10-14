@@ -1,9 +1,10 @@
 // /app/dashboard/page.tsx
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { Prisma, ProjectStatus, ProjectType, AgentCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { buildWebsiteStatusWhere, DONE_PRODUCTION_STATUSES } from "@/lib/project-status";
-import { getEffectiveUser } from "@/lib/authz";
+import { getEffectiveUser, getAuthSession } from "@/lib/authz";
 
 export const metadata = { title: "Dashboard" };
 
@@ -140,6 +141,12 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<DashboardSearchParams>;
 }) {
+  // Require authentication - redirect to login if not authenticated
+  const session = await getAuthSession();
+  if (!session) {
+    redirect("/login");
+  }
+
   // Get effective user (could be an agent in dev mode)
   const effectiveUser = await getEffectiveUser();
 
