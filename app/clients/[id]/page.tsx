@@ -104,6 +104,11 @@ export default async function ClientDetailPage({ params }: Props) {
 
   // Automatic server assignment if no server is assigned yet
   if (!client.serverId && client.customerNo) {
+    // Store customer info before async operations (for type narrowing)
+    const customerNo = client.customerNo;
+    const clientId = client.id;
+    const clientName = client.name;
+
     try {
       // Get all servers with valid Froxlor credentials
       const servers = await prisma.server.findMany({
@@ -127,16 +132,16 @@ export default async function ClientDetailPage({ params }: Props) {
             apiSecret: server.froxlorApiSecret,
           });
 
-          const froxlorCustomer = await froxlorClient.findCustomerByNumber(client.customerNo);
+          const froxlorCustomer = await froxlorClient.findCustomerByNumber(customerNo ?? "");
 
           if (froxlorCustomer) {
             // Found the customer on this server! Assign it.
             await prisma.client.update({
-              where: { id: client.id },
+              where: { id: clientId },
               data: { serverId: server.id },
             });
 
-            console.log(`Auto-assigned server ${server.name} to client ${client.name} (${client.customerNo})`);
+            console.log(`Auto-assigned server ${server.name} to client ${clientName} (${customerNo})`);
 
             // Reload client with updated server info
           client = await prisma.client.findUnique({
@@ -161,7 +166,7 @@ export default async function ClientDetailPage({ params }: Props) {
             break; // Stop searching after finding the first match
           }
         } catch (error) {
-          console.error(`Error checking server ${server.name} for customer ${client.customerNo}:`, error);
+          console.error(`Error checking server ${server.name} for customer ${customerNo}:`, error);
           // Continue with next server
         }
       }
@@ -169,6 +174,11 @@ export default async function ClientDetailPage({ params }: Props) {
       console.error('Error during automatic server assignment:', error);
       // Continue without server assignment
     }
+  }
+
+  // Ensure client is still valid (TypeScript type narrowing)
+  if (!client) {
+    notFound();
   }
 
   // Fetch Froxlor customer data if server is available

@@ -104,39 +104,46 @@ export function UnifiedProjectForm({
     if (!form) return;
 
     const radios = form.querySelectorAll('input[name="projectType"]');
-    const websiteFields = form.querySelector(".website-fields");
-    const filmFields = form.querySelector(".film-fields");
-    const websiteAgentSelect = form.querySelector(".website-agent-select");
-    const filmAgentSelect = form.querySelector(".film-agent-select");
+    const websiteFields = form.querySelector(".website-fields") as Element | null;
+    const filmFields = form.querySelector(".film-fields") as Element | null;
+    const websiteAgentSelect = form.querySelector(".website-agent-select") as Element | null;
+    const filmAgentSelect = form.querySelector(".film-agent-select") as Element | null;
 
     if (!websiteFields || !filmFields || !websiteAgentSelect || !filmAgentSelect) return;
 
+    // Store as non-null for closure
+    const wf = websiteFields;
+    const ff = filmFields;
+    const was = websiteAgentSelect;
+    const fas = filmAgentSelect;
+
     function updateVisibility() {
+      if (!form) return;
       const selected = form.querySelector('input[name="projectType"]:checked') as HTMLInputElement | null;
       if (!selected) {
-        websiteFields.classList.add("hidden");
-        filmFields.classList.add("hidden");
-        websiteAgentSelect.classList.add("hidden");
-        filmAgentSelect.classList.add("hidden");
+        wf.classList.add("hidden");
+        ff.classList.add("hidden");
+        was.classList.add("hidden");
+        fas.classList.add("hidden");
         return;
       }
 
       const value = selected.value;
       if (value === "WEBSITE") {
-        websiteFields.classList.remove("hidden");
-        filmFields.classList.add("hidden");
-        websiteAgentSelect.classList.remove("hidden");
-        filmAgentSelect.classList.add("hidden");
+        wf.classList.remove("hidden");
+        ff.classList.add("hidden");
+        was.classList.remove("hidden");
+        fas.classList.add("hidden");
       } else if (value === "FILM") {
-        websiteFields.classList.add("hidden");
-        filmFields.classList.remove("hidden");
-        websiteAgentSelect.classList.add("hidden");
-        filmAgentSelect.classList.remove("hidden");
+        wf.classList.add("hidden");
+        ff.classList.remove("hidden");
+        was.classList.add("hidden");
+        fas.classList.remove("hidden");
       } else if (value === "BOTH") {
-        websiteFields.classList.remove("hidden");
-        filmFields.classList.remove("hidden");
-        websiteAgentSelect.classList.remove("hidden");
-        filmAgentSelect.classList.add("hidden");
+        wf.classList.remove("hidden");
+        ff.classList.remove("hidden");
+        was.classList.remove("hidden");
+        fas.classList.add("hidden");
       }
     }
 

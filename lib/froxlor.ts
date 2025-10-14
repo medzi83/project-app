@@ -377,7 +377,7 @@ export class FroxlorClient {
         const domains = normalizeFroxlorList(result.data);
 
         // Filter by customerid (API might return all domains despite parameter)
-        return domains.filter((d) => d && d.customerid == customerId);
+        return domains.filter((d) => d && Number.parseInt(d.customerid, 10) === customerId);
       }
 
       return [];

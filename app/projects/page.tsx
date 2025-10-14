@@ -304,12 +304,12 @@ export default async function ProjectsPage({ searchParams }: Props) {
       const orParts: Prisma.ProjectWhereInput[] = [];
       if (websiteWhere) {
         const shouldExcludeDone = scopeActive || (statusValue === "ONLINE" && !includesBeendet);
-        const websiteCondition = shouldExcludeDone
+        const websiteCondition: Prisma.ProjectWhereInput = shouldExcludeDone
           ? {
               AND: [
                 websiteWhere,
                 {
-                  type: "WEBSITE",
+                  type: "WEBSITE" as const,
                   website: { is: { pStatus: { notIn: DONE_PRODUCTION_STATUSES } } },
                 },
               ],

@@ -382,6 +382,7 @@ export async function createProject(formData: FormData) {
   if (!parsed.success) {
     const msg = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
     sendError(msg, defaultTab);
+    return; // This line will never be reached, but TypeScript needs it
   }
 
   const data = parsed.data;

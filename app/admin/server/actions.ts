@@ -126,7 +126,7 @@ function mapMailServerData(
   options?: { preservePassword?: boolean },
 ) {
   const passwordRaw = (input.password ?? "").trim();
-  const data: Record<string, unknown> = {
+  const data = {
     name: input.name.trim(),
     host: input.host.trim(),
     port: input.port,
@@ -136,6 +136,7 @@ function mapMailServerData(
     useTls: input.useTls !== "no",
     notes: input.notes?.trim() ? input.notes.trim() : null,
     agencyId: input.agencyId?.trim() ? input.agencyId.trim() : null,
+    password: null as string | null,
   };
 
   if (passwordRaw) {
@@ -175,9 +176,16 @@ export async function updateMailServer(formData: FormData) {
 
   const { id, ...rest } = parsed.data!;
   const payload = mapMailServerData(rest, { preservePassword: true });
+
+  // Remove password from payload if preservePassword is true and password is null
+  const updateData: any = { ...payload };
+  if (!payload.password && payload.password === null) {
+    delete updateData.password;
+  }
+
   await prisma.mailServer.update({
     where: { id },
-    data: payload,
+    data: updateData,
   });
 
   revalidatePath("/admin/server");

@@ -16,7 +16,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   const effectiveUser = await getEffectiveUser();
 
   // Use effective user role for shell (respects dev mode)
-  const effectiveRole = effectiveUser?.role === "ADMIN" ? "ADMIN" : effectiveUser?.role === "AGENT" ? "AGENT" : null;
+  const effectiveRole = effectiveUser?.role === "ADMIN" ? "ADMIN" as const : effectiveUser?.role === "AGENT" ? "AGENT" as const : null;
 
   const shell = effectiveRole
     ? {
