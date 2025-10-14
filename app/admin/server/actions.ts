@@ -102,6 +102,7 @@ export async function deleteServer(formData: FormData) {
 
 const MailServerBaseSchema = z.object({
   name: z.string().min(1, "Name fehlt").trim(),
+  host: z.string().min(1, "Host fehlt").trim(),
   port: z.coerce.number().min(1, "Port muss > 0 sein").max(65535, "Port ist zu gross"),
   username: z.string().trim().optional().or(z.literal("")),
   password: z.string().trim().optional().or(z.literal("")),
