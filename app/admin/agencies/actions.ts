@@ -37,7 +37,7 @@ async function requireAdmin() {
   return session;
 }
 
-function baseRedirect(params?: Record<string, string | undefined>) {
+function baseRedirect(params?: Record<string, string | undefined>): never {
   if (!params || Object.keys(params).length === 0) {
     redirect("/admin/agencies");
   }
