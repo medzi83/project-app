@@ -3,9 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FroxlorClient } from "@/lib/froxlor";
 import type { FroxlorCustomer, FroxlorDomain } from "@/lib/froxlor";
 import { deriveProjectStatus, labelForProjectStatus } from "@/lib/project-status";
+import type { ProjectStatus, ProjectType } from "@prisma/client";
+import { EmailLogItem } from "@/components/EmailLogItem";
+import { deriveFilmStatus, getFilmStatusDate, FILM_STATUS_LABELS } from "@/lib/film-status";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -44,38 +48,47 @@ const isInPast = (value?: Date | string | null) => {
   }
 };
 
-type FilmStatus = "BEENDET" | "ONLINE" | "FINALVERSION" | "SCHNITT" | "DREH" | "SKRIPTFREIGABE" | "SKRIPT" | "SCOUTING";
+// FilmStatus logic is now centralized in lib/film-status.ts
 
-const FILM_STATUS_LABELS: Record<FilmStatus, string> = {
-  BEENDET: "Beendet",
-  ONLINE: "Online",
-  FINALVERSION: "Finalversion",
-  SCHNITT: "Schnitt",
-  DREH: "Dreh",
-  SKRIPTFREIGABE: "Skriptfreigabe",
-  SKRIPT: "Skript",
-  SCOUTING: "Scouting",
+const toDate = (value?: Date | string | null) => {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const deriveFilmStatus = (film: {
-  status?: string | null;
-  onlineDate?: Date | string | null;
-  finalToClient?: Date | string | null;
-  shootDate?: Date | string | null;
-  scriptApproved?: Date | string | null;
-  scriptToClient?: Date | string | null;
-  scouting?: Date | string | null;
-}): FilmStatus => {
-  // Hierarchie: Beendet > Online > Finalversion > Schnitt > Dreh > Skriptfreigabe > Skript > Scouting
-  if (film.status === "BEENDET") return "BEENDET";
-  if (film.onlineDate) return "ONLINE";
-  if (film.finalToClient) return "FINALVERSION";
-  if (isInPast(film.shootDate)) return "SCHNITT";
-  if (film.scriptApproved) return "DREH";
-  if (film.scriptToClient) return "SKRIPTFREIGABE";
-  if (isInPast(film.scouting)) return "SKRIPT";
-  return "SCOUTING";
+const getWebsiteStatusDate = (
+  status: ProjectStatus,
+  website?: {
+    webDate?: Date | string | null;
+    demoDate?: Date | string | null;
+    onlineDate?: Date | string | null;
+    lastMaterialAt?: Date | string | null;
+  },
+) => {
+  if (!website) return null;
+  switch (status) {
+    case "WEBTERMIN":
+      return toDate(website.webDate);
+    case "MATERIAL":
+    case "UMSETZUNG":
+      return toDate(website.lastMaterialAt) ?? toDate(website.webDate);
+    case "DEMO":
+      return (
+        toDate(website.demoDate) ??
+        toDate(website.lastMaterialAt) ??
+        toDate(website.webDate)
+      );
+    case "ONLINE":
+      return toDate(website.onlineDate);
+    default:
+      return null;
+  }
 };
+
+// getFilmStatusDate is now centralized in lib/film-status.ts
 
 export default async function ClientDetailPage({ params }: Props) {
   const session = await getAuthSession();
@@ -91,7 +104,31 @@ export default async function ClientDetailPage({ params }: Props) {
       projects: {
         include: {
           website: true,
-          film: true,
+          film: {
+            include: {
+              previewVersions: {
+                select: {
+                  sentDate: true,
+                  version: true,
+                },
+                orderBy: {
+                  sentDate: "desc",
+                },
+                take: 1,
+              },
+            },
+          },
+          emailLogs: {
+            orderBy: { sentAt: "desc" },
+            take: 50,
+            include: {
+              trigger: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
       },
@@ -152,7 +189,31 @@ export default async function ClientDetailPage({ params }: Props) {
               projects: {
                 include: {
                   website: true,
-                  film: true,
+                  film: {
+                    include: {
+                      previewVersions: {
+                        select: {
+                          sentDate: true,
+                          version: true,
+                        },
+                        orderBy: {
+                          sentDate: "desc",
+                        },
+                        take: 1,
+                      },
+                    },
+                  },
+                  emailLogs: {
+                    orderBy: { sentAt: "desc" },
+                    take: 50,
+                    include: {
+                      trigger: {
+                        select: {
+                          name: true,
+                        },
+                      },
+                    },
+                  },
                 },
                   orderBy: { createdAt: "desc" },
                 },
@@ -181,16 +242,21 @@ export default async function ClientDetailPage({ params }: Props) {
     notFound();
   }
 
+  const canFetchFroxlor =
+    !!(
+      client.server &&
+      client.customerNo &&
+      client.server.froxlorUrl &&
+      client.server.froxlorApiKey &&
+      client.server.froxlorApiSecret
+    );
+
   // Fetch Froxlor customer data if server is available
   let froxlorCustomer: FroxlorCustomer | null = null;
   let froxlorDomains: FroxlorDomain[] = [];
-  if (
-    client.server &&
-    client.customerNo &&
-    client.server.froxlorUrl &&
-    client.server.froxlorApiKey &&
-    client.server.froxlorApiSecret
-  ) {
+  let froxlorError: string | null = null;
+
+  if (canFetchFroxlor && client.server?.froxlorUrl && client.server?.froxlorApiKey && client.server?.froxlorApiSecret) {
     try {
       const froxlorClient = new FroxlorClient({
         url: client.server.froxlorUrl,
@@ -198,17 +264,45 @@ export default async function ClientDetailPage({ params }: Props) {
         apiSecret: client.server.froxlorApiSecret,
       });
 
-      froxlorCustomer = await froxlorClient.findCustomerByNumber(client.customerNo);
+      if (client.customerNo) {
+        froxlorCustomer = await froxlorClient.findCustomerByNumber(client.customerNo);
+      }
 
       if (froxlorCustomer) {
         froxlorDomains = await froxlorClient.getCustomerDomains(froxlorCustomer.customerid);
+      } else {
+        froxlorError = `Kunde ${client.customerNo} wurde auf dem Froxlor-Server nicht gefunden.`;
       }
     } catch (error) {
       console.error("Error fetching Froxlor data:", error);
+      froxlorError =
+        error instanceof Error
+          ? error.message
+          : "Unbekannter Fehler beim Abrufen der Froxlor-Daten.";
     }
   }
 
   const isAdmin = session.user.role === "ADMIN";
+
+  // Collect all email logs from all projects
+  const allEmailLogs = client.projects.flatMap((project) =>
+    project.emailLogs.map((log) => ({
+      ...log,
+      projectTitle: project.title,
+      projectId: project.id,
+      projectType: project.type,
+    }))
+  ).sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+
+  // Group email logs by project type
+  const emailLogsByType: Record<ProjectType, typeof allEmailLogs> = {
+    WEBSITE: allEmailLogs.filter((log) => log.projectType === "WEBSITE"),
+    FILM: allEmailLogs.filter((log) => log.projectType === "FILM"),
+    SOCIAL: allEmailLogs.filter((log) => log.projectType === "SOCIAL"),
+  };
+
+  // TODO: Add general emails (emails without project) when feature is implemented
+  const generalEmails: typeof allEmailLogs = [];
 
   return (
     <div className="space-y-6">
@@ -246,6 +340,16 @@ export default async function ClientDetailPage({ params }: Props) {
           <div>
             <div className="text-xs text-gray-500">Kontaktperson</div>
             <div>{client.contact || "-"}</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">E-Mail</div>
+            <div>
+              {client.email ? (
+                <a href={`mailto:${client.email}`} className="text-blue-600 hover:underline">
+                  {client.email}
+                </a>
+              ) : "-"}
+            </div>
           </div>
           <div>
             <div className="text-xs text-gray-500">Telefon</div>
@@ -369,37 +473,56 @@ export default async function ClientDetailPage({ params }: Props) {
       {/* Domains and Projects Side by Side */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Domains */}
-        {froxlorDomains.length > 0 && (
+        {(canFetchFroxlor || froxlorError) && (
           <section className="rounded-lg border bg-white p-4">
-            <h2 className="text-base font-medium mb-3">Domains ({froxlorDomains.length})</h2>
-            <div className="space-y-2">
-              {froxlorDomains.map((domain) => {
-                const isStandard =
-                  froxlorCustomer?.standardsubdomain != null
-                    ? Number.parseInt(domain.id, 10) === Number.parseInt(froxlorCustomer.standardsubdomain, 10)
-                    : false;
-                return (
-                  <div key={domain.id} className="rounded border p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      {isStandard && <span className="text-yellow-500 text-sm">★</span>}
-                      <span className="font-medium text-sm">{domain.domain}</span>
-                      {domain.deactivated === "1" && (
-                        <Badge variant="destructive" className="text-xs">Deaktiviert</Badge>
-                      )}
+            <h2 className="text-base font-medium mb-3">
+              Domains
+              {froxlorDomains.length > 0 && <span> ({froxlorDomains.length})</span>}
+            </h2>
+
+            {froxlorError && (
+              <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {froxlorError}
+              </div>
+            )}
+
+            {!froxlorError && froxlorDomains.length === 0 && (
+              <p className="text-sm text-gray-500">Keine Domains fuer diesen Kunden vorhanden.</p>
+            )}
+
+            {!froxlorError && froxlorDomains.length > 0 && (
+              <div className="space-y-2">
+                {froxlorDomains.map((domain) => {
+                  const isStandard =
+                    froxlorCustomer?.standardsubdomain != null
+                      ? Number.parseInt(domain.id, 10) === Number.parseInt(froxlorCustomer.standardsubdomain, 10)
+                      : false;
+                  return (
+                    <div key={domain.id} className="rounded border p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        {isStandard && (
+                          <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                            Standard
+                          </Badge>
+                        )}
+                        <span className="font-medium text-sm">{domain.domain}</span>
+                        {domain.deactivated === "1" && (
+                          <Badge variant="destructive" className="text-xs">Deaktiviert</Badge>
+                        )}
+                      </div>
+                      <div className="font-mono text-xs text-gray-600 mb-1">{domain.documentroot}</div>
+                      <div className="flex gap-3 text-xs text-gray-500">
+                        <span>SSL: {domain.ssl_redirect === "1" ? "Ja" : "Nein"}</span>
+                        <span>LE: {domain.letsencrypt === "1" ? "Ja" : "Nein"}</span>
+                        <span>PHP: {domain.phpsettingid}</span>
+                      </div>
                     </div>
-                    <div className="font-mono text-xs text-gray-600 mb-1">{domain.documentroot}</div>
-                    <div className="flex gap-3 text-xs text-gray-500">
-                      <span>SSL: {domain.ssl_redirect === "1" ? "✓" : "✗"}</span>
-                      <span>LE: {domain.letsencrypt === "1" ? "✓" : "✗"}</span>
-                      <span>PHP: {domain.phpsettingid}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
         )}
-
         {/* Projects */}
         <section className="rounded-lg border bg-white p-4">
           <h2 className="text-base font-medium mb-3">Projekte ({client.projects.length})</h2>
@@ -415,7 +538,7 @@ export default async function ClientDetailPage({ params }: Props) {
 
                 // Use derived status for website and film projects
                 let statusLabel: string;
-                let onlineDate: Date | null = null;
+                let statusDate: Date | null = null;
 
                 if (project.type === "WEBSITE" && project.website) {
                   const derivedStatus = deriveProjectStatus({
@@ -426,27 +549,11 @@ export default async function ClientDetailPage({ params }: Props) {
                     materialStatus: project.website.materialStatus,
                   });
                   statusLabel = labelForProjectStatus(derivedStatus, { pStatus: project.website.pStatus });
-
-                  // If status is Online and we have an online date, store it
-                  if (derivedStatus === "ONLINE" && project.website.onlineDate) {
-                    onlineDate = project.website.onlineDate;
-                  }
+                  statusDate = getWebsiteStatusDate(derivedStatus, project.website);
                 } else if (project.type === "FILM" && project.film) {
-                  const derivedFilmStatus = deriveFilmStatus({
-                    status: project.film.status,
-                    onlineDate: project.film.onlineDate,
-                    finalToClient: project.film.finalToClient,
-                    shootDate: project.film.shootDate,
-                    scriptApproved: project.film.scriptApproved,
-                    scriptToClient: project.film.scriptToClient,
-                    scouting: project.film.scouting,
-                  });
+                  const derivedFilmStatus = deriveFilmStatus(project.film);
                   statusLabel = FILM_STATUS_LABELS[derivedFilmStatus];
-
-                  // If status is Online and we have an online date, store it
-                  if (derivedFilmStatus === "ONLINE" && project.film.onlineDate) {
-                    onlineDate = project.film.onlineDate;
-                  }
+                  statusDate = getFilmStatusDate(derivedFilmStatus, project.film);
                 } else {
                   statusLabel = project.status === "WEBTERMIN" ? "Webtermin"
                     : project.status === "MATERIAL" ? "Material"
@@ -464,7 +571,7 @@ export default async function ClientDetailPage({ params }: Props) {
                         <div className="mt-1 flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">
                             {typeLabel}: {statusLabel}
-                            {onlineDate && ` (seit ${formatDateOnly(onlineDate)})`}
+                            {statusDate && ` (seit ${formatDateOnly(statusDate)})`}
                           </Badge>
                           {project.website && project.website.domain && (
                             <span className="text-xs text-gray-500">{project.website.domain}</span>
@@ -472,7 +579,7 @@ export default async function ClientDetailPage({ params }: Props) {
                         </div>
                       </div>
                       <Link
-                        href={`/projects/${project.id}`}
+                        href={project.type === "FILM" ? `/film-projects/${project.id}` : `/projects/${project.id}`}
                         className="text-blue-600 hover:underline text-xs whitespace-nowrap ml-3"
                       >
                         Details →
@@ -485,6 +592,63 @@ export default async function ClientDetailPage({ params }: Props) {
           )}
         </section>
       </div>
+
+      {/* Email Logs */}
+      <section className="rounded-lg border bg-white p-4">
+        <h2 className="text-base font-medium mb-3">
+          Versendete E-Mails ({allEmailLogs.length})
+        </h2>
+        {allEmailLogs.length === 0 && generalEmails.length === 0 ? (
+          <p className="text-sm text-gray-500">Noch keine E-Mails an diesen Kunden versendet.</p>
+        ) : (
+          <Tabs defaultValue="general" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="general">
+                Allgemein ({generalEmails.length})
+              </TabsTrigger>
+              <TabsTrigger value="WEBSITE">
+                Webseite ({emailLogsByType.WEBSITE.length})
+              </TabsTrigger>
+              <TabsTrigger value="FILM">
+                Film ({emailLogsByType.FILM.length})
+              </TabsTrigger>
+              <TabsTrigger value="SOCIAL">
+                Social Media ({emailLogsByType.SOCIAL.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="general" className="mt-4">
+              {generalEmails.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  Keine allgemeinen E-Mails (ohne Projektbezug) vorhanden.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {generalEmails.map((log) => (
+                    <EmailLogItem key={log.id} log={log} isAdmin={isAdmin} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {(["WEBSITE", "FILM", "SOCIAL"] as const).map((type) => (
+              <TabsContent key={type} value={type} className="mt-4">
+                {emailLogsByType[type].length === 0 ? (
+                  <p className="text-sm text-gray-500">Keine E-Mails für diesen Projekttyp.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {emailLogsByType[type].map((log) => (
+                      <EmailLogItem key={log.id} log={log} isAdmin={isAdmin} />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            ))}
+          </Tabs>
+        )}
+      </section>
     </div>
   );
 }
+
+

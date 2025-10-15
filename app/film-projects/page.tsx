@@ -9,6 +9,7 @@ import FilmInlineCell from "@/components/FilmInlineCell";
 import FilmPreviewCell from "@/components/FilmPreviewCell";
 import DangerActionButton from "@/components/DangerActionButton";
 import { deleteFilmProject, deleteAllFilmProjects } from "./actions";
+import { deriveFilmStatus, getFilmStatusDate, FILM_STATUS_LABELS, type FilmStatus } from "@/lib/film-status";
 
 type Search = {
   sort?: string;
@@ -55,19 +56,7 @@ const P_STATUS_LABELS: Record<FilmProjectStatus, string> = {
   MMW: "MMW",
 };
 
-type FilmStatus = "BEENDET" | "ONLINE" | "FINALVERSION" | "VORABVERSION" | "SCHNITT" | "DREH" | "SKRIPTFREIGABE" | "SKRIPT" | "SCOUTING";
-
-const FILM_STATUS_LABELS: Record<FilmStatus, string> = {
-  BEENDET: "Beendet",
-  ONLINE: "Online",
-  FINALVERSION: "Finalversion",
-  VORABVERSION: "Vorabversion",
-  SCHNITT: "Schnitt",
-  DREH: "Dreh",
-  SKRIPTFREIGABE: "Skriptfreigabe",
-  SKRIPT: "Skript",
-  SCOUTING: "Scouting",
-};
+// FilmStatus types and labels are now imported from lib/film-status.ts
 
 const HEX_COLOR_REGEX = /^#([0-9a-f]{6})$/i;
 const AGENT_BADGE_BASE_CLASS = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border";
@@ -103,7 +92,9 @@ const isInPast = (value?: Date | string | null) => {
   }
 };
 
-const deriveFilmStatus = (film: {
+// deriveFilmStatus is now imported from lib/film-status.ts
+// But we need a local wrapper that handles firstCutToClient for backwards compatibility
+const deriveFilmStatusLocal = (film: {
   status?: FilmProjectStatus | null;
   onlineDate?: Date | string | null;
   finalToClient?: Date | string | null;
@@ -112,35 +103,10 @@ const deriveFilmStatus = (film: {
   scriptApproved?: Date | string | null;
   scriptToClient?: Date | string | null;
   scouting?: Date | string | null;
+  previewVersions?: Array<{ sentDate: Date | string }>;
 }): FilmStatus => {
-  // Hierarchie: Beendet > Online > Finalversion > Vorabversion > Schnitt > Dreh > Skriptfreigabe > Skript > Scouting
-
-  // Beendet - P-Status auf beendet
-  if (film.status === "BEENDET") return "BEENDET";
-
-  // Online - Datum bei Online
-  if (film.onlineDate) return "ONLINE";
-
-  // Finalversion - Finalversion an Kunden
-  if (film.finalToClient) return "FINALVERSION";
-
-  // Vorabversion - Datum bei Vorabversion an Kunden
-  if (film.firstCutToClient) return "VORABVERSION";
-
-  // Schnitt - Drehtermin-Datum in Vergangenheit
-  if (isInPast(film.shootDate)) return "SCHNITT";
-
-  // Dreh - Datum bei Skriptfreigabe
-  if (film.scriptApproved) return "DREH";
-
-  // Skriptfreigabe - Datum bei Script an Kunden
-  if (film.scriptToClient) return "SKRIPTFREIGABE";
-
-  // Skript - Datum Scouting in Vergangenheit
-  if (isInPast(film.scouting)) return "SKRIPT";
-
-  // Scouting - Kein Scoutingdatum vergeben oder in der Zukunft
-  return "SCOUTING";
+  // Use preview versions if available, otherwise use the central logic
+  return deriveFilmStatus(film);
 };
 
 const labelForScope = (value?: FilmScope | null) => {
@@ -266,7 +232,7 @@ const buildRows = (projects: Awaited<ReturnType<typeof loadFilmProjects>>): Film
       ? `${formatDate(latestPreview.sentDate)} (v${latestPreview.version})`
       : formatDate(film?.firstCutToClient ?? undefined);
 
-    const derivedStatus: FilmStatus = film ? deriveFilmStatus({
+    const derivedStatus: FilmStatus = film ? deriveFilmStatusLocal({
       status: film.status,
       onlineDate: film.onlineDate,
       finalToClient: film.finalToClient,
@@ -275,6 +241,7 @@ const buildRows = (projects: Awaited<ReturnType<typeof loadFilmProjects>>): Film
       scriptApproved: film.scriptApproved,
       scriptToClient: film.scriptToClient,
       scouting: film.scouting,
+      previewVersions: film.previewVersions,
     }) : "SCOUTING";
 
     const statusDate =
@@ -410,7 +377,7 @@ async function loadFilmProjects(
       const latestPreview = project.film?.previewVersions?.[0];
       const previewDate = latestPreview?.sentDate ?? project.film?.firstCutToClient;
 
-      const derivedStatus = deriveFilmStatus({
+      const derivedStatus = deriveFilmStatusLocal({
         status: project.film?.status,
         onlineDate: project.film?.onlineDate,
         finalToClient: project.film?.finalToClient,
@@ -419,6 +386,7 @@ async function loadFilmProjects(
         scriptApproved: project.film?.scriptApproved,
         scriptToClient: project.film?.scriptToClient,
         scouting: project.film?.scouting,
+        previewVersions: project.film?.previewVersions,
       });
       return filmStatuses.includes(derivedStatus);
     });
@@ -762,7 +730,13 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                     </td>
                     <td className="font-mono text-xs text-gray-600">
                       <div className="flex flex-col gap-1">
-                        <span>{row.customerNo}</span>
+                        {row.customerNo !== "-" ? (
+                          <Link href={`/clients/${project.client?.id}`} className="underline text-blue-600 hover:text-blue-800">
+                            {row.customerNo}
+                          </Link>
+                        ) : (
+                          <span>-</span>
+                        )}
                         {project.client?.workStopped && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-600 text-white">
                             ARBEITSSTOPP

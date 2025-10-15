@@ -111,6 +111,10 @@ export default async function NewProjectPage({ searchParams }: Props) {
               <input name="contact" className="rounded border p-2" placeholder="optional" />
             </label>
             <label className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">E-Mail</span>
+              <input name="email" type="email" className="rounded border p-2" placeholder="optional" />
+            </label>
+            <label className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">Telefon</span>
               <input name="phone" className="rounded border p-2" placeholder="optional" />
             </label>

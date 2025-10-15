@@ -1,8 +1,10 @@
 ﻿import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
-import { createTrigger, deleteTrigger, toggleTrigger } from "./actions";
+import { createTrigger, updateTrigger, deleteTrigger, toggleTrigger } from "./actions";
 import { TriggerForm } from "./TriggerForm";
+import { DeleteTriggerButton } from "./DeleteTriggerButton";
+import { ProcessQueueButton } from "./ProcessQueueButton";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -23,11 +25,19 @@ export default async function EmailTriggersPage({ searchParams }: Props) {
     prisma.emailTrigger.findMany({
       include: {
         template: true,
-        _count: {
-          select: {
-            queuedEmails: true,
-            sentLogs: true,
+        queuedEmails: {
+          where: {
+            status: {
+              in: ["PENDING", "SENDING"],
+            },
           },
+          select: { id: true },
+        },
+        sentLogs: {
+          where: {
+            success: true,
+          },
+          select: { id: true },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -63,15 +73,26 @@ export default async function EmailTriggersPage({ searchParams }: Props) {
         <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
           {success === "created" && "Trigger erfolgreich erstellt"}
           {success === "updated" && "Trigger erfolgreich aktualisiert"}
-          {success === "deleted" && "Trigger erfolgreich gelÃ¶scht"}
+          {success === "deleted" && "Trigger erfolgreich gelöscht"}
         </div>
       )}
+
+      {/* Process Queue Button */}
+      <div className="rounded-lg border bg-blue-50 p-4">
+        <h2 className="text-base font-medium mb-2">E-Mail-Warteschlange verarbeiten</h2>
+        <p className="text-sm text-gray-600 mb-3">
+          Klicken Sie hier, um alle fälligen E-Mails aus der Warteschlange zu versenden.
+        </p>
+        <ProcessQueueButton />
+      </div>
 
       {/* Trigger Liste */}
       <div className="space-y-4">
         {triggers.map((trigger) => {
           const conditions = trigger.conditions as Record<string, unknown>;
           const recipientConfig = trigger.recipientConfig as Record<string, unknown>;
+          const pendingQueueCount = trigger.queuedEmails.length;
+          const sentSuccessCount = trigger.sentLogs.length;
 
           return (
             <div
@@ -105,6 +126,15 @@ export default async function EmailTriggersPage({ searchParams }: Props) {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
+                  <details className="relative">
+                    <summary className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-gray-50">
+                      Bearbeiten
+                    </summary>
+                    <div className="absolute right-0 mt-2 w-[600px] max-h-[600px] overflow-y-auto space-y-4 rounded-lg border bg-white p-6 shadow-xl z-10">
+                      <h3 className="text-lg font-semibold">Trigger bearbeiten</h3>
+                      <TriggerForm action={updateTrigger} templates={templates} trigger={trigger} />
+                    </div>
+                  </details>
                   <form action={toggleTrigger}>
                     <input type="hidden" name="id" value={trigger.id} />
                     <input type="hidden" name="active" value={trigger.active.toString()} />
@@ -115,20 +145,11 @@ export default async function EmailTriggersPage({ searchParams }: Props) {
                       {trigger.active ? "Deaktivieren" : "Aktivieren"}
                     </button>
                   </form>
-                  <form action={deleteTrigger}>
-                    <input type="hidden" name="id" value={trigger.id} />
-                    <button
-                      type="submit"
-                      className="rounded border border-red-300 px-3 py-1 text-sm text-red-600 hover:bg-red-50"
-                      onClick={(e) => {
-                        if (!confirm(`Trigger "${trigger.name}" wirklich lÃ¶schen?`)) {
-                          e.preventDefault();
-                        }
-                      }}
-                    >
-                      LÃ¶schen
-                    </button>
-                  </form>
+                  <DeleteTriggerButton
+                    triggerId={trigger.id}
+                    triggerName={trigger.name}
+                    deleteTrigger={deleteTrigger}
+                  />
                 </div>
               </div>
 
@@ -138,7 +159,7 @@ export default async function EmailTriggersPage({ searchParams }: Props) {
                   <span>{trigger.template.title}</span>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-500">VerzÃ¶gerung:</span>{" "}
+                  <span className="font-medium text-gray-500">Verzögerung:</span>{" "}
                   <span>
                     {trigger.delayDays != null
                       ? `${trigger.delayDays} Tage ${trigger.delayType === "BEFORE" ? "vorher" : trigger.delayType === "AFTER" ? "nachher" : "genau"}`
@@ -152,18 +173,18 @@ export default async function EmailTriggersPage({ searchParams }: Props) {
                   </span>
                 </div>
                 <div>
-                  <span className="font-medium text-gray-500">EmpfÃ¤nger:</span>{" "}
+                  <span className="font-medium text-gray-500">Empfänger:</span>{" "}
                   <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
                     {JSON.stringify(recipientConfig)}
                   </span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-500">Warteschlange:</span>{" "}
-                  <span>{trigger._count.queuedEmails} E-Mails</span>
+                  <span>{pendingQueueCount} E-Mails</span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-500">Versendet:</span>{" "}
-                  <span>{trigger._count.sentLogs} E-Mails</span>
+                  <span>{sentSuccessCount} E-Mails</span>
                 </div>
               </div>
             </div>

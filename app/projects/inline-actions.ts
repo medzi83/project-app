@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { deriveProjectStatus } from "@/lib/project-status";
 import { normalizeAgentIdForDB } from "@/lib/agent-helpers";
+import { processTriggers } from "@/lib/email/trigger-service";
 import type {
   Prisma,
   WebsitePriority,
@@ -80,6 +81,14 @@ export async function updateInlineField(formData: FormData) {
   } else {
     const websiteKey = WebsiteKey.parse(key);
     const parsedValue = coerce(websiteKey, value);
+
+    // Fetch old values for trigger comparison
+    const oldProject = await prisma.project.findUnique({
+      where: { id },
+      include: { website: true },
+    });
+    const oldValue = oldProject?.website?.[websiteKey as keyof typeof oldProject.website];
+
     const updateData: Prisma.ProjectWebsiteUncheckedUpdateInput = {};
     const createData: Prisma.ProjectWebsiteUncheckedCreateInput = { projectId: id };
 
@@ -181,6 +190,19 @@ export async function updateInlineField(formData: FormData) {
       update: updateData,
       create: createData,
     });
+
+    // Process email triggers and get confirmation queue IDs
+    try {
+      await processTriggers(
+        id,
+        { [websiteKey]: parsedValue },
+        { [websiteKey]: oldValue }
+      );
+    } catch (error) {
+      console.error("Error processing triggers:", error);
+      // Don't fail the update if trigger processing fails
+    }
+
     if (statusRelevantWebsiteKeys.has(websiteKey)) {
       const project = await prisma.project.findUnique({
         where: { id },

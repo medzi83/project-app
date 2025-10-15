@@ -40,6 +40,13 @@ const VARIABLE_GROUPS: VariableGroup[] = [
     ],
   },
   {
+    label: "Webseitenprojekt - Links",
+    items: [
+      { placeholder: "{{website.domain}}", description: "Domain der Webseite" },
+      { placeholder: "{{website.demoLink}}", description: "Link zur Demo-Version" },
+    ],
+  },
+  {
     label: "Filmprojekt",
     items: [
       { placeholder: "{{film.scope}}", description: "Art des Filmprojekts" },
@@ -47,6 +54,15 @@ const VARIABLE_GROUPS: VariableGroup[] = [
       { placeholder: "{{film.shootDate}}", description: "Drehtermin" },
       { placeholder: "{{film.filmerName}}", description: "Filmer Name" },
       { placeholder: "{{film.cutterName}}", description: "Cutter Name" },
+    ],
+  },
+  {
+    label: "Filmprojekt - Links",
+    items: [
+      { placeholder: "{{film.previewLink}}", description: "Link zur neuesten Vorabversion" },
+      { placeholder: "{{film.previewDate}}", description: "Datum der neuesten Vorabversion" },
+      { placeholder: "{{film.finalLink}}", description: "Link zur finalen Version" },
+      { placeholder: "{{film.onlineLink}}", description: "Link zur Online-Version" },
     ],
   },
   {

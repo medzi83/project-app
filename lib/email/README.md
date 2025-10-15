@@ -4,7 +4,22 @@ Automatisches E-Mail-Versand-System basierend auf Projekt-Events.
 
 ## Funktionen
 
-### 1. **Automatische Mailserver-Auswahl**
+### 1. **Sofortversand mit Bestätigung vs. Queue**
+
+Das System unterscheidet zwischen sofortigem Versand (mit Bestätigung) und verzögertem Versand:
+
+- **Sofortversand mit Bestätigung**: Trigger ohne Verzögerung (`delayDays` = 0 oder null) zeigen einen **Bestätigungsdialog**
+  - Beispiel: Wenn ein Datum gerade eingetragen wird
+  - Dialog zeigt: E-Mail-Adresse (editierbar), Betreff, E-Mail-Text
+  - E-Mail-Adresse kann im Dialog angepasst und beim Kunden gespeichert werden
+  - Optionen: "Jetzt senden" oder "Abbrechen"
+  - Status in Queue: `PENDING_CONFIRMATION`
+- **Verzögerter Versand**: Trigger mit `delayDays` > 0 werden in die Queue geschrieben
+  - Beispiel: 1 Tag vor einem Termin
+  - Versand über Cron-Job oder manuell
+  - Status in Queue: `PENDING`
+
+### 2. **Automatische Mailserver-Auswahl**
 
 Das System wählt automatisch den richtigen Mailserver basierend auf der Agentur-Zuordnung:
 
@@ -18,48 +33,47 @@ import { getMailServerForProject } from "@/lib/email/mailserver-service";
 const mailServer = await getMailServerForProject(projectId);
 ```
 
-### 2. **Trigger-Typen**
-
-#### **DATE_FIELD_SET** - Datumsfeld wurde gesetzt
-Wird ausgelöst, wenn ein bestimmtes Datumsfeld gesetzt wird.
-
-**Beispiel**: Demo-Termin wurde eingetragen
-```json
-{
-  "field": "demoDate",
-  "operator": "SET"
-}
-```
-
-#### **DATE_REACHED** - Datum wurde erreicht
-Wird ausgelöst, wenn ein bestimmtes Datum erreicht ist.
-
-**Beispiel**: 1 Tag vor Demo-Termin
-```json
-{
-  "field": "demoDate",
-  "operator": "REACHED"
-}
-```
-Mit `delayDays: -1` und `delayType: "BEFORE"`
+### 3. **Trigger-Typen**
 
 #### **CONDITION_MET** - Bedingung erfüllt
-Wird ausgelöst, wenn eine komplexe Bedingung erfüllt ist.
+Wird ausgelöst, wenn eine Bedingung erfüllt ist. Dies ist der Haupttrigger-Typ für alle Feld-Änderungen.
 
-**Beispiel**: 7 Tage nach Skript-Versand keine Freigabe
-```json
-{
-  "field": "scriptToClient",
-  "checkField": "scriptApproved",
-  "operator": "NOT_SET_AFTER_DAYS",
-  "days": 7
-}
-```
+**Verfügbare Operatoren:**
+
+- **SET**: Feld wurde gerade gesetzt (von leer → Wert)
+  ```json
+  {
+    "field": "demoDate",
+    "operator": "SET"
+  }
+  ```
+
+- **EQUALS**: Feld hat einen bestimmten Wert
+  ```json
+  {
+    "field": "materialStatus",
+    "operator": "EQUALS",
+    "value": "VOLLSTAENDIG"
+  }
+  ```
+
+- **NOT_SET_AFTER_DAYS**: Feld wurde nach X Tagen noch nicht gesetzt
+  ```json
+  {
+    "field": "scriptToClient",
+    "checkField": "scriptApproved",
+    "operator": "NOT_SET_AFTER_DAYS",
+    "days": 7
+  }
+  ```
+
+#### **DATE_REACHED** - Datum erreicht (Cron)
+Wird über einen Cron-Job ausgelöst, wenn ein Datum erreicht wurde. Nicht für sofortige Auslösung bei Feld-Änderungen.
 
 #### **MANUAL** - Manuell ausgelöst
 Wird nur manuell durch einen Admin ausgelöst.
 
-### 3. **Empfänger-Konfiguration**
+### 4. **Empfänger-Konfiguration**
 
 ```json
 {
@@ -72,16 +86,48 @@ Mögliche Werte:
 - **to**: `CLIENT`, `AGENT`, `FILMER`, `CUTTER`
 - **cc**: Array mit beliebiger Kombination
 
-### 4. **Template-Variablen**
+**Hinweis**: E-Mail-Adressen werden automatisch aus dem Projekt aufgelöst.
+
+### 5. **Template-Variablen**
 
 Templates können folgende Variablen verwenden (werden automatisch ersetzt):
 
-- `{{projectTitle}}` - Projekttitel
-- `{{clientName}}` - Kundenname
-- `{{agentName}}` - Name des zuständigen Agents
-- `{{demoDate}}` - Demo-Datum (formatiert)
-- `{{webDate}}` - Web-Termin (formatiert)
-- etc.
+**Projekt:**
+- `{{project.title}}` - Projekttitel
+- `{{project.id}}` - Projekt-ID
+- `{{project.status}}` - Projektstatus
+- `{{project.webDate}}` - Web-Termin (formatiert)
+- `{{project.demoDate}}` - Demo-Datum (formatiert)
+- `{{project.agentName}}` - Name des zuständigen Agents
+
+**Kunde:**
+- `{{client.name}}` - Kundenname
+- `{{client.customerNo}}` - Kundennummer
+- `{{client.contact}}` - Kontaktperson
+- `{{client.phone}}` - Telefonnummer
+
+**Agent:**
+- `{{agent.name}}` - Agent-Name
+- `{{agent.email}}` - Agent-E-Mail
+- `{{agent.categories}}` - Agent-Kategorien
+
+**Website:**
+- `{{website.domain}}` - Domain
+- `{{website.webDate}}` - Web-Termin (formatiert)
+- `{{website.demoDate}}` - Demo-Datum (formatiert)
+- `{{website.demoLink}}` - Demo-Link
+
+**Film:**
+- `{{film.scope}}` - Umfang (z.B. FILM, VIDEO, FOTO)
+- `{{film.status}}` - Film-Status
+- `{{film.shootDate}}` - Dreh-/Fototermin (formatiert)
+- `{{film.filmerName}}` - Name des Filmers
+- `{{film.cutterName}}` - Name des Cutters
+- `{{film.previewLink}}` - Link zur neuesten Vorabversion
+- `{{film.previewDate}}` - Datum der neuesten Vorabversion (formatiert)
+- `{{film.previewVersion}}` - Versionsnummer der neuesten Vorabversion (z.B. "1", "2")
+- `{{film.finalLink}}` - Link zur Finalversion
+- `{{film.onlineLink}}` - Online-Link
 
 ## Admin-Interface
 
@@ -150,12 +196,12 @@ Gibt Statistiken über die Queue zurück:
 
 ## Beispiel-Konfigurationen
 
-### 1. Demo-Termin gesetzt (Website)
+### 1. Demo-Termin gesetzt (Website) - **Sofortversand**
 
 ```json
 {
   "name": "Demo-Termin gesetzt",
-  "triggerType": "DATE_FIELD_SET",
+  "triggerType": "CONDITION_MET",
   "projectType": "WEBSITE",
   "conditions": {
     "field": "demoDate",
@@ -163,6 +209,29 @@ Gibt Statistiken über die Queue zurück:
   },
   "delayDays": 0,
   "delayType": "EXACT",
+  "templateId": "...",
+  "recipientConfig": {
+    "to": "CLIENT",
+    "cc": ["AGENT"]
+  }
+}
+```
+
+**Hinweis**: Weil `delayDays: 0`, wird bei dieser E-Mail ein **Bestätigungsdialog** angezeigt, bevor sie versendet wird.
+
+### 1b. Material vollständig (Website) - **Sofortversand**
+
+```json
+{
+  "name": "Material vollständig",
+  "triggerType": "CONDITION_MET",
+  "projectType": "WEBSITE",
+  "conditions": {
+    "field": "materialStatus",
+    "operator": "EQUALS",
+    "value": "VOLLSTAENDIG"
+  },
+  "delayDays": 0,
   "templateId": "...",
   "recipientConfig": {
     "to": "CLIENT",

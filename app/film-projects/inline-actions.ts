@@ -10,6 +10,7 @@ import type {
 import { getAuthSession } from "@/lib/authz";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { processTriggers } from "@/lib/email/trigger-service";
 
 const FilmKey = z.enum([
   "scope",
@@ -261,6 +262,18 @@ export async function addPreviewVersion(formData: FormData) {
 
   const { projectId, version, sentDate, link } = parsed.data;
 
+  const parsedSentDate = new Date(sentDate);
+
+  // Check if this preview version existed before (to determine old value for triggers)
+  const existingPreview = await prisma.filmPreviewVersion.findUnique({
+    where: {
+      projectId_version: {
+        projectId,
+        version,
+      },
+    },
+  });
+
   await prisma.filmPreviewVersion.upsert({
     where: {
       projectId_version: {
@@ -269,16 +282,27 @@ export async function addPreviewVersion(formData: FormData) {
       },
     },
     update: {
-      sentDate: new Date(sentDate),
+      sentDate: parsedSentDate,
       link,
     },
     create: {
       projectId,
       version,
-      sentDate: new Date(sentDate),
+      sentDate: parsedSentDate,
       link,
     },
   });
 
+  // Process email triggers for preview version
+  // Pass the old date if updating, null if creating new version
+  const queueIds = await processTriggers(
+    projectId,
+    { previewDate: parsedSentDate },
+    { previewDate: existingPreview?.sentDate ?? null }
+  );
+
   revalidatePath("/film-projects");
+
+  // Return queue IDs for confirmation dialog
+  return queueIds;
 }

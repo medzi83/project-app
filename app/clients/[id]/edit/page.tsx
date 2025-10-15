@@ -88,6 +88,19 @@ export default async function EditClientPage({ params }: Props) {
 
             <div>
               <label className="block text-sm font-medium mb-1">
+                E-Mail
+              </label>
+              <input
+                type="email"
+                name="email"
+                defaultValue={client.email || ""}
+                className="w-full rounded border p-2"
+                placeholder="kunde@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
                 Telefon
               </label>
               <input

@@ -30,8 +30,9 @@ export function TriggerForm({ action, templates, trigger }: TriggerFormProps) {
   const recipientConfig = trigger?.recipientConfig as Record<string, unknown> | undefined;
   const ccList = (recipientConfig?.cc as string[]) || [];
 
-  const [triggerType, setTriggerType] = useState(trigger?.triggerType || "DATE_FIELD_SET");
+  const [triggerType, setTriggerType] = useState(trigger?.triggerType || "CONDITION_MET");
   const [projectType, setProjectType] = useState(trigger?.projectType || "");
+  const [conditionField, setConditionField] = useState((conditions?.field as string) || "");
 
   return (
     <form action={action} className="space-y-4">
@@ -83,9 +84,8 @@ export function TriggerForm({ action, templates, trigger }: TriggerFormProps) {
               required
               className="w-full rounded border px-3 py-2 text-sm"
             >
-              <option value="DATE_FIELD_SET">Datumsfeld gesetzt</option>
-              <option value="DATE_REACHED">Datum erreicht</option>
               <option value="CONDITION_MET">Bedingung erfüllt</option>
+              <option value="DATE_REACHED">Datum erreicht (Cron)</option>
               <option value="MANUAL">Manuell</option>
             </select>
           </div>
@@ -115,7 +115,8 @@ export function TriggerForm({ action, templates, trigger }: TriggerFormProps) {
             <label className="block text-sm font-medium mb-1">Feld</label>
             <select
               name="conditionField"
-              defaultValue={(conditions?.field as string) || ""}
+              value={conditionField}
+              onChange={(e) => setConditionField(e.target.value)}
               className="w-full rounded border px-3 py-2 text-sm"
             >
               <option value="">Bitte wählen</option>
@@ -124,6 +125,7 @@ export function TriggerForm({ action, templates, trigger }: TriggerFormProps) {
                   <option value="demoDate">Demo-Datum</option>
                   <option value="webDate">Web-Termin</option>
                   <option value="onlineDate">Online-Datum</option>
+                  <option value="materialStatus">Material-Status</option>
                 </>
               )}
               {projectType === "FILM" && (
@@ -132,6 +134,7 @@ export function TriggerForm({ action, templates, trigger }: TriggerFormProps) {
                   <option value="scriptApproved">Skript freigegeben</option>
                   <option value="shootDate">Dreh-Datum</option>
                   <option value="firstCutToClient">Erster Schnitt an Kunde</option>
+                  <option value="previewDate">Vorabversion</option>
                   <option value="finalToClient">Final an Kunde</option>
                 </>
               )}
@@ -139,6 +142,7 @@ export function TriggerForm({ action, templates, trigger }: TriggerFormProps) {
                 <>
                   <option value="demoDate">Demo-Datum (Website)</option>
                   <option value="webDate">Web-Termin (Website)</option>
+                  <option value="materialStatus">Material-Status (Website)</option>
                   <option value="scriptToClient">Skript an Kunde (Film)</option>
                   <option value="shootDate">Dreh-Datum (Film)</option>
                 </>
@@ -179,15 +183,41 @@ export function TriggerForm({ action, templates, trigger }: TriggerFormProps) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Tage für Bedingung</label>
-            <input
-              name="conditionDays"
-              type="number"
-              defaultValue={(conditions?.days as number) || ""}
-              className="w-full rounded border px-3 py-2 text-sm"
-              placeholder="z.B. 7"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Tage für Bedingung</label>
+              <input
+                name="conditionDays"
+                type="number"
+                defaultValue={(conditions?.days as number) || ""}
+                className="w-full rounded border px-3 py-2 text-sm"
+                placeholder="z.B. 7"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Wert (für EQUALS)</label>
+              {conditionField === "materialStatus" ? (
+                <select
+                  name="conditionValue"
+                  defaultValue={(conditions?.value as string) || ""}
+                  className="w-full rounded border px-3 py-2 text-sm"
+                >
+                  <option value="">Bitte wählen</option>
+                  <option value="ANGEFORDERT">Angefordert</option>
+                  <option value="TEILWEISE">Teilweise</option>
+                  <option value="VOLLSTAENDIG">Vollständig</option>
+                  <option value="NV">Nicht verfügbar</option>
+                </select>
+              ) : (
+                <input
+                  name="conditionValue"
+                  type="text"
+                  defaultValue={(conditions?.value as string) || ""}
+                  className="w-full rounded border px-3 py-2 text-sm"
+                  placeholder="z.B. VOLLSTAENDIG"
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

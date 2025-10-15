@@ -33,6 +33,7 @@ model Client {
   id          String    @id @default(cuid())
   name        String
   contact     String?
+  email       String?
   phone       String?
   notes       String?
   createdAt   DateTime  @default(now())
@@ -396,6 +397,7 @@ enum DelayType {
 
 enum QueueStatus {
   PENDING
+  PENDING_CONFIRMATION
   SENDING
   SENT
   FAILED

@@ -57,6 +57,7 @@ const TriggerSchema = z.object({
   conditionOperator: z.string().optional(),
   conditionCheckField: z.string().optional(),
   conditionDays: z.coerce.number().int().optional().nullable(),
+  conditionValue: z.string().optional(),
 
   // Recipients (als einzelne Felder, werden zu JSON konvertiert)
   recipientTo: z.string().min(1, "Empfänger ist erforderlich"),
@@ -84,6 +85,7 @@ export async function createTrigger(formData: FormData) {
   if (data.conditionOperator) conditions.operator = data.conditionOperator;
   if (data.conditionCheckField) conditions.checkField = data.conditionCheckField;
   if (data.conditionDays) conditions.days = data.conditionDays;
+  if (data.conditionValue) conditions.value = data.conditionValue;
 
   // Build recipient config JSON
   const recipientConfig: Record<string, unknown> = {
@@ -138,6 +140,7 @@ export async function updateTrigger(formData: FormData) {
   if (data.conditionOperator) conditions.operator = data.conditionOperator;
   if (data.conditionCheckField) conditions.checkField = data.conditionCheckField;
   if (data.conditionDays) conditions.days = data.conditionDays;
+  if (data.conditionValue) conditions.value = data.conditionValue;
 
   // Build recipient config JSON
   const recipientConfig: Record<string, unknown> = {

@@ -169,15 +169,15 @@ export function UnifiedProjectForm({
           </legend>
           <label className="flex items-center gap-2">
             <input type="radio" name="projectType" value="WEBSITE" className="h-4 w-4" required />
-            <span>Nur Website</span>
+            <span>Website</span>
           </label>
           <label className="flex items-center gap-2">
             <input type="radio" name="projectType" value="FILM" className="h-4 w-4" required />
-            <span>Nur Film</span>
+            <span>Film</span>
           </label>
           <label className="flex items-center gap-2">
             <input type="radio" name="projectType" value="BOTH" className="h-4 w-4" required />
-            <span>Website + Film</span>
+            <span>Website + Film (2 Projekte)</span>
           </label>
         </fieldset>
       </div>

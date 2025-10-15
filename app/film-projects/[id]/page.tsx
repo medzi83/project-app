@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { Badge } from "@/components/ui/badge";
+import { PreviewVersionItem } from "@/components/PreviewVersionItem";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -284,23 +285,11 @@ export default async function FilmProjectDetailPage({ params }: Props) {
         ) : (
           <div className="space-y-2">
             {film.previewVersions.map((version) => (
-              <div key={version.id} className="flex items-center gap-3 p-2 rounded border">
-                <Badge variant="outline" className="font-mono">v{version.version}</Badge>
-                <span className="text-sm">{formatDate(version.sentDate)}</span>
-                {version.link && (
-                  <a
-                    href={version.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    Link öffnen →
-                  </a>
-                )}
-                <span className="text-xs text-gray-500 ml-auto">
-                  (Erfasst: {formatDate(version.createdAt)})
-                </span>
-              </div>
+              <PreviewVersionItem
+                key={version.id}
+                version={version}
+                isAdmin={isAdmin}
+              />
             ))}
             {film.firstCutToClient && film.previewVersions.length > 0 && (
               <div className="flex items-center gap-3 p-2 rounded border border-dashed bg-gray-50">

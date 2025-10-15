@@ -24,7 +24,12 @@ export default function RichHtmlEditor({
 
   useEffect(() => {
     if (mode === "rich" && editorRef.current && editorRef.current.innerHTML !== value) {
-      editorRef.current.innerHTML = value || "";
+      // If empty, start with a clean paragraph to prevent auto-formatting
+      if (!value || value.trim() === "") {
+        editorRef.current.innerHTML = "<p><br></p>";
+      } else {
+        editorRef.current.innerHTML = value;
+      }
     }
   }, [mode, value]);
 
@@ -33,7 +38,37 @@ export default function RichHtmlEditor({
   };
 
   const handleRichInput = () => {
-    onChange(editorRef.current?.innerHTML ?? "");
+    const html = editorRef.current?.innerHTML ?? "";
+    // Clean up if only contains empty paragraph
+    if (html === "<p><br></p>") {
+      onChange("");
+    } else {
+      onChange(html);
+    }
+  };
+
+  const handleFocus = () => {
+    // Ensure no formatting is active when focusing empty editor
+    if (typeof window !== "undefined" && editorRef.current) {
+      const isEmpty = !editorRef.current.textContent?.trim();
+      if (isEmpty) {
+        // Remove any active formatting
+        document.execCommand("removeFormat", false);
+      }
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+
+    // Get plain text from clipboard
+    const text = e.clipboardData.getData("text/plain");
+
+    // Insert as plain text
+    if (typeof window !== "undefined") {
+      document.execCommand("insertText", false, text);
+      onChange(editorRef.current?.innerHTML ?? "");
+    }
   };
 
   const applyCommand = (command: string) => {
@@ -104,6 +139,8 @@ export default function RichHtmlEditor({
             aria-label="Rich-Text-Editor"
             suppressContentEditableWarning
             onInput={handleRichInput}
+            onPaste={handlePaste}
+            onFocus={handleFocus}
           />
           {value.trim().length === 0 && (
             <span className="pointer-events-none absolute left-3 top-2 text-sm text-gray-400">

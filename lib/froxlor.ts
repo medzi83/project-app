@@ -48,7 +48,7 @@ export type FroxlorDomain = {
   id: string;
   domain: string;
   documentroot: string;
-  customerid: string;
+  customerid: string | number;
   ssl_redirect: string;
   letsencrypt: string;
   phpsettingid: string;
@@ -64,7 +64,7 @@ const normalizeFroxlorList = <T>(payload: FroxlorListingPayload<T> | null | unde
   if (Array.isArray(payload)) {
     return payload;
   }
-  if (typeof payload === 'object') {
+  if (typeof payload === "object") {
     const maybeWithList = payload as { list?: T[] };
     if (Array.isArray(maybeWithList.list)) {
       return maybeWithList.list;
@@ -72,6 +72,11 @@ const normalizeFroxlorList = <T>(payload: FroxlorListingPayload<T> | null | unde
     return Object.values(payload as Record<string, T>);
   }
   return [];
+};
+
+const toNumericId = (value: unknown): number | null => {
+  const parsed = Number.parseInt(String(value ?? "").trim(), 10);
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 export type FroxlorCustomerCreateInput = {
@@ -367,22 +372,28 @@ export class FroxlorClient {
   /**
    * Get all domains for a customer
    */
-  async getCustomerDomains(customerId: number): Promise<FroxlorDomain[]> {
+  async getCustomerDomains(customerId: number | string): Promise<FroxlorDomain[]> {
+    const targetId = toNumericId(customerId);
+
     try {
-      const result = await this.request<FroxlorListingPayload<FroxlorDomain>>('Domains.listing', {
-        customerid: customerId,
+      const result = await this.request<FroxlorListingPayload<FroxlorDomain>>("Domains.listing", {
+        customerid: targetId ?? customerId,
       });
 
       if (result.status === 200 && result.data) {
         const domains = normalizeFroxlorList(result.data);
 
+        if (targetId == null) {
+          return domains;
+        }
+
         // Filter by customerid (API might return all domains despite parameter)
-        return domains.filter((d) => d && Number.parseInt(d.customerid, 10) === customerId);
+        return domains.filter((domain) => toNumericId(domain?.customerid) === targetId);
       }
 
       return [];
     } catch (error) {
-      console.error('Error getting customer domains:', error);
+      console.error("Error getting customer domains:", error);
       return [];
     }
   }
@@ -390,13 +401,20 @@ export class FroxlorClient {
   /**
    * Get customer's standard domain (subdomain)
    */
-  async getCustomerStandardDomain(customerId: number, standardSubdomainId: number): Promise<FroxlorDomain | null> {
+  async getCustomerStandardDomain(
+    customerId: number | string,
+    standardSubdomainId: number | string
+  ): Promise<FroxlorDomain | null> {
     try {
+      const targetStandardId = toNumericId(standardSubdomainId);
       const domains = await this.getCustomerDomains(customerId);
-      const standardDomain = domains.find((d) => d && parseInt(d.id) === standardSubdomainId);
+      const standardDomain = domains.find((domain) => {
+        if (targetStandardId == null) return false;
+        return toNumericId(domain?.id) === targetStandardId;
+      });
       return standardDomain || null;
     } catch (error) {
-      console.error('Error getting customer standard domain:', error);
+      console.error("Error getting customer standard domain:", error);
       return null;
     }
   }

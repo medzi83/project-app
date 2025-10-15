@@ -67,6 +67,7 @@ const ClientSchema = z.object({
   name: z.string().min(1, "Name fehlt"),
   customerNo: z.string().optional().transform((v) => v?.trim() || null),
   contact: z.string().optional().transform((v) => v?.trim() || null),
+  email: z.string().optional().transform((v) => v?.trim() || null),
   phone: z.string().optional().transform((v) => v?.trim() || null),
   agencyId: z.string().optional().transform((v) => v?.trim() || null),
   notes: z.string().optional().transform((v) => v?.trim() || null),
@@ -495,20 +496,16 @@ export async function createProject(formData: FormData) {
     revalidatePath(`/clients/${project.clientId}`);
     redirect(`/clients/${project.clientId}`);
   } else if (projectType === "BOTH") {
-    // Bestimme den Status basierend auf Website-Daten, da das Projekt primär als Website geführt wird
-    const nextStatus = deriveProjectStatus({
-      pStatus: data.pStatus ?? "NONE",
-      webDate: data.webDate ?? null,
-      demoDate: data.demoDate ?? null,
-      onlineDate: data.onlineDate ?? null,
-      materialStatus: data.materialStatus ?? "ANGEFORDERT",
-    });
-
-    const cmsOther = (data.cms && ["OTHER", "CUSTOM"].includes(data.cms)) ? data.cmsOther : null;
+    // Erstelle zwei separate Projekte: Website und Film
     const { baseAgentId, isWTAssignment } = normalizeAgentIdForDB(data.agentId);
 
-    // Wenn kein Filmer explizit angegeben ist, verwende den Agent als Filmer
-    const filmerId = data.filmerId || baseAgentId;
+    // Fetch client for redirect
+    const client = await prisma.client.findUnique({ where: { id: data.clientId } });
+    if (!client) {
+      return sendError("Client not found", "both");
+    }
+
+    // Validierung für Film-Daten
     const filmFinalLink = data.finalLink ?? null;
     if (data.finalToClient && !filmFinalLink) {
       sendError("Finalversion-Link ist erforderlich, wenn eine Finalversion gesetzt wird.", "both");
@@ -518,11 +515,22 @@ export async function createProject(formData: FormData) {
       sendError("Bitte einen Hauptlink hinterlegen, wenn ein Online-Datum gesetzt wird.", "both");
     }
 
-    const project = await prisma.project.create({
+    // Website-Projekt erstellen
+    const websiteStatus = deriveProjectStatus({
+      pStatus: data.pStatus ?? "NONE",
+      webDate: data.webDate ?? null,
+      demoDate: data.demoDate ?? null,
+      onlineDate: data.onlineDate ?? null,
+      materialStatus: data.materialStatus ?? "ANGEFORDERT",
+    });
+
+    const cmsOther = (data.cms && ["OTHER", "CUSTOM"].includes(data.cms)) ? data.cmsOther : null;
+
+    const websiteProject = await prisma.project.create({
       data: {
-        title: data.title || "",
+        title: data.title ? `${data.title} (Website)` : "Website",
         type: "WEBSITE",
-        status: nextStatus,
+        status: websiteStatus,
         clientId: data.clientId,
         agentId: baseAgentId,
         website: {
@@ -547,6 +555,20 @@ export async function createProject(formData: FormData) {
             isWTAssignment,
           },
         },
+      },
+    });
+
+    // Film-Projekt erstellen
+    const filmStatus = mapFilmStatusToProjectStatus(data.status ?? "AKTIV");
+    const filmerId = data.filmerId || baseAgentId;
+
+    const filmProject = await prisma.project.create({
+      data: {
+        title: data.title ? `${data.title} (Film)` : "Film",
+        type: "FILM",
+        status: filmStatus,
+        clientId: data.clientId,
+        agentId: baseAgentId,
         film: {
           create: {
             scope: data.scope ?? "FILM",
@@ -574,9 +596,10 @@ export async function createProject(formData: FormData) {
 
     revalidatePath("/projects");
     revalidatePath("/film-projects");
-    revalidatePath(`/projects/${project.id}`);
-    revalidatePath(`/clients/${project.clientId}`);
-    redirect(`/clients/${project.clientId}`);
+    revalidatePath(`/projects/${websiteProject.id}`);
+    revalidatePath(`/projects/${filmProject.id}`);
+    revalidatePath(`/clients/${client.id}`);
+    redirect(`/clients/${client.id}`);
   }
 
   redirect("/projects");

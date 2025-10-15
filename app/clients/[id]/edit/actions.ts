@@ -14,6 +14,7 @@ export async function updateClient(formData: FormData) {
   const name = formData.get("name") as string;
   const customerNo = formData.get("customerNo") as string;
   const contact = formData.get("contact") as string;
+  const email = formData.get("email") as string;
   const phone = formData.get("phone") as string;
   const serverId = formData.get("serverId") as string;
   const notes = formData.get("notes") as string;
@@ -27,6 +28,7 @@ export async function updateClient(formData: FormData) {
       name: name || undefined,
       customerNo: customerNo || null,
       contact: contact || null,
+      email: email || null,
       phone: phone || null,
       serverId: serverId || null,
       notes: notes || null,

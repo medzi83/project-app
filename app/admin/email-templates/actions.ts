@@ -134,9 +134,25 @@ export async function deleteEmailTemplate(formData: FormData) {
 
   const { id } = parsed.data!;
 
-  await prisma.emailTemplate.delete({
-    where: { id },
+  // Check if template is used by any triggers
+  const triggersUsingTemplate = await prisma.emailTrigger.count({
+    where: { templateId: id },
   });
+
+  if (triggersUsingTemplate > 0) {
+    buildRedirect(
+      "error",
+      `Vorlage kann nicht gelöscht werden. Sie wird von ${triggersUsingTemplate} Trigger(n) verwendet. Bitte löschen Sie zuerst die zugehörigen Trigger.`
+    );
+  }
+
+  try {
+    await prisma.emailTemplate.delete({
+      where: { id },
+    });
+  } catch (error) {
+    buildRedirect("error", handlePrismaError(error));
+  }
 
   revalidatePath("/admin/email-templates");
   buildRedirect("success", "Vorlage gelöscht.");
