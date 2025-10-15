@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { sendProjectEmail } from "@/lib/email/send-service";
+import { QueueStatus } from "@prisma/client";
 
 /**
  * GET - Fetch email details for confirmation
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Email not found" }, { status: 404 });
   }
 
-  if (queuedEmail.status !== "PENDING_CONFIRMATION") {
+  if (queuedEmail.status !== QueueStatus.PENDING_CONFIRMATION) {
     return NextResponse.json(
       { error: "Email is not pending confirmation" },
       { status: 400 }
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Email not found" }, { status: 404 });
   }
 
-  if (queuedEmail.status !== "PENDING_CONFIRMATION") {
+  if (queuedEmail.status !== QueueStatus.PENDING_CONFIRMATION) {
     return NextResponse.json(
       { error: "Email is not pending confirmation" },
       { status: 400 }
@@ -158,7 +159,7 @@ export async function POST(request: NextRequest) {
     await prisma.emailQueue.update({
       where: { id: queueId },
       data: {
-        status: "SENT",
+        status: QueueStatus.SENT,
         sentAt: new Date(),
       },
     });
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
     await prisma.emailQueue.update({
       where: { id: queueId },
       data: {
-        status: "FAILED",
+        status: QueueStatus.FAILED,
         error: error instanceof Error ? error.message : "Unknown error",
         attempts: queuedEmail.attempts + 1,
       },
@@ -211,7 +212,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Email not found" }, { status: 404 });
   }
 
-  if (queuedEmail.status !== "PENDING_CONFIRMATION") {
+  if (queuedEmail.status !== QueueStatus.PENDING_CONFIRMATION) {
     return NextResponse.json(
       { error: "Email is not pending confirmation" },
       { status: 400 }
