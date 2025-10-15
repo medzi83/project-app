@@ -36,7 +36,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
       <body>
         <AuthSessionProvider session={session}>
           {shell ? (
-            <AppShell user={shell} counts={counts} devMode={devMode}>{children}</AppShell>
+            <AppShell user={shell} counts={counts} devMode={devMode}>
+              {children}
+            </AppShell>
           ) : (
             children
           )}

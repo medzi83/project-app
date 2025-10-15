@@ -5,6 +5,7 @@ import type { Prisma, ProjectStatus, ProjectType, AgentCategory } from "@prisma/
 import { prisma } from "@/lib/prisma";
 import { buildWebsiteStatusWhere, DONE_PRODUCTION_STATUSES } from "@/lib/project-status";
 import { getEffectiveUser, getAuthSession } from "@/lib/authz";
+import { NoticeBoard, type NoticeBoardEntry } from "@/components/NoticeBoard";
 
 export const metadata = { title: "Dashboard" };
 
@@ -44,6 +45,22 @@ function formatDate(d?: Date | null) {
     return "-";
   }
 }
+
+const buildNoticeTargetLabel = (
+  visibility: "GLOBAL" | "TARGETED",
+  role: string | undefined,
+  recipients: Array<{ user: { name: string | null } }>,
+) => {
+  if (visibility === "GLOBAL") return undefined;
+  if (role === "AGENT") return "Für dich";
+  const names = recipients.map((entry) => entry.user.name).filter(Boolean) as string[];
+  if (names.length === 0) return "Spezifische Agenten";
+  if (names.length > 2) {
+    const displayed = names.slice(0, 2).join(", ");
+    return `${displayed} (+${names.length - 2} weitere)`;
+  }
+  return names.join(", ");
+};
 
 // Helper: Check if a date is older than 4 weeks (28 days)
 const isOlderThan4Weeks = (date: Date | null | undefined) => {
@@ -147,6 +164,9 @@ export default async function DashboardPage({
     redirect("/login");
   }
 
+  const userRole = (session.user.role ?? "CUSTOMER") as "ADMIN" | "AGENT" | "CUSTOMER";
+  const sessionUserId = session.user.id ?? null;
+
   // Get effective user (could be an agent in dev mode)
   const effectiveUser = await getEffectiveUser();
 
@@ -214,6 +234,27 @@ export default async function DashboardPage({
       ? { AND: [activeProjectWhere, agentFilterWhere] }
       : activeProjectWhere ?? agentFilterWhere;
 
+  const noticeTargetUserId = agentId ?? sessionUserId;
+
+  let noticeWhere: Prisma.NoticeWhereInput = { isActive: true };
+  if (!(userRole === "ADMIN" && !isAgentView)) {
+    if (noticeTargetUserId) {
+      noticeWhere = {
+        isActive: true,
+        OR: [
+          { visibility: "GLOBAL" as const },
+          { visibility: "TARGETED" as const, recipients: { some: { userId: noticeTargetUserId } } },
+        ],
+      };
+    } else {
+      noticeWhere = {
+        isActive: true,
+        visibility: "GLOBAL" as const,
+      };
+    }
+  }
+  const acknowledgementUserId = noticeTargetUserId ?? sessionUserId ?? "";
+
   const [
     scopedProjectsCount,
     activeProjectsCount,
@@ -223,6 +264,7 @@ export default async function DashboardPage({
     socialCount,
     nonWebsiteStatusCountsRaw,
     overdueCandidates,
+    dashboardNotices,
   ] = await Promise.all([
     prisma.project.count({ where: baseWhere }),
     prisma.project.count({
@@ -286,7 +328,44 @@ export default async function DashboardPage({
         website: { select: { lastMaterialAt: true, demoDate: true } },
       },
     }),
+    prisma.notice.findMany({
+      where: noticeWhere,
+      orderBy: { createdAt: "desc" },
+      include: {
+        createdBy: { select: { name: true } },
+        recipients: {
+          select: {
+            user: { select: { name: true } },
+          },
+        },
+        acknowledgements: {
+          where: { userId: acknowledgementUserId },
+          select: { readAt: true, userId: true },
+        },
+      },
+    }),
   ]);
+
+  const noticeBoardEntries: NoticeBoardEntry[] = dashboardNotices.map((notice) => {
+    const acknowledgement = notice.acknowledgements?.[0];
+    return {
+      id: notice.id,
+      title: notice.title,
+      message: notice.message,
+      createdAt: notice.createdAt.toISOString(),
+      requireAcknowledgement: notice.requireAcknowledgement,
+      acknowledgedAt: acknowledgement?.readAt
+        ? acknowledgement.readAt.toISOString()
+        : null,
+      visibility: notice.visibility,
+      targetLabel: buildNoticeTargetLabel(
+        notice.visibility,
+        isAgentView ? "AGENT" : userRole,
+        notice.recipients,
+      ),
+      authorName: notice.createdBy.name,
+    };
+  });
 
   const activeWebsiteConstraint: Prisma.ProjectWhereInput = {
     type: "WEBSITE",
@@ -730,6 +809,16 @@ export default async function DashboardPage({
         </div>
       </div>
 
+      <section className="space-y-4 rounded-2xl border bg-white p-5 sm:p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Wichtige Hinweise</h2>
+          <Link href="/notices" className="text-sm text-blue-600 hover:underline">
+            Hinweis-Historie
+          </Link>
+        </div>
+        <NoticeBoard notices={noticeBoardEntries} canAcknowledge={isAgentView} />
+      </section>
+
       {/* KPI-Kacheln */}
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
         {overviewTiles.map((tile) => (
@@ -789,40 +878,41 @@ export default async function DashboardPage({
         </div>
       </section>
 
-      {/* Zuletzt aktualisierte Projekte */}
-      <section className="rounded-2xl border overflow-hidden">
-        <div className="px-4 py-3 border-b bg-gray-50">
-          <h2 className="font-medium">Zuletzt aktualisierte Projekte</h2>
-        </div>
-        <div className="divide-y">
-          {recentProjects.length === 0 ? (
-            <div className="p-4 text-sm text-gray-500">Noch keine Projekte vorhanden.</div>
-          ) : (
-            recentProjects.map((p) => {
-              const { label, detail } = activityInfo(p);
-              const customerLabel = [p.client?.customerNo, p.client?.name].filter(Boolean).join(" - ");
-              return (
-                <Link
-                  key={p.id}
-                  href={`/projects/${p.id}`}
-                  className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
-                      <div className="font-semibold truncate">{customerLabel || "Kunde unbekannt"}</div>
-                      <div className="font-medium text-sm text-gray-600 truncate">{p.title ?? `Projekt #${p.id}`}</div>
+      {!isAgentView && (
+        <section className="rounded-2xl border overflow-hidden">
+          <div className="px-4 py-3 border-b bg-gray-50">
+            <h2 className="font-medium">Zuletzt aktualisierte Projekte</h2>
+          </div>
+          <div className="divide-y">
+            {recentProjects.length === 0 ? (
+              <div className="p-4 text-sm text-gray-500">Noch keine Projekte vorhanden.</div>
+            ) : (
+              recentProjects.map((p) => {
+                const { label, detail } = activityInfo(p);
+                const customerLabel = [p.client?.customerNo, p.client?.name].filter(Boolean).join(" - ");
+                return (
+                  <Link
+                    key={p.id}
+                    href={`/projects/${p.id}`}
+                    className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
+                        <div className="font-semibold truncate">{customerLabel || "Kunde unbekannt"}</div>
+                        <div className="font-medium text-sm text-gray-600 truncate">{p.title ?? `Projekt #${p.id}`}</div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5 truncate">
+                        {label} - {detail} - aktualisiert: {formatDate(p.updatedAt)} - erstellt: {formatDate(p.createdAt)}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5 truncate">
-                      {label} - {detail} - aktualisiert: {formatDate(p.updatedAt)} - erstellt: {formatDate(p.createdAt)}
-                    </div>
-                  </div>
-                  <span className="text-sm text-blue-600 shrink-0">Details</span>
-                </Link>
-              );
-            })
-          )}
-        </div>
-      </section>
+                    <span className="text-sm text-blue-600 shrink-0">Details</span>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

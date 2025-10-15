@@ -4,7 +4,7 @@ import React from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap } from "lucide-react";
+import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -42,6 +42,7 @@ type AppShellProps = {
 export default function AppShell({ user, counts, devMode, children }: AppShellProps) {
   const [open, setOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
+  const navigationRole = user.role;
 
   React.useEffect(() => {
     setMounted(true);
@@ -69,6 +70,14 @@ export default function AppShell({ user, counts, devMode, children }: AppShellPr
           <Link href="/" className="font-semibold tracking-tight">Projektverwaltung</Link>
 
           <div className="ml-auto flex items-center gap-2">
+            {(navigationRole === "ADMIN" || navigationRole === "AGENT") && (
+              <Button asChild size="sm" className="gap-2">
+                <Link href="/projects/new">
+                  <PlusCircle className="h-4 w-4" />
+                  Projekt anlegen
+                </Link>
+              </Button>
+            )}
             {mounted && devMode && devMode.availableAgents.length > 0 && (
               <DevModeToggle
                 currentUserId={devMode.currentViewUserId}
@@ -111,6 +120,7 @@ type NavItem = {
 
 function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const navigationRole = user.role;
 
   const baseItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -118,14 +128,16 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
     { label: "Filmprojekte", href: "/film-projects", icon: Clapperboard },
     { label: "SocialMedia-Projekte", href: "/social-projects", icon: Share2 },
     { label: "Kunden", href: "/clients", icon: Building2 },
+    { label: "Hinweis-Historie", href: "/notices", icon: Megaphone },
     { label: "Einstellungen", href: "/settings", icon: Settings },
   ];
 
-  const adminItems: NavItem[] = user.role === "ADMIN"
+  const adminItems: NavItem[] = navigationRole === "ADMIN"
     ? [
         { label: "Admins", href: "/admin/admins", icon: Shield },
         { label: "Agenten", href: "/admin/agents", icon: Users, badge: counts ? String(counts.agentsActive ?? 0) : undefined },
         { label: "Agenturen", href: "/admin/agencies", icon: Landmark },
+        { label: "Hinweise", href: "/admin/notices", icon: Megaphone },
         { label: "Statistik", href: "/admin/statistics", icon: BarChart3 },
         { label: "Server", href: "/admin/server", icon: Server },
         { label: "Emailvorlagen", href: "/admin/email-templates", icon: Mail },
@@ -134,7 +146,7 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
       ]
     : [];
 
-  const importItems: NavItem[] = user.role === "ADMIN"
+  const importItems: NavItem[] = navigationRole === "ADMIN"
     ? [
         { label: "Webseitenprojekte", href: "/admin/import", icon: Upload },
         { label: "Filmprojekte", href: "/admin/film-import", icon: Upload },
@@ -143,17 +155,8 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
 
   return (
     <div className="flex h-[calc(100vh-56px)] flex-col">
-      <div className="px-4 py-4 space-y-2">
+      <div className="px-4 py-4">
         <h2 className="text-sm font-medium text-muted-foreground">Navigation</h2>
-        {(user.role === "ADMIN" || user.role === "AGENT") && (
-          <Link
-            href="/projects/new"
-            onClick={onNavigate}
-            className="flex items-center gap-2 rounded-xl bg-black px-3 py-2 text-sm font-medium text-white hover:bg-black/90"
-          >
-            <PlusCircle className="h-4 w-4" /> Projekt anlegen
-          </Link>
-        )}
       </div>
       <Separator />
 

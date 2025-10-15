@@ -25,6 +25,9 @@ model User {
   filmProjectsResponsible  ProjectFilm[]  @relation("FilmProjectFilmer")
   filmProjectsCutting      ProjectFilm[]  @relation("FilmProjectCutter")
   client                   Client?        @relation(fields: [clientId], references: [id])
+  noticesCreated           Notice[]       @relation("NoticesCreated")
+  noticeAssignments        NoticeRecipient[]
+  noticeAcknowledgements   NoticeAcknowledgement[]
 
   @@index([clientId])
 }
@@ -300,6 +303,47 @@ model EmailLog {
   @@index([projectId])
   @@index([triggerId])
 }
+
+model Notice {
+  id                     String                   @id @default(cuid())
+  title                  String
+  message                String
+  visibility             NoticeVisibility         @default(GLOBAL)
+  requireAcknowledgement Boolean                  @default(false)
+  isActive               Boolean                  @default(true)
+  createdById            String
+  createdBy              User                     @relation("NoticesCreated", fields: [createdById], references: [id], onDelete: Cascade)
+  recipients             NoticeRecipient[]
+  acknowledgements       NoticeAcknowledgement[]
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+
+  @@index([isActive, visibility])
+  @@index([createdById])
+}
+
+model NoticeRecipient {
+  noticeId   String
+  notice     Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@id([noticeId, userId])
+  @@index([userId])
+}
+
+model NoticeAcknowledgement {
+  id       String  @id @default(cuid())
+  noticeId String
+  notice   Notice  @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt   DateTime @default(now())
+
+  @@unique([noticeId, userId])
+  @@index([userId])
+}
 enum Role {
   ADMIN
   AGENT
@@ -402,4 +446,9 @@ enum QueueStatus {
   SENT
   FAILED
   CANCELLED
+}
+
+enum NoticeVisibility {
+  GLOBAL
+  TARGETED
 }
