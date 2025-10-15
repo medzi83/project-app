@@ -26,13 +26,7 @@ export async function GET(request: NextRequest) {
     include: {
       project: {
         include: {
-          client: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
+          client: true,
         },
       },
       trigger: {
@@ -54,6 +48,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const clientRecord = queuedEmail.project.client as
+    | { id: string; name: string; email?: string | null }
+    | null;
+
   return NextResponse.json({
     id: queuedEmail.id,
     toEmail: queuedEmail.toEmail,
@@ -64,7 +62,13 @@ export async function GET(request: NextRequest) {
       id: queuedEmail.project.id,
       title: queuedEmail.project.title,
     },
-    client: queuedEmail.project.client,
+    client: clientRecord
+      ? {
+          id: clientRecord.id,
+          name: clientRecord.name,
+          email: clientRecord.email ?? null,
+        }
+      : null,
     trigger: queuedEmail.trigger,
   });
 }
@@ -113,7 +117,10 @@ export async function POST(request: NextRequest) {
   const finalBody = customBody || queuedEmail.body;
 
   // If client email was updated, save it
-  if (toEmail && toEmail !== queuedEmail.project.client?.email) {
+  const currentClientEmail =
+    (queuedEmail.project.client as { email?: string | null } | null)?.email ?? null;
+
+  if (toEmail && toEmail !== currentClientEmail) {
     await prisma.client.update({
       where: { id: queuedEmail.project.clientId },
       data: { email: toEmail },
