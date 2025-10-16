@@ -32,6 +32,21 @@ export default async function ProjectDetail({ params }: Props) {
 
   const website = project.website;
 
+  // Derive the correct status for website projects
+  const displayStatus = project.type === "WEBSITE" && website
+    ? deriveProjectStatus({
+        pStatus: website.pStatus,
+        webDate: website.webDate,
+        demoDate: website.demoDate,
+        onlineDate: website.onlineDate,
+        materialStatus: website.materialStatus,
+      })
+    : project.status;
+
+  const statusLabel = project.type === "WEBSITE"
+    ? labelForProjectStatus(displayStatus, { pStatus: website?.pStatus })
+    : displayStatus;
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -53,7 +68,7 @@ export default async function ProjectDetail({ params }: Props) {
 
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">{project.title}</h1>
-        <div className="text-sm opacity-70">Typ: {project.type} | Status: {project.status}</div>
+        <div className="text-sm opacity-70">Typ: {project.type} | Status: {statusLabel}</div>
         {project.important && (
           <div className="p-3 bg-yellow-50 border rounded">Wichtige Infos: {project.important}</div>
         )}

@@ -981,9 +981,11 @@ export default async function DashboardPage({
               </span>
             )}
           </div>
-          <div className="text-xs text-gray-600 mt-0.5 truncate">
-            {entry.title} · {entry.typeLabel}
-          </div>
+          {entry.title && entry.title !== entry.typeLabel && entry.title !== "Website" && entry.title !== "Film" && entry.title !== "Social Media" && (
+            <div className="text-xs text-gray-600 mt-0.5 truncate">
+              {entry.title}
+            </div>
+          )}
           <div className="text-xs font-medium text-blue-700 mt-1">
             {entry.taskType}
             {entry.taskDate && ` · ${formatDate(entry.taskDate)}`}
