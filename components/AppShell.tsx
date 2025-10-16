@@ -251,6 +251,30 @@ function RoleBadge({ role }: { role: Role }) {
 }
 
 function UserPill({ user }: { user: User }) {
+  const handleSignOut = React.useCallback(async () => {
+    if (typeof window !== "undefined") {
+      const globalAny = window as typeof window & { __NEXTAUTH?: { baseUrl?: string; basePath?: string } };
+      globalAny.__NEXTAUTH = globalAny.__NEXTAUTH ?? {};
+      const currentBaseUrl = globalAny.__NEXTAUTH.baseUrl;
+      const origin = window.location.origin;
+      if (!currentBaseUrl || currentBaseUrl.startsWith("http://localhost")) {
+        globalAny.__NEXTAUTH.baseUrl = origin;
+      }
+      if (!globalAny.__NEXTAUTH.basePath) {
+        globalAny.__NEXTAUTH.basePath = "/api/auth";
+      }
+    }
+
+    try {
+      await signOut({ callbackUrl: "/login" });
+    } catch (error) {
+      console.error("Sign-out failed; falling back to manual redirect", error);
+      if (typeof window !== "undefined") {
+        window.location.href = "/api/auth/signout?callbackUrl=/login";
+      }
+    }
+  }, []);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -288,7 +312,10 @@ function UserPill({ user }: { user: User }) {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-red-600 focus:text-red-600 cursor-pointer"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onSelect={(event) => {
+            event.preventDefault();
+            void handleSignOut();
+          }}
         >
           <LogOut className="mr-2 h-4 w-4" />
           <span>Abmelden</span>
