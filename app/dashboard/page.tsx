@@ -1042,7 +1042,9 @@ export default async function DashboardPage({
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
           <p className="text-sm font-medium text-blue-900">
             {effectiveUser?.isDevMode ? "🔧 Dev-Modus: " : ""}
-            {isAgentView ? "Agent-Ansicht: " : "Gefilterte Ansicht: "}{effectiveUser?.name}
+            {isAgentView
+              ? `Hallo ${effectiveUser?.name ?? "Agent"}, schön dass du da bist!`
+              : `Gefilterte Ansicht: ${effectiveUser?.name ?? "-"}`}
             {allowedProjectTypes.length > 0 && (
               <span className="ml-2 text-blue-700">
                 ({allowedProjectTypes.join(", ")})
