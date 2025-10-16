@@ -4,13 +4,22 @@ import React from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap, Megaphone } from "lucide-react";
+import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap, Megaphone, MessageSquareHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import DevModeToggle from "@/components/DevModeToggle";
+import FeedbackDialog from "@/components/FeedbackDialog";
 
 export type Role = "ADMIN" | "AGENT";
 
@@ -23,6 +32,7 @@ type Counts = {
   projectsOpen?: number;
   projectsAll?: number;
   agentsActive?: number;
+  feedbackOpen?: number;
 };
 
 type DevModeData = {
@@ -85,25 +95,20 @@ export default function AppShell({ user, counts, devMode, children }: AppShellPr
                 agents={devMode.availableAgents}
               />
             )}
-            <UserPill user={user} />
-            <Button
-              variant="outline"
-              size="sm"
-              className="hidden md:inline-flex"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-            >
-              <LogOut className="mr-2 h-4 w-4" /> Logout
-            </Button>
+            {mounted && (
+              <FeedbackDialog />
+            )}
+            {mounted && <UserPill user={user} />}
           </div>
         </div>
       </div>
 
-      <div className="grid w-full max-w-7xl grid-cols-1 md:grid-cols-[260px_1fr]">
+      <div className="grid w-full grid-cols-1 md:grid-cols-[260px_1fr]">
         <aside className="hidden border-r bg-white md:block">
           <Sidebar user={user} counts={counts} />
         </aside>
 
-        <main className="min-h-[calc(100vh-56px)] p-4 md:p-6">
+        <main className="min-h-[calc(100vh-56px)] w-full p-4 md:p-6">
           {children}
         </main>
       </div>
@@ -128,8 +133,6 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
     { label: "Filmprojekte", href: "/film-projects", icon: Clapperboard },
     { label: "SocialMedia-Projekte", href: "/social-projects", icon: Share2 },
     { label: "Kunden", href: "/clients", icon: Building2 },
-    { label: "Hinweis-Historie", href: "/notices", icon: Megaphone },
-    { label: "Einstellungen", href: "/settings", icon: Settings },
   ];
 
   const adminItems: NavItem[] = navigationRole === "ADMIN"
@@ -138,6 +141,7 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
         { label: "Agenten", href: "/admin/agents", icon: Users, badge: counts ? String(counts.agentsActive ?? 0) : undefined },
         { label: "Agenturen", href: "/admin/agencies", icon: Landmark },
         { label: "Hinweise", href: "/admin/notices", icon: Megaphone },
+        { label: "Kummerkasten", href: "/admin/kummerkasten", icon: MessageSquareHeart, badge: counts?.feedbackOpen ? String(counts.feedbackOpen) : undefined },
         { label: "Statistik", href: "/admin/statistics", icon: BarChart3 },
         { label: "Server", href: "/admin/server", icon: Server },
         { label: "Emailvorlagen", href: "/admin/email-templates", icon: Mail },
@@ -248,15 +252,49 @@ function RoleBadge({ role }: { role: Role }) {
 
 function UserPill({ user }: { user: User }) {
   return (
-    <div className="flex items-center gap-2 rounded-full border bg-white px-3 py-1">
-      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-[11px] font-semibold uppercase">
-        {user.name?.slice(0, 2) || "U"}
-      </div>
-      <div className="leading-tight">
-        <div className="text-xs font-medium">{user.name}</div>
-        <div className="text-[10px] uppercase text-gray-500">{user.role}</div>
-      </div>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-2 rounded-full border bg-white px-3 py-1 hover:bg-gray-50 transition-colors">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-[11px] font-semibold uppercase">
+            {user.name?.slice(0, 2) || "U"}
+          </div>
+          <div className="leading-tight">
+            <div className="text-xs font-medium">{user.name}</div>
+            <div className="text-[10px] uppercase text-gray-500">{user.role}</div>
+          </div>
+          <ChevronDown className="h-3 w-3 text-gray-500" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel>
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-xs leading-none text-muted-foreground uppercase">{user.role}</p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/notices" className="flex items-center cursor-pointer">
+            <Megaphone className="mr-2 h-4 w-4" />
+            <span>Hinweis-Historie</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/settings" className="flex items-center cursor-pointer">
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Einstellungen</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-red-600 focus:text-red-600 cursor-pointer"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Abmelden</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

@@ -9,7 +9,7 @@ type Props = {
   target: "project" | "website";
   id: string;             // projectId
   name: string;           // Feldname (whitelisted)
-  type: "text" | "number" | "date" | "select" | "tri" | "textarea";
+  type: "text" | "number" | "date" | "datetime" | "select" | "tri" | "textarea";
   display: string;        // Anzeige im Read-Mode
   value?: string | number | boolean | null; // Startwert fuer Edit
   options?: Option[];     // fuer select/tri
@@ -170,6 +170,19 @@ export default function InlineCell({
         />
       )}
 
+      {type === "datetime" && (
+        <input
+          name="value" type="datetime-local" defaultValue={vStr}
+          ref={(el: HTMLInputElement | null) => { inputRef.current = el; }}
+          className="p-1 border rounded"
+          onBlur={() => formRef.current?.requestSubmit()}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") { e.preventDefault(); cancel(); }
+            if (e.key === "Enter")  { e.preventDefault(); formRef.current?.requestSubmit(); }
+          }}
+        />
+      )}
+
       {type === "text" && (
         <input
           name="value" type="text" defaultValue={vStr}
@@ -208,6 +221,17 @@ function vToString(v: Props["value"], type: Props["type"]) {
     const d = new Date(String(v));
     if (Number.isNaN(d.getTime())) return "";
     return d.toISOString().slice(0, 10);
+  }
+  if (type === "datetime") {
+    const d = new Date(String(v));
+    if (Number.isNaN(d.getTime())) return "";
+    // Format für datetime-local: YYYY-MM-DDTHH:mm
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
   if (type === "tri") return v === true ? "yes" : v === false ? "no" : "unknown";
   return String(v);

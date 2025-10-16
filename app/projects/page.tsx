@@ -44,6 +44,9 @@ const CMS = ["SHOPWARE", "JOOMLA", "LOGO", "PRINT", "OTHER"] as const;
 const fmtDate = (d?: Date | string | null) =>
   d ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(d)) : "-";
 
+const fmtDateTime = (d?: Date | string | null) =>
+  d ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(d)) : "-";
+
 const mm = (n?: number | null) => (n ? `${Math.floor(n / 60)}h ${n % 60}m` : "-");
 
 const HEX_COLOR_REGEX = /^#([0-9a-f]{6})$/i;
@@ -663,7 +666,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
                   <td><InlineCell target="website" id={p.id} name="pStatus" type="select" display={labelForProductionStatus(p.website?.pStatus)} value={p.website?.pStatus ?? "NONE"} options={pStatusOptions} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="cms" type="select" display={p.website?.cms === "SHOPWARE" ? "Shop" : p.website?.cms ?? "-"} value={p.website?.cms ?? ""} options={cmsOptions} canEdit={canEdit} /></td>
                   <td><InlineCell target="project" id={p.id} name="agentId" type="select" display={agentDisplayName} value={effectiveAgentId} options={agentOptions} canEdit={canEdit} displayClassName={badgeClass} displayStyle={badgeStyle} /></td>
-                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="webDate" type="date" display={fmtDate(p.website?.webDate)} value={p.website?.webDate ? new Date(p.website.webDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
+                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="webDate" type="datetime" display={fmtDateTime(p.website?.webDate)} value={p.website?.webDate ?? ""} canEdit={canEdit} /></td>
                   <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="demoDate" type="date" display={fmtDate(p.website?.demoDate)} value={p.website?.demoDate ? new Date(p.website.demoDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
                   <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="onlineDate" type="date" display={fmtDate(p.website?.onlineDate)} value={p.website?.onlineDate ? new Date(p.website.onlineDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="materialStatus" type="select" display={labelForMaterialStatus(materialStatus)} value={materialStatus} options={materialStatusOptions} canEdit={canEdit} /></td>

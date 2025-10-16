@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
+import { deriveProjectStatus, labelForProjectStatus } from "@/lib/project-status";
 import { notFound, redirect } from "next/navigation";
 
 const fmtDate = (d?: Date | string | null) =>

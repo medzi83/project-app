@@ -17,7 +17,7 @@ type ExtraFieldConfig = {
 type Props = {
   id: string; // projectId
   name: string; // Feldname (whitelisted)
-  type: "text" | "date" | "select" | "textarea";
+  type: "text" | "date" | "datetime" | "select" | "textarea";
   display: string; // Anzeige im Read-Mode
   value?: string | null; // Startwert fuer Edit
   options?: Option[]; // fuer select
@@ -143,6 +143,16 @@ export default function FilmInlineCell({
   // EDIT MODE
   const vStr = value ?? "";
   const vDate = type === "date" && vStr ? new Date(vStr).toISOString().slice(0, 10) : vStr;
+  const vDateTime = type === "datetime" && vStr ? (() => {
+    const d = new Date(vStr);
+    if (Number.isNaN(d.getTime())) return "";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  })() : vStr;
   const extraDefaultValue = extraField?.value ?? "";
   const shouldAutoSubmit = !extraField;
 
@@ -186,6 +196,31 @@ export default function FilmInlineCell({
           name="value"
           type="date"
           defaultValue={vDate}
+          ref={(el: HTMLInputElement | null) => {
+            inputRef.current = el;
+          }}
+          className="p-1 border rounded"
+          onBlur={() => {
+            if (shouldAutoSubmit) formRef.current?.requestSubmit();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              cancel();
+            }
+            if (e.key === "Enter" && shouldAutoSubmit) {
+              e.preventDefault();
+              formRef.current?.requestSubmit();
+            }
+          }}
+        />
+      )}
+
+      {type === "datetime" && (
+        <input
+          name="value"
+          type="datetime-local"
+          defaultValue={vDateTime}
           ref={(el: HTMLInputElement | null) => {
             inputRef.current = el;
           }}

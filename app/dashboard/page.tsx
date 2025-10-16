@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Prisma, ProjectStatus, ProjectType, AgentCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { buildWebsiteStatusWhere, DONE_PRODUCTION_STATUSES } from "@/lib/project-status";
+import { buildWebsiteStatusWhere, DONE_PRODUCTION_STATUSES, deriveProjectStatus } from "@/lib/project-status";
 import { getEffectiveUser, getAuthSession } from "@/lib/authz";
 import { NoticeBoard, type NoticeBoardEntry } from "@/components/NoticeBoard";
 
@@ -729,6 +729,271 @@ export default async function DashboardPage({
     return { ...type, tiles };
   });
 
+  const workStoppedProjects = isAgentView && agentId
+    ? await prisma.project.findMany({
+        where: (() => {
+          const filters: Prisma.ProjectWhereInput[] = [
+            { client: { is: { workStopped: true } } },
+          ];
+          if (agentFilterWhere) filters.push(agentFilterWhere);
+          return filters.length > 1 ? { AND: filters } : filters[0];
+        })(),
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          status: true,
+          client: {
+            select: {
+              name: true,
+              customerNo: true,
+            },
+          },
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 10,
+      })
+    : [];
+
+  type AgentAgendaEntry = {
+    id: string;
+    projectUrl: string;
+    customerLabel: string;
+    typeLabel: string;
+    title: string;
+    taskType: string;
+    taskDate: Date | null;
+    isWorkStopped: boolean;
+    category: "appointment" | "task";
+  };
+
+  const upcomingAgendaConditions: Prisma.ProjectWhereInput[] = [];
+
+  if (userCategories.includes("WEBSEITE" as AgentCategory)) {
+    upcomingAgendaConditions.push(
+      {
+        type: "WEBSITE",
+        website: {
+          is: {
+            AND: [
+              { pStatus: { notIn: DONE_PRODUCTION_STATUSES } },
+              { onlineDate: null },
+              { demoDate: null },
+              {
+                OR: [
+                  { webDate: null },
+                  { webDate: { gt: now } },
+                ],
+              },
+            ],
+          },
+        },
+      },
+      {
+        type: "WEBSITE",
+        website: {
+          is: {
+            AND: [
+              { pStatus: { notIn: DONE_PRODUCTION_STATUSES } },
+              { onlineDate: null },
+              { demoDate: null },
+              { webDate: { lte: now } },
+              {
+                OR: [
+                  { pStatus: "VOLLST_A_K" },
+                  { materialStatus: "VOLLSTAENDIG" },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    );
+  }
+
+  if (userCategories.includes("FILM" as AgentCategory)) {
+    upcomingAgendaConditions.push(
+      {
+        type: "FILM",
+        film: {
+          is: {
+            scouting: {
+              gte: now,
+            },
+            status: { not: "BEENDET" },
+          },
+        },
+      },
+      {
+        type: "FILM",
+        film: {
+          is: {
+            shootDate: {
+              gte: now,
+            },
+            status: { not: "BEENDET" },
+          },
+        },
+      },
+    );
+  }
+
+  const upcomingAgentProjects = isAgentView && agentId && upcomingAgendaConditions.length > 0
+    ? await prisma.project.findMany({
+        where: (() => {
+          const filters: Prisma.ProjectWhereInput[] = [{ OR: upcomingAgendaConditions }];
+          if (agentFilterWhere) filters.push(agentFilterWhere);
+          return filters.length > 1 ? { AND: filters } : filters[0];
+        })(),
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          status: true,
+          client: {
+            select: {
+              name: true,
+              customerNo: true,
+              workStopped: true,
+            },
+          },
+          website: {
+            select: {
+              webDate: true,
+              demoDate: true,
+              onlineDate: true,
+              materialStatus: true,
+              pStatus: true,
+            },
+          },
+          film: {
+            select: {
+              scouting: true,
+              shootDate: true,
+            },
+          },
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 12,
+      })
+    : [];
+
+  const agentAgendaEntries: AgentAgendaEntry[] = upcomingAgentProjects
+    .map((project) => {
+      const typeLabel = project.type === "WEBSITE"
+        ? "Webseite"
+        : project.type === "FILM"
+        ? "Film"
+        : project.type === "SOCIAL"
+        ? "Social Media"
+        : project.type;
+      const customerLabel = [project.client?.customerNo, project.client?.name].filter(Boolean).join(" - ") || "Kunde unbekannt";
+      const projectUrl = project.type === "FILM" ? `/film-projects/${project.id}` : `/projects/${project.id}`;
+
+      let taskType = "";
+      let taskDate: Date | null = null;
+      let category: "appointment" | "task" = "task";
+
+      if (project.type === "WEBSITE" && project.website) {
+        const derivedStatus = deriveProjectStatus({
+          pStatus: project.website.pStatus,
+          webDate: project.website.webDate,
+          demoDate: project.website.demoDate,
+          onlineDate: project.website.onlineDate,
+          materialStatus: project.website.materialStatus,
+          now,
+        });
+
+        if (derivedStatus === "WEBTERMIN" && project.website.webDate) {
+          taskType = "Webtermin";
+          taskDate = new Date(project.website.webDate);
+          category = "appointment";
+        } else if (derivedStatus === "UMSETZUNG") {
+          taskType = "In Umsetzung";
+          taskDate = project.website.demoDate ? new Date(project.website.demoDate) : null;
+          category = "task";
+        } else {
+          return null;
+        }
+      } else if (project.type === "FILM") {
+        if (project.film?.scouting && new Date(project.film.scouting) >= now) {
+          taskType = "Scouting";
+          taskDate = new Date(project.film.scouting);
+          category = "appointment";
+        } else if (project.film?.shootDate && new Date(project.film.shootDate) >= now) {
+          taskType = "Dreh";
+          taskDate = new Date(project.film.shootDate);
+          category = "appointment";
+        } else {
+          return null;
+        }
+      } else {
+        return null;
+      }
+
+      if (!taskType) {
+        return null;
+      }
+
+      return {
+        id: project.id,
+        projectUrl,
+        customerLabel,
+        typeLabel,
+        title: project.title ?? "Projekt ohne Titel",
+        taskType,
+        taskDate,
+        isWorkStopped: Boolean(project.client?.workStopped),
+        category,
+      } satisfies AgentAgendaEntry;
+    })
+    .filter((entry): entry is AgentAgendaEntry => entry !== null);
+
+  const agentAppointments = agentAgendaEntries.filter((entry) => entry.category === "appointment");
+  const agentTasks = agentAgendaEntries.filter((entry) => entry.category === "task");
+
+  const agentAgendaGroups = [
+    agentAppointments.length > 0
+      ? { key: "appointments", title: `Termine (${agentAppointments.length})`, items: agentAppointments }
+      : null,
+    agentTasks.length > 0
+      ? { key: "tasks", title: `Aufgaben (${agentTasks.length})`, items: agentTasks }
+      : null,
+  ].filter((group): group is { key: string; title: string; items: AgentAgendaEntry[] } => group !== null);
+
+  const renderAgendaEntry = (entry: AgentAgendaEntry) => (
+    <Link
+      key={entry.id}
+      href={entry.projectUrl}
+      className={`block rounded-lg border p-3 transition-colors ${
+        entry.isWorkStopped
+          ? "border-orange-200 bg-orange-50 hover:border-orange-400"
+          : "border-blue-200 bg-white hover:border-blue-400"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm truncate">{entry.customerLabel}</span>
+            {entry.isWorkStopped && (
+              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-orange-700 bg-orange-200 rounded">
+                ARBEITSSTOPP
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-gray-600 mt-0.5 truncate">
+            {entry.title} · {entry.typeLabel}
+          </div>
+          <div className="text-xs font-medium text-blue-700 mt-1">
+            {entry.taskType}
+            {entry.taskDate && ` · ${formatDate(entry.taskDate)}`}
+          </div>
+        </div>
+        <span className="text-xs text-blue-700 whitespace-nowrap">Details →</span>
+      </div>
+    </Link>
+  );
+
   // Zuletzt aktualisierte Projekte
   const recentProjects = await prisma.project.findMany({
     where: baseWhere,
@@ -809,15 +1074,97 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <section className="space-y-4 rounded-2xl border bg-white p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Wichtige Hinweise</h2>
-          <Link href="/notices" className="text-sm text-blue-600 hover:underline">
-            Hinweis-Historie
-          </Link>
-        </div>
-        <NoticeBoard notices={noticeBoardEntries} canAcknowledge={isAgentView} />
-      </section>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="space-y-4 rounded-2xl border bg-white p-5 sm:p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Wichtige Hinweise</h2>
+            <Link href="/notices" className="text-sm text-blue-600 hover:underline">
+              Hinweis-Historie
+            </Link>
+          </div>
+          <NoticeBoard notices={noticeBoardEntries} canAcknowledge={isAgentView} />
+        </section>
+
+        {isAgentView && workStoppedProjects.length > 0 && (
+          <section className="rounded-2xl border border-orange-300 bg-orange-50 p-5 sm:p-6 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 text-2xl">⚠️</div>
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-orange-900 mb-2">
+                  Projekte mit Arbeitsstopp ({workStoppedProjects.length})
+                </h2>
+                <p className="text-sm text-orange-800 mb-4">
+                  Diese Projekte befinden sich im Status „Arbeitsstopp“. Bitte keine weiteren Arbeiten durchführen.
+                </p>
+                <div className="space-y-2">
+                  {workStoppedProjects.map((project) => {
+                    const typeLabel = project.type === "WEBSITE"
+                      ? "Webseite"
+                      : project.type === "FILM"
+                      ? "Film"
+                      : project.type === "SOCIAL"
+                      ? "Social Media"
+                      : project.type;
+                    const statusLabel = STATUS_LABELS[project.status as ProjectStatus] ?? project.status;
+                    const customerLabel = [project.client?.customerNo, project.client?.name].filter(Boolean).join(" - ") || "Kunde unbekannt";
+                    const projectUrl = project.type === "FILM" ? `/film-projects/${project.id}` : `/projects/${project.id}`;
+
+                    return (
+                      <Link
+                        key={project.id}
+                        href={projectUrl}
+                        className="block rounded-lg border border-orange-200 bg-white p-3 hover:border-orange-400 transition-colors"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-sm truncate">{customerLabel}</div>
+                            <div className="text-xs text-gray-600 mt-0.5 truncate">
+                              {(project.title ?? "Projekt ohne Titel")} · {typeLabel} · Status: {statusLabel}
+                            </div>
+                          </div>
+                          <span className="text-xs text-orange-700 whitespace-nowrap">Details →</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+      </div>
+
+      {isAgentView && agentAgendaGroups.length > 0 && (
+        <section className="rounded-2xl border border-blue-300 bg-blue-50 p-5 sm:p-6 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 text-2xl">📅</div>
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-blue-900 mb-2">
+                Aktuelle Termine und Aufgaben ({agentAgendaEntries.length})
+              </h2>
+              <p className="text-sm text-blue-800 mb-4">
+                {userCategories.includes("WEBSEITE" as AgentCategory) && userCategories.includes("FILM" as AgentCategory)
+                  ? "Anstehende Webtermine, Projekte in Umsetzung sowie Scouting- und Drehtermine."
+                  : userCategories.includes("FILM" as AgentCategory)
+                  ? "Anstehende Scouting- und Drehtermine."
+                  : "Anstehende Webtermine und Projekte in Umsetzung."}
+              </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                {agentAgendaGroups.map((group) => (
+                  <div key={group.key}>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-blue-900 mb-2">
+                      {group.title}
+                    </div>
+                    <div className="space-y-2">
+                      {group.items.map((entry) => renderAgendaEntry(entry))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* KPI-Kacheln */}
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">

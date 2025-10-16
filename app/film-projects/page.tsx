@@ -82,6 +82,15 @@ const formatDate = (value?: Date | string | null) => {
   }
 };
 
+const formatDateTime = (value?: Date | string | null) => {
+  if (!value) return "-";
+  try {
+    return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  } catch {
+    return "-";
+  }
+};
+
 const isInPast = (value?: Date | string | null) => {
   if (!value) return false;
   try {
@@ -267,10 +276,10 @@ const buildRows = (projects: Awaited<ReturnType<typeof loadFilmProjects>>): Film
       filmer: filmerName && filmerName.length > 0 ? filmerName : "-",
       cutter: cutterName && cutterName.length > 0 ? cutterName : "-",
       contractStart: formatDate(film?.contractStart ?? undefined),
-      scouting: formatDate(film?.scouting ?? undefined),
+      scouting: formatDateTime(film?.scouting ?? undefined),
       scriptToClient: formatDate(film?.scriptToClient ?? undefined),
       scriptApproved: formatDate(film?.scriptApproved ?? undefined),
-      shootDate: formatDate(film?.shootDate ?? undefined),
+      shootDate: formatDateTime(film?.shootDate ?? undefined),
       firstCutToClient: previewDisplay,
       finalToClient: formatDate(film?.finalToClient ?? undefined),
       finalLinkLabel: finalLinkInfo.label,
@@ -807,7 +816,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                       <FilmInlineCell
                         id={project.id}
                         name="scouting"
-                        type="date"
+                        type="datetime"
                         display={row.scouting}
                         value={film?.scouting?.toISOString() ?? null}
                         canEdit={canEdit}
@@ -837,7 +846,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                       <FilmInlineCell
                         id={project.id}
                         name="shootDate"
-                        type="date"
+                        type="datetime"
                         display={row.shootDate}
                         value={film?.shootDate?.toISOString() ?? null}
                         canEdit={canEdit}

@@ -28,6 +28,7 @@ model User {
   noticesCreated           Notice[]       @relation("NoticesCreated")
   noticeAssignments        NoticeRecipient[]
   noticeAcknowledgements   NoticeAcknowledgement[]
+  feedbacks                Feedback[]     @relation("FeedbackAuthor")
 
   @@index([clientId])
 }
@@ -451,4 +452,33 @@ enum QueueStatus {
 enum NoticeVisibility {
   GLOBAL
   TARGETED
+}
+
+model Feedback {
+  id          String         @id @default(cuid())
+  title       String
+  message     String
+  type        FeedbackType   @default(SUGGESTION)
+  status      FeedbackStatus @default(OPEN)
+  authorId    String
+  author      User           @relation("FeedbackAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([status, createdAt])
+  @@index([authorId])
+}
+
+enum FeedbackType {
+  BUG
+  SUGGESTION
+  IMPROVEMENT
+  OTHER
+}
+
+enum FeedbackStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
 }

@@ -49,13 +49,14 @@ export default async function RootLayout({ children }: RootLayoutProps) {
 }
 
 async function loadCounts() {
-  const [projectsOpen, projectsAll, agentsActive] = await Promise.all([
+  const [projectsOpen, projectsAll, agentsActive, feedbackOpen] = await Promise.all([
     prisma.project.count({ where: { status: { not: "ONLINE" } } }),
     prisma.project.count(),
     prisma.user.count({ where: { role: "AGENT", active: true } }),
+    prisma.feedback.count({ where: { status: "OPEN" } }),
   ]);
 
-  return { projectsOpen, projectsAll, agentsActive };
+  return { projectsOpen, projectsAll, agentsActive, feedbackOpen };
 }
 
 async function loadDevModeData(effectiveUser: Awaited<ReturnType<typeof getEffectiveUser>>) {
