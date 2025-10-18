@@ -303,7 +303,7 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
       mysqls: Number.parseInt(mysqls, 10) || 0,
       ftps: Number.parseInt(ftps, 10) || 0,
       deactivated: deactivated ? 1 : 0,
-      allowed_phpconfigs,
+      phpsettings: allowed_phpconfigs,
       leregistered: leregistered ? 1 : 0,
     };
 

@@ -5,10 +5,12 @@ export default function ConfirmSubmit({
   confirmText,
   className,
   children,
+  title,
 }: {
   confirmText: string;
   className?: string;
   children: React.ReactNode;
+  title?: string;
 }) {
   return (
     <button
@@ -19,6 +21,7 @@ export default function ConfirmSubmit({
         }
       }}
       className={className ?? "px-3 py-1.5 rounded border"}
+      title={title}
     >
       {children}
     </button>

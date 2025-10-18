@@ -399,7 +399,7 @@ async function extractArchive(
         factory: factory,
       };
 
-      let continueResponse;
+      let continueResponse: Response | undefined;
       let retries = 0;
       const maxRetries = 3;
 
@@ -427,6 +427,13 @@ async function extractArchive(
           // Wait a bit before retrying
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
+      }
+
+      if (!continueResponse) {
+        return {
+          success: false,
+          message: "Failed to get response from Kickstart after retries",
+        };
       }
 
       const continueText = await continueResponse.text();

@@ -27,6 +27,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Type assertion after validation
+    const validatedField = field as "workStopped" | "finished";
+
     // Get current value
     const client = await prisma.client.findUnique({
       where: { id: clientId },
@@ -38,16 +41,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Toggle the field
-    const newValue = !client[field];
+    const newValue = !client[validatedField];
 
     const updatedClient = await prisma.client.update({
       where: { id: clientId },
-      data: { [field]: newValue },
+      data: { [validatedField]: newValue },
     });
 
     return NextResponse.json({
       success: true,
-      [field]: updatedClient[field],
+      [validatedField]: updatedClient[validatedField],
     });
   } catch (error) {
     console.error("Error toggling client status:", error);
