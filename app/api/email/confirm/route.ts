@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
   }
 
   const clientRecord = queuedEmail.project.client as
-    | { id: string; name: string; email?: string | null }
+    | { id: string; name: string; email?: string | null; contact?: string | null; agencyId?: string | null }
     | null;
 
   return NextResponse.json({
@@ -68,6 +68,8 @@ export async function GET(request: NextRequest) {
           id: clientRecord.id,
           name: clientRecord.name,
           email: clientRecord.email ?? null,
+          contact: clientRecord.contact ?? null,
+          agencyId: clientRecord.agencyId ?? null,
         }
       : null,
     trigger: queuedEmail.trigger,
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { queueId, toEmail, ccEmails, body: customBody } = body;
+  const { queueId, toEmail, ccEmails, body: customBody, contact } = body;
 
   if (!queueId) {
     return NextResponse.json({ error: "Missing queueId" }, { status: 400 });
@@ -117,14 +119,33 @@ export async function POST(request: NextRequest) {
   const finalCcEmails = ccEmails || queuedEmail.ccEmails?.split(",");
   const finalBody = customBody || queuedEmail.body;
 
-  // If client email was updated, save it
-  const currentClientEmail =
-    (queuedEmail.project.client as { email?: string | null } | null)?.email ?? null;
+  // Validate that email is provided
+  if (!finalToEmail || finalToEmail.trim() === "") {
+    return NextResponse.json(
+      { error: "E-Mail-Adresse ist erforderlich" },
+      { status: 400 }
+    );
+  }
+
+  // If client email or contact was updated, save it
+  const currentClient = queuedEmail.project.client as { email?: string | null; contact?: string | null } | null;
+  const currentClientEmail = currentClient?.email ?? null;
+  const currentClientContact = currentClient?.contact ?? null;
+
+  const updateData: { email?: string; contact?: string } = {};
 
   if (toEmail && toEmail !== currentClientEmail) {
+    updateData.email = toEmail;
+  }
+
+  if (contact !== undefined && contact !== currentClientContact) {
+    updateData.contact = contact || null; // Empty string becomes null
+  }
+
+  if (Object.keys(updateData).length > 0) {
     await prisma.client.update({
       where: { id: queuedEmail.project.clientId },
-      data: { email: toEmail },
+      data: updateData,
     });
   }
 

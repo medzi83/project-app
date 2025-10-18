@@ -184,9 +184,52 @@ export async function checkCustomerNumber(serverId: string, customerNumber: stri
 
   // If customer found and we have customerNumber in DB, update the server reference
   if (customer && customerNumber) {
+    // Determine if customer should be assigned to an agency based on customer number
+    let agencyId: string | undefined;
+
+    if (customerNumber.startsWith("3")) {
+      // Find or create Vendoweb agency
+      let vendowebAgency = await prisma.agency.findFirst({
+        where: { name: "Vendoweb" },
+      });
+
+      if (!vendowebAgency) {
+        vendowebAgency = await prisma.agency.create({
+          data: {
+            name: "Vendoweb",
+            contactEmail: "info@vendoweb.de",
+            contactPhone: "",
+          },
+        });
+      }
+
+      agencyId = vendowebAgency.id;
+    } else if (customerNumber.startsWith("2")) {
+      // Find or create Eventomaxx agency
+      let eventomaxxAgency = await prisma.agency.findFirst({
+        where: { name: "Eventomaxx" },
+      });
+
+      if (!eventomaxxAgency) {
+        eventomaxxAgency = await prisma.agency.create({
+          data: {
+            name: "Eventomaxx",
+            contactEmail: "info@eventomaxx.de",
+            contactPhone: "",
+          },
+        });
+      }
+
+      agencyId = eventomaxxAgency.id;
+    }
+
+    // Update server reference and agency assignment
     await prisma.client.updateMany({
       where: { customerNo: customerNumber },
-      data: { serverId: serverId },
+      data: {
+        serverId: serverId,
+        ...(agencyId ? { agencyId } : {}),
+      },
     });
   }
 
@@ -229,8 +272,10 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
   });
   const allowed_phpconfigs = phpConfigIds.length > 0 ? `[${phpConfigIds.join(",")}]` : "[1]";
 
-  // Convert GB to KB for Froxlor API
-  const diskspaceKB = parseInt(diskspace_gb) * 1024 * 1024;
+  // Convert GB to MB for Froxlor API
+  // 1 GB input = 1000 MB (decimal, not binary)
+  // Froxlor expects MB and will display it correctly
+  const diskspaceMB = parseInt(diskspace_gb) * 1000;
 
   const server = await prisma.server.findUnique({
     where: { id: serverId },
@@ -254,7 +299,7 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
       name,
       company,
       email,
-      diskspace: diskspaceKB,
+      diskspace: diskspaceMB,
       mysqls: Number.parseInt(mysqls, 10) || 0,
       ftps: Number.parseInt(ftps, 10) || 0,
       deactivated: deactivated ? 1 : 0,
@@ -280,7 +325,7 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
     email: "server@eventomaxx.de", // Always this email
     loginname: loginname || customerNumber,
     password,
-    diskspace: diskspaceKB,
+    diskspace: diskspaceMB,
     mysqls: Number.parseInt(mysqls, 10) || 0,
     ftps: Number.parseInt(ftps, 10) || 0,
     deactivated: deactivated ? 1 : 0,
@@ -292,7 +337,41 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
     createData.documentroot = documentroot;
   }
 
-  const result = await client.createCustomer(createData);
+  // Extract the server domain from froxlorUrl for standard subdomain
+  // e.g., "https://vautron06.server-nord.de" -> "vautron06.server-nord.de"
+  let standardSubdomain: string | undefined;
+  if (server.froxlorUrl) {
+    try {
+      const url = new URL(server.froxlorUrl);
+      standardSubdomain = url.hostname;
+    } catch (e) {
+      console.warn('Could not parse froxlorUrl for standard subdomain:', e);
+    }
+  }
+
+  // Create the customer
+  const result = await client.createCustomer(createData, standardSubdomain);
+
+  // If customer was created successfully and we have a PHP config, set it for the standard subdomain
+  if (result.success && result.customer && phpConfigIds.length > 0) {
+    // Use the LAST selected PHP config (usually the highest/newest version)
+    const primaryPhpConfigId = parseInt(phpConfigIds[phpConfigIds.length - 1]);
+
+    // Get the customer to find the standard subdomain ID
+    const customer = await client.getCustomer(result.customer.customerid);
+
+    if (customer && customer.standardsubdomain) {
+      // Small delay to ensure Froxlor has finished creating everything
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Set the PHP configuration for the standard subdomain
+      await client.updateDomain(parseInt(customer.standardsubdomain), {
+        phpsettingid: primaryPhpConfigId,
+        phpenabled: 1,
+        openbasedir: 1,
+      });
+    }
+  }
 
   return result;
 }
@@ -310,6 +389,55 @@ export async function manageDomain(formData: FormData) {
   console.log("Manage domain:", { clientId, serverId });
 
   return { success: true, message: "Funktion in Vorbereitung" };
+}
+
+export async function getCustomerDetails(serverId: string, customerNo: string) {
+  const session = await getAuthSession();
+  if (!session || session.user.role !== "ADMIN") {
+    return { success: false, message: "Nicht autorisiert", customer: null, standardDomain: null };
+  }
+
+  const server = await prisma.server.findUnique({
+    where: { id: serverId },
+  });
+
+  if (!server || !server.froxlorUrl || !server.froxlorApiKey || !server.froxlorApiSecret) {
+    return { success: false, message: "Server nicht konfiguriert", customer: null, standardDomain: null };
+  }
+
+  const client = new FroxlorClient({
+    url: server.froxlorUrl,
+    apiKey: server.froxlorApiKey,
+    apiSecret: server.froxlorApiSecret,
+  });
+
+  const customer = await client.findCustomerByNumber(customerNo);
+
+  if (!customer) {
+    return { success: false, message: "Kunde nicht gefunden", customer: null, standardDomain: null };
+  }
+
+  let standardDomain = "";
+  if (customer.standardsubdomain) {
+    const stdDomain = await client.getCustomerStandardDomain(
+      customer.customerid,
+      customer.standardsubdomain
+    );
+    if (stdDomain) {
+      standardDomain = stdDomain.domain;
+    }
+  }
+
+  return {
+    success: true,
+    message: "Kundendaten abgerufen",
+    customer: {
+      customerNo,
+      documentRoot: customer.documentroot || "",
+      customerId: customer.customerid,
+    },
+    standardDomain,
+  };
 }
 
 export async function installJoomla(formData: FormData) {

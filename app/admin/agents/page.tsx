@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
-import { createAgent, resetAgentPassword, updateAgentName, toggleAgentActive, deleteAgent, updateAgentCategories } from "../agents/actions";
+import { createAgent, resetAgentPassword, toggleAgentActive, deleteAgent } from "../agents/actions";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import AgentColorForm from "./AgentColorForm";
+import AgentEditModal from "./AgentEditModal";
 
 
 type Props = {
@@ -32,6 +33,8 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
     select: {
       id: true,
       name: true,
+      fullName: true,
+      roleTitle: true,
       email: true,
       active: true,
       color: true,
@@ -64,8 +67,14 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
             {agentError && <p className="text-sm text-red-600">{agentError}</p>}
             {agentOk && <p className="text-sm text-green-700">Agent wurde angelegt.</p>}
             <form action={createAgent} className="space-y-3">
-              <Field label="Name">
-                <input name="name" className="w-full rounded border p-2" placeholder="z. B. Anna Agent" />
+              <Field label="Name (Kurzname)">
+                <input name="name" className="w-full rounded border p-2" placeholder="z. B. Anna" />
+              </Field>
+              <Field label="Voller Name">
+                <input name="fullName" className="w-full rounded border p-2" placeholder="z. B. Anna Agent" />
+              </Field>
+              <Field label="Rollenbezeichnung">
+                <input name="roleTitle" className="w-full rounded border p-2" placeholder="z. B. Projektmanagerin" />
               </Field>
               <Field label="E-Mail">
                 <input name="email" type="email" className="w-full rounded border p-2" placeholder="agent@example.com" />
@@ -111,13 +120,12 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
         {pwdOk && <p className="text-sm text-green-700">Passwort aktualisiert.</p>}
 
         <div className="overflow-x-auto rounded border">
-          <table className="min-w-[900px] w-full text-sm">
+          <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
                 <th>Name</th>
-                <th>Farbe</th>
-                <th>Kategorien</th>
                 <th>E-Mail</th>
+                <th>Farbe</th>
                 <th>Projekte</th>
                 <th>Erstellt</th>
                 <th>Aktionen</th>
@@ -125,61 +133,57 @@ export default async function AgentsAdminPage({ searchParams }: Props) {
             </thead>
             <tbody className="[&>tr>td]:px-3 [&>tr>td]:py-2">
               {agents.map((a) => (
-                <tr key={a.id} className={`border-t ${a.active ? "" : "opacity-60"}`}>
+                <tr key={a.id} className={`border-t ${a.active ? "" : "opacity-60 bg-gray-50"}`}>
                   <td>
-                    <form action={updateAgentName} className="flex items-center gap-2">
-                      <input type="hidden" name="userId" value={a.id} />
-                      <input name="name" defaultValue={a.name ?? ""} className="rounded border p-1" />
-                      {!a.active && <span className="rounded border px-2 py-0.5 text-xs">inaktiv</span>}
-                      <button className="rounded border px-2 py-1" title="Name speichern">Speichern</button>
-                    </form>
+                    <div className="flex items-center gap-2">
+                      {a.name ?? "-"}
+                      {!a.active && <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">inaktiv</span>}
+                    </div>
                   </td>
+                  <td className="whitespace-nowrap">{a.email ?? "-"}</td>
                   <td>
                     <AgentColorForm userId={a.id} color={a.color} />
                   </td>
-                  <td>
-                    <form action={updateAgentCategories} className="space-y-1">
-                      <input type="hidden" name="userId" value={a.id} />
-                      <label className="flex items-center gap-1 text-xs">
-                        <input type="checkbox" name="categories" value="WEBSEITE" defaultChecked={a.categories.includes("WEBSEITE")} className="rounded" />
-                        <span>Web</span>
-                      </label>
-                      <label className="flex items-center gap-1 text-xs">
-                        <input type="checkbox" name="categories" value="FILM" defaultChecked={a.categories.includes("FILM")} className="rounded" />
-                        <span>Film</span>
-                      </label>
-                      <label className="flex items-center gap-1 text-xs">
-                        <input type="checkbox" name="categories" value="SOCIALMEDIA" defaultChecked={a.categories.includes("SOCIALMEDIA")} className="rounded" />
-                        <span>Social</span>
-                      </label>
-                      <button className="rounded border px-2 py-0.5 text-xs" title="Kategorien speichern">Speichern</button>
-                    </form>
-                  </td>
-                  <td className="whitespace-nowrap">{a.email ?? "-"}</td>
                   <td>{a._count.projects + a._count.filmProjectsResponsible + a._count.filmProjectsCutting}</td>
                   <td className="whitespace-nowrap">{fmtDate(a.createdAt)}</td>
-                  <td className="space-y-2 whitespace-nowrap">
-                    <form action={resetAgentPassword} className="flex items-center gap-2">
-                      <input type="hidden" name="userId" value={a.id} />
-                      <input name="newPassword" type="password" placeholder="Neues Passwort" className="rounded border p-1" />
-                      <button className="rounded border px-2 py-1" title="Passwort setzen">Passwort setzen</button>
-                    </form>
-                    <form action={toggleAgentActive}>
-                      <input type="hidden" name="userId" value={a.id} />
-                      <input type="hidden" name="active" value={a.active ? "0" : "1"} />
-                      <button className="rounded border px-2 py-1" title={a.active ? "Deaktivieren" : "Aktivieren"}>
-                        {a.active ? "Deaktivieren" : "Aktivieren"}
-                      </button>
-                    </form>
-                    <form action={deleteAgent}>
-                      <input type="hidden" name="userId" value={a.id} />
-                      <ConfirmSubmit confirmText="Diesen Agent unwiderruflich loeschen? Zugeordnete Projekte werden vom Agent geloest." className="rounded border px-2 py-1 text-red-700 border-red-300 bg-red-50 hover:bg-red-100">Loeschen</ConfirmSubmit>
-                    </form>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <AgentEditModal agent={{
+                        id: a.id,
+                        name: a.name,
+                        fullName: a.fullName,
+                        roleTitle: a.roleTitle,
+                        email: a.email,
+                        categories: a.categories,
+                      }} />
+                      <form action={resetAgentPassword} className="flex items-center gap-1">
+                        <input type="hidden" name="userId" value={a.id} />
+                        <input name="newPassword" type="password" placeholder="Neues Passwort" className="rounded border p-1 text-sm w-32" />
+                        <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" title="Passwort setzen">🔑</button>
+                      </form>
+                      <form action={toggleAgentActive}>
+                        <input type="hidden" name="userId" value={a.id} />
+                        <input type="hidden" name="active" value={a.active ? "0" : "1"} />
+                        <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" title={a.active ? "Deaktivieren" : "Aktivieren"}>
+                          {a.active ? "❌" : "✅"}
+                        </button>
+                      </form>
+                      <form action={deleteAgent}>
+                        <input type="hidden" name="userId" value={a.id} />
+                        <ConfirmSubmit
+                          confirmText="Diesen Agent unwiderruflich loeschen? Zugeordnete Projekte werden vom Agent geloest."
+                          className="rounded border px-2 py-1 text-xs text-red-700 border-red-300 bg-red-50 hover:bg-red-100"
+                          title="Agent löschen"
+                        >
+                          🗑️
+                        </ConfirmSubmit>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               ))}
               {agents.length === 0 && (
-                <tr><td colSpan={7} className="py-8 text-center opacity-60">Keine Agenten vorhanden.</td></tr>
+                <tr><td colSpan={6} className="py-8 text-center opacity-60">Keine Agenten vorhanden.</td></tr>
               )}
             </tbody>
           </table>

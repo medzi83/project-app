@@ -199,6 +199,9 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
   // Preload agents by name
   const agentRecords = await prisma.user.findMany({ where: { role: "AGENT" }, select: { id: true, name: true } });
   for (const a of agentRecords) if (a.name) existingAgents.set(a.name.trim().toLowerCase(), { id: a.id });
+  // Preload agencies for auto-assignment based on customer number
+  const eventomaxxAgency = await prisma.agency.findFirst({ where: { name: "Eventomaxx GmbH" }, select: { id: true } });
+  const vendowebAgency = await prisma.agency.findFirst({ where: { name: "Vendoweb GmbH" }, select: { id: true } });
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const rowNum = i + 2; // considering header at 1
@@ -272,7 +275,20 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
         if (found) {
           client = found;
         } else {
-          client = await prisma.client.create({ data: { name: clientName, customerNo: partnerNoBase } });
+          // Determine agency based on customer number prefix
+          let agencyId: string | null = null;
+          if (partnerNoBase.startsWith("2") && eventomaxxAgency) {
+            agencyId = eventomaxxAgency.id;
+          } else if (partnerNoBase.startsWith("3") && vendowebAgency) {
+            agencyId = vendowebAgency.id;
+          }
+          client = await prisma.client.create({
+            data: {
+              name: clientName,
+              customerNo: partnerNoBase,
+              agencyId: agencyId,
+            }
+          });
         }
         existingClients.set(partnerNoBase, { id: client.id });
       }

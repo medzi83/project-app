@@ -49,6 +49,8 @@ const EmailField = z
 
 const CreateAgentSchema = z.object({
   name: z.string().optional().transform(v => v?.trim() || null),
+  fullName: z.string().optional().transform(v => v?.trim() || null),
+  roleTitle: z.string().optional().transform(v => v?.trim() || null),
   email: EmailField,
   password: z.string().min(8, "Mind. 8 Zeichen"),
   color: ColorField,
@@ -74,11 +76,13 @@ export async function createAgent(formData: FormData) {
     redirect(`/admin/agents?agentError=${encodeURIComponent(msg)}`);
   }
 
-  const { name, email, password, color, categories } = parsed.data;
+  const { name, fullName, roleTitle, email, password, color, categories } = parsed.data;
   try {
     await prisma.user.create({
       data: {
         name,
+        fullName,
+        roleTitle,
         email: email ?? undefined,
         password: bcrypt.hashSync(password, 10),
         role: "AGENT",
@@ -143,6 +147,50 @@ export async function updateAgentName(formData: FormData) {
 
   revalidatePath("/admin/agents");
   revalidatePath("/projects");
+  redirect(`/admin/agents`);
+}
+
+/* ---------- Agent Voller Name aktualisieren ---------- */
+const UpdateAgentFullNameSchema = z.object({
+  userId: z.string().min(1),
+  fullName: z.string().optional().transform(v => v?.trim() || null),
+});
+export async function updateAgentFullName(formData: FormData) {
+  await requireAdmin();
+
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = UpdateAgentFullNameSchema.safeParse(raw);
+  if (!parsed.success) redirect(`/admin/agents`);
+
+  const { userId, fullName } = parsed.data;
+  await prisma.user.update({
+    where: { id: userId, role: "AGENT" },
+    data: { fullName },
+  });
+
+  revalidatePath("/admin/agents");
+  redirect(`/admin/agents`);
+}
+
+/* ---------- Agent Rollenbezeichnung aktualisieren ---------- */
+const UpdateAgentRoleTitleSchema = z.object({
+  userId: z.string().min(1),
+  roleTitle: z.string().optional().transform(v => v?.trim() || null),
+});
+export async function updateAgentRoleTitle(formData: FormData) {
+  await requireAdmin();
+
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = UpdateAgentRoleTitleSchema.safeParse(raw);
+  if (!parsed.success) redirect(`/admin/agents`);
+
+  const { userId, roleTitle } = parsed.data;
+  await prisma.user.update({
+    where: { id: userId, role: "AGENT" },
+    data: { roleTitle },
+  });
+
+  revalidatePath("/admin/agents");
   redirect(`/admin/agents`);
 }
 

@@ -860,6 +860,7 @@ export default async function DashboardPage({
           website: {
             select: {
               webDate: true,
+              webterminType: true,
               demoDate: true,
               onlineDate: true,
               materialStatus: true,
@@ -905,7 +906,14 @@ export default async function DashboardPage({
         });
 
         if (derivedStatus === "WEBTERMIN" && project.website.webDate) {
-          taskType = "Webtermin";
+          const typeLabel = project.website.webterminType === "TELEFONISCH"
+            ? " (Telefonisch)"
+            : project.website.webterminType === "BEIM_KUNDEN"
+            ? " (Beim Kunden)"
+            : project.website.webterminType === "IN_DER_AGENTUR"
+            ? " (In der Agentur)"
+            : "";
+          taskType = `Webtermin${typeLabel}`;
           taskDate = new Date(project.website.webDate);
           category = "appointment";
         } else if (derivedStatus === "UMSETZUNG") {
@@ -1205,7 +1213,7 @@ export default async function DashboardPage({
                   Alle anzeigen
                 </Link>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                 {section.tiles.map((tile) => (
                   <Link
                     key={`${section.key}-${tile.key}`}

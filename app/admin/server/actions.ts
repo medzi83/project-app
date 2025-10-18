@@ -22,6 +22,10 @@ const CreateServerSchema = z.object({
   mysqlUrl: z.string().url("UngÃ¼ltige URL").trim().optional().or(z.literal("")),
   froxlorApiKey: z.string().trim().optional().or(z.literal("")),
   froxlorApiSecret: z.string().trim().optional().or(z.literal("")),
+  sshHost: z.string().trim().optional().or(z.literal("")),
+  sshPort: z.coerce.number().optional(),
+  sshUsername: z.string().trim().optional().or(z.literal("")),
+  sshPassword: z.string().trim().optional().or(z.literal("")),
 });
 
 export async function createServer(formData: FormData) {
@@ -33,7 +37,7 @@ export async function createServer(formData: FormData) {
     redirect(`/admin/server?error=${encodeURIComponent(msg)}`);
   }
 
-  const { name, ip, froxlorUrl, mysqlUrl, froxlorApiKey, froxlorApiSecret } = parsed.data;
+  const { name, ip, froxlorUrl, mysqlUrl, froxlorApiKey, froxlorApiSecret, sshHost, sshPort, sshUsername, sshPassword } = parsed.data;
   await prisma.server.create({
     data: {
       name,
@@ -42,6 +46,10 @@ export async function createServer(formData: FormData) {
       mysqlUrl: mysqlUrl || null,
       froxlorApiKey: froxlorApiKey || null,
       froxlorApiSecret: froxlorApiSecret || null,
+      sshHost: sshHost || null,
+      sshPort: sshPort || null,
+      sshUsername: sshUsername || null,
+      sshPassword: sshPassword || null,
     },
   });
 
@@ -57,6 +65,10 @@ const UpdateServerSchema = z.object({
   mysqlUrl: z.string().url().trim().optional().or(z.literal("")),
   froxlorApiKey: z.string().trim().optional().or(z.literal("")),
   froxlorApiSecret: z.string().trim().optional().or(z.literal("")),
+  sshHost: z.string().trim().optional().or(z.literal("")),
+  sshPort: z.coerce.number().optional(),
+  sshUsername: z.string().trim().optional().or(z.literal("")),
+  sshPassword: z.string().trim().optional().or(z.literal("")),
 });
 
 export async function updateServer(formData: FormData) {
@@ -68,7 +80,7 @@ export async function updateServer(formData: FormData) {
     redirect(`/admin/server?error=${encodeURIComponent(msg)}`);
   }
 
-  const { id, name, ip, froxlorUrl, mysqlUrl, froxlorApiKey, froxlorApiSecret } = parsed.data;
+  const { id, name, ip, froxlorUrl, mysqlUrl, froxlorApiKey, froxlorApiSecret, sshHost, sshPort, sshUsername, sshPassword } = parsed.data;
   await prisma.server.update({
     where: { id },
     data: {
@@ -78,6 +90,10 @@ export async function updateServer(formData: FormData) {
       mysqlUrl: mysqlUrl || null,
       froxlorApiKey: froxlorApiKey || null,
       froxlorApiSecret: froxlorApiSecret || null,
+      sshHost: sshHost || null,
+      sshPort: sshPort || null,
+      sshUsername: sshUsername || null,
+      sshPassword: sshPassword || null,
     },
   });
 

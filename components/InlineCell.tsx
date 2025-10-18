@@ -9,9 +9,10 @@ type Props = {
   target: "project" | "website";
   id: string;             // projectId
   name: string;           // Feldname (whitelisted)
-  type: "text" | "number" | "date" | "datetime" | "select" | "tri" | "textarea";
+  type: "text" | "number" | "date" | "datetime" | "datetime-with-type" | "select" | "tri" | "textarea";
   display: string;        // Anzeige im Read-Mode
   value?: string | number | boolean | null; // Startwert fuer Edit
+  extraValue?: string;    // Für datetime-with-type: webterminType
   options?: Option[];     // fuer select/tri
   canEdit: boolean;
   displayClassName?: string;
@@ -25,6 +26,7 @@ export default function InlineCell({
   type,
   display,
   value,
+  extraValue,
   options,
   canEdit,
   displayClassName,
@@ -181,6 +183,47 @@ export default function InlineCell({
             if (e.key === "Enter")  { e.preventDefault(); formRef.current?.requestSubmit(); }
           }}
         />
+      )}
+
+      {type === "datetime-with-type" && (
+        <div className="flex flex-col gap-2">
+          <input
+            name="value" type="datetime-local" defaultValue={vStr}
+            ref={(el: HTMLInputElement | null) => { inputRef.current = el; }}
+            className="p-1 border rounded"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") { e.preventDefault(); cancel(); }
+            }}
+          />
+          <select
+            name="extraValue"
+            defaultValue={extraValue ?? ""}
+            className="p-1 border rounded text-sm"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") { e.preventDefault(); cancel(); }
+            }}
+          >
+            <option value="">(nicht gesetzt)</option>
+            <option value="TELEFONISCH">Telefonisch</option>
+            <option value="BEIM_KUNDEN">Beim Kunden</option>
+            <option value="IN_DER_AGENTUR">In der Agentur</option>
+          </select>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={cancel}
+              className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="submit"
+              className="px-2 py-1 text-xs bg-black text-white rounded hover:bg-gray-800"
+            >
+              Speichern
+            </button>
+          </div>
+        </div>
       )}
 
       {type === "text" && (

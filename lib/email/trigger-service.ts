@@ -19,6 +19,7 @@ type ProjectWithDetails = Project & {
         customerNo: string | null;
         contact: string | null;
         phone: string | null;
+        agency: { id: string } | null;
       }
     | null;
   agent?:
@@ -26,6 +27,8 @@ type ProjectWithDetails = Project & {
         id: string;
         name: string | null;
         email: string | null;
+        fullName: string | null;
+        roleTitle: string | null;
         categories: string[];
       }
     | null;
@@ -89,6 +92,11 @@ export async function processTriggers(
           customerNo: true,
           contact: true,
           phone: true,
+          agency: {
+            select: {
+              id: true,
+            },
+          },
         },
       },
       agent: {
@@ -96,6 +104,8 @@ export async function processTriggers(
           id: true,
           name: true,
           email: true,
+          fullName: true,
+          roleTitle: true,
           categories: true,
         },
       },
@@ -263,9 +273,16 @@ async function queueEmail(
       break;
   }
 
+  // If no email is set, use a placeholder for immediate triggers (user will be prompted to fill it in)
+  // For delayed triggers, skip if no email is available
   if (!recipientEmail) {
-    console.warn(`Could not determine recipient email for trigger ${trigger.id}, recipient type: ${recipientConfig.to}`);
-    return;
+    if (shouldSendImmediately) {
+      console.log(`No email found for ${recipientConfig.to}, but creating queue for user confirmation`);
+      recipientEmail = ""; // Empty string - user must fill in confirmation dialog
+    } else {
+      console.warn(`Could not determine recipient email for delayed trigger ${trigger.id}, recipient type: ${recipientConfig.to}`);
+      return;
+    }
   }
 
   // Build CC list
@@ -294,7 +311,20 @@ async function queueEmail(
 
   // Replace placeholders in subject and body
   const subject = replacePlaceholders(trigger.template.subject, project);
-  const body = replacePlaceholders(trigger.template.body, project);
+  let body = replacePlaceholders(trigger.template.body, project);
+
+  // Load and append signature based on agency
+  const agencyId = project.client?.agency?.id ?? null;
+  const signature = await prisma.emailSignature.findFirst({
+    where: { agencyId },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (signature) {
+    // Replace placeholders in signature as well
+    const signatureWithData = replacePlaceholders(signature.body, project);
+    body = body + "\n\n" + signatureWithData;
+  }
 
   // Determine status: immediate emails need confirmation, delayed emails go straight to PENDING
   const queueStatus = shouldSendImmediately ? "PENDING_CONFIRMATION" : "PENDING";
@@ -329,6 +359,18 @@ function replacePlaceholders(text: string, project: ProjectWithDetails): string 
   const formatDate = (value?: Date | null) =>
     value ? value.toLocaleDateString("de-DE") : "";
 
+  const formatDateTime = (value?: Date | null) =>
+    value ? value.toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : "";
+
+  const formatWebterminType = (type?: string | null) => {
+    switch (type) {
+      case "TELEFONISCH": return "Telefonisch";
+      case "BEIM_KUNDEN": return "Beim Kunden";
+      case "IN_DER_AGENTUR": return "In der Agentur";
+      default: return "";
+    }
+  };
+
   // Get latest preview version link if available
   const latestPreviewLink = project.film?.previewVersions?.[0]?.link ?? "";
   const latestPreviewDate = project.film?.previewVersions?.[0]?.sentDate
@@ -340,7 +382,8 @@ function replacePlaceholders(text: string, project: ProjectWithDetails): string 
     "{{project.title}}": project.title ?? "",
     "{{project.id}}": project.id,
     "{{project.status}}": project.status ?? "",
-    "{{project.webDate}}": formatDate(project.website?.webDate ?? null),
+    "{{project.webDate}}": formatDateTime(project.website?.webDate ?? null),
+    "{{project.webterminType}}": formatWebterminType(project.website?.webterminType),
     "{{project.demoDate}}": formatDate(project.website?.demoDate ?? null),
     "{{project.agentName}}": project.agent?.name ?? "",
 
@@ -350,11 +393,13 @@ function replacePlaceholders(text: string, project: ProjectWithDetails): string 
     "{{client.phone}}": project.client?.phone ?? "",
 
     "{{agent.name}}": project.agent?.name ?? "",
+    "{{agent.fullName}}": project.agent?.fullName ?? "",
+    "{{agent.roleTitle}}": project.agent?.roleTitle ?? "",
     "{{agent.email}}": project.agent?.email ?? "",
     "{{agent.categories}}": project.agent?.categories?.join(", ") ?? "",
 
     "{{website.domain}}": project.website?.domain ?? "",
-    "{{website.webDate}}": formatDate(project.website?.webDate ?? null),
+    "{{website.webDate}}": formatDateTime(project.website?.webDate ?? null),
     "{{website.demoDate}}": formatDate(project.website?.demoDate ?? null),
     "{{website.demoLink}}": project.website?.demoLink ?? "",
 

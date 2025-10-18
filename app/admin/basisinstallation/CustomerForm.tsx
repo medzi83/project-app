@@ -39,9 +39,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
     company: "",
     email: "server@eventomaxx.de",
     loginname: "",
-    password: "",
-    diskspace_gb: "5",
-    mysqls: "2",
+    password: "dkNM95z31Z31",
+    diskspace_gb: "2",
+    mysqls: "1",
     ftps: "1",
     documentroot: "",
     leregistered: false,
@@ -101,10 +101,10 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
       name: "",
       company: normalizedClientName,
       email: "server@eventomaxx.de",
-      loginname: "",
-      password: "",
-      diskspace_gb: "5",
-      mysqls: "2",
+      loginname: normalizedCustomerNo,
+      password: "dkNM95z31Z31",
+      diskspace_gb: "2",
+      mysqls: "1",
       ftps: "1",
       documentroot: "",
       leregistered: false,
@@ -122,8 +122,8 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
           setExistingCustomer(response.customer);
           // Convert diskspace from KB to GB (diskspace is in KB in Froxlor)
           const diskspaceGB = response.customer.diskspace
-            ? Math.round(parseInt(response.customer.diskspace) / 1024 / 1024)
-            : 5;
+            ? Math.round(parseInt(response.customer.diskspace) / 1000)
+            : 2;
           // Parse allowed_phpconfigs from string like "[1,2]" to array
           const phpConfigsStr = response.customer.allowed_phpconfigs || "[1]";
           const phpConfigsMatch = phpConfigsStr.match(/\[([^\]]*)\]/);
@@ -138,9 +138,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
             company: response.customer.company || "",
             email: response.customer.email || "server@eventomaxx.de",
             loginname: response.customer.loginname || "",
-            password: "",
+            password: "dkNM95z31Z31",
             diskspace_gb: diskspaceGB.toString(),
-            mysqls: response.customer.mysqls?.toString() || "2",
+            mysqls: response.customer.mysqls?.toString() || "1",
             ftps: response.customer.ftps?.toString() || "1",
             documentroot: response.customer.documentroot || "",
             leregistered: response.customer.leregistered === 1,
@@ -167,8 +167,8 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
       setExistingCustomer(response.customer);
       // Convert diskspace from KB to GB (diskspace is in KB in Froxlor)
       const diskspaceGB = response.customer.diskspace
-        ? Math.round(parseInt(response.customer.diskspace) / 1024 / 1024)
-        : 5;
+        ? Math.round(parseInt(response.customer.diskspace) / 1000)
+        : 2;
       // Parse allowed_phpconfigs from string like "[1,2]" to array
       const phpConfigsStr = response.customer.allowed_phpconfigs || "[1]";
       const phpConfigsMatch = phpConfigsStr.match(/\[([^\]]*)\]/);
@@ -183,9 +183,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
         company: response.customer.company || "",
         email: response.customer.email || "server@eventomaxx.de",
         loginname: response.customer.loginname || "",
-        password: "",
+        password: "dkNM95z31Z31",
         diskspace_gb: diskspaceGB.toString(),
-        mysqls: response.customer.mysqls?.toString() || "2",
+        mysqls: response.customer.mysqls?.toString() || "1",
         ftps: response.customer.ftps?.toString() || "1",
         documentroot: response.customer.documentroot || "",
         leregistered: response.customer.leregistered === 1,
@@ -196,13 +196,12 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
       loadCustomerDomains(response.customer.customerid);
     } else {
       setExistingCustomer(null);
-      // Prefill with client name if available
-      if (clientName) {
-        setFormData({
-          ...formData,
-          company: clientName,
-        });
-      }
+      // Prefill with client name and customer number if available
+      setFormData({
+        ...formData,
+        company: clientName || "",
+        loginname: customerNumber || "",
+      });
     }
   };
 
@@ -229,9 +228,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
           company: "",
           email: "server@eventomaxx.de",
           loginname: "",
-          password: "",
-          diskspace_gb: "5",
-          mysqls: "2",
+          password: "dkNM95z31Z31",
+          diskspace_gb: "2",
+          mysqls: "1",
           ftps: "1",
           documentroot: "",
           leregistered: false,
@@ -283,7 +282,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="mb-4 font-medium">Schritt 1: Kundennummer prÃ¼fen</h3>
+        <h3 className="mb-4 font-medium">Schritt 1: Kundennummer prüfen</h3>
         <div className="flex gap-3">
           <input
             type="text"
@@ -299,13 +298,13 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
             disabled={checking || !customerNumber.trim()}
             className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
           >
-            {checking ? "PrÃ¼fe..." : "PrÃ¼fen"}
+            {checking ? "Prüfe..." : "Prüfen"}
           </button>
         </div>
 
         {existingCustomer && (
           <div className="mt-3 rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
-            <div className="font-medium">âœ“ Kunde gefunden (ID: {existingCustomer.customerid})</div>
+            <div className="font-medium">✓ Kunde gefunden (ID: {existingCustomer.customerid})</div>
             <div className="mt-1">
               Kundennummer: {existingCustomer.customernumber} | Login: {existingCustomer.loginname}
             </div>
@@ -384,7 +383,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
                 disabled={existingCustomer ? true : false}
               />
               <span className="text-xs text-gray-500 mt-1">
-                {existingCustomer ? "Login-Name kann nicht geÃ¤ndert werden" : "Empfohlen: VWxxxxx Format"}
+                {existingCustomer ? "Login-Name kann nicht geändert werden" : "Empfohlen: Kundennummer verwenden"}
               </span>
             </Field>
 
@@ -447,14 +446,14 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
                 placeholder="/var/customers/webs/VWxxxxx/"
               />
               <span className="text-xs text-gray-500 mt-1">
-                Leer lassen fÃ¼r automatische Generierung
+                Leer lassen für automatische Generierung
               </span>
             </Field>
           </div>
 
           <div className="space-y-2">
             <label className="text-xs uppercase tracking-wide text-gray-500">
-              PHP Konfigurationen
+              PHP Konfiguration für Standard-Subdomain
             </label>
             {phpConfigs.length === 0 ? (
               <div className="text-sm text-gray-500">Lade PHP-Konfigurationen...</div>
@@ -576,7 +575,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          {isStandard && <span className="text-yellow-500 text-lg">â˜…</span>}
+                          {isStandard && <span className="text-yellow-500 text-lg">★</span>}
                           <span className="font-medium">{domain.domain}</span>
                           {domain.deactivated === "1" && (
                             <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">Deaktiviert</span>
@@ -584,12 +583,12 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
                         </div>
                         <div className="mt-1 text-xs text-gray-500 space-x-4">
                           <span>PHP: {phpConfigs.find(c => c.id.toString() === domain.phpsettingid)?.description || domain.phpsettingid}</span>
-                          <span>SSL: {domain.ssl_redirect === "1" ? "âœ“" : "âœ—"}</span>
-                          <span>LE: {domain.letsencrypt === "1" ? "âœ“" : "âœ—"}</span>
+                          <span>SSL: {domain.ssl_redirect === "1" ? "✓" : "✗"}</span>
+                          <span>LE: {domain.letsencrypt === "1" ? "✓" : "✗"}</span>
                         </div>
                       </div>
                       <div className="ml-4 text-gray-400">
-                        {isExpanded ? "â–¼" : "â–¶"}
+                        {isExpanded ? "▼" : "▶"}
                       </div>
                     </button>
 

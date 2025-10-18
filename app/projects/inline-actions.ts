@@ -30,6 +30,7 @@ const FormSchema = z.object({
   id: z.string().min(1),          // projectId
   key: z.string().min(1),
   value: z.string().optional(),
+  extraValue: z.string().optional(), // For datetime-with-type: webterminType
 });
 
 const dateKeys = new Set(["webDate","demoDate","onlineDate","lastMaterialAt"]);
@@ -60,7 +61,7 @@ export async function updateInlineField(formData: FormData) {
   const raw = Object.fromEntries(formData.entries());
   const parsed = FormSchema.safeParse(raw);
   if (!parsed.success) throw new Error("Bad request");
-  const { target, id, key, value } = parsed.data;
+  const { target, id, key, value, extraValue } = parsed.data;
 
   if (target === "project") {
     const projectKey = ProjectKey.parse(key);
@@ -121,6 +122,12 @@ export async function updateInlineField(formData: FormData) {
         const nextValue = parsedValue instanceof Date ? parsedValue : null;
         updateData.webDate = nextValue;
         createData.webDate = nextValue;
+        // Also handle webterminType if extraValue is provided
+        if (extraValue !== undefined) {
+          const nextType = extraValue.trim() !== "" ? extraValue as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" : null;
+          updateData.webterminType = nextType;
+          createData.webterminType = nextType;
+        }
         break;
       }
       case "demoDate": {

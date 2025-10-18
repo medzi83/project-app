@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
@@ -6,6 +5,7 @@ import { deleteEmailTemplate, updateEmailTemplate } from "./actions";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import TemplateCreationTabs from "./TemplateCreationTabs";
 import TemplateSlideout from "./TemplateSlideout";
+import EditTemplateForm from "./EditTemplateForm";
 import type { VariableGroup } from "./VariableGroupsPanel";
 import { DEFAULT_SIGNATURE_KEY } from "./constants";
 
@@ -34,7 +34,8 @@ const VARIABLE_GROUPS: VariableGroup[] = [
     items: [
       { placeholder: "{{project.title}}", description: "Titel des Projekts" },
       { placeholder: "{{project.status}}", description: "Aktueller Projektstatus" },
-      { placeholder: "{{project.webDate}}", description: "Geplanter Webtermin" },
+      { placeholder: "{{project.webDate}}", description: "Geplanter Webtermin (Datum und Uhrzeit)" },
+      { placeholder: "{{project.webterminType}}", description: "Art des Webtermins (Telefonisch, Beim Kunden, In der Agentur)" },
       { placeholder: "{{project.demoDate}}", description: "Termin für Demo" },
       { placeholder: "{{project.agentName}}", description: "Name des zuständigen Agents" },
     ],
@@ -68,7 +69,9 @@ const VARIABLE_GROUPS: VariableGroup[] = [
   {
     label: "Agent",
     items: [
-      { placeholder: "{{agent.name}}", description: "Anzeigename des Agents" },
+      { placeholder: "{{agent.name}}", description: "Anzeigename des Agents (Kurzname)" },
+      { placeholder: "{{agent.fullName}}", description: "Voller Name des Agents" },
+      { placeholder: "{{agent.roleTitle}}", description: "Rollenbezeichnung des Agents" },
       { placeholder: "{{agent.email}}", description: "E-Mail des Agents" },
       { placeholder: "{{agent.categories}}", description: "Kommagetrennte Agent Kategorien" },
     ],
@@ -152,44 +155,14 @@ export default async function EmailTemplatesAdminPage({ searchParams }: Props) {
                 subtitle={template.subject}
                 meta={`Stand ${fmtDate(template.updatedAt)}`}
               >
-                <form action={updateEmailTemplate} className="space-y-3">
-                  <input type="hidden" name="id" value={template.id} />
-                  <Field label="Technischer Titel *">
-                    <input
-                      name="title"
-                      defaultValue={template.title}
-                      required
-                      className="w-full rounded border px-3 py-2 text-sm"
-                    />
-                  </Field>
-                  <Field label="Betreff *">
-                    <input
-                      name="subject"
-                      defaultValue={template.subject}
-                      required
-                      className="w-full rounded border px-3 py-2 text-sm"
-                    />
-                  </Field>
-                  <Field label="HTML-Inhalt *">
-                    <textarea
-                      name="body"
-                      defaultValue={template.body}
-                      required
-                      rows={8}
-                      className="w-full rounded border px-3 py-2 font-mono text-sm"
-                    />
-                  </Field>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      type="submit"
-                      className="rounded border border-black px-4 py-2 text-sm font-medium text-black hover:bg-gray-50"
-                    >
-                      Änderungen speichern
-                    </button>
-                  </div>
-                </form>
+                <EditTemplateForm
+                  id={template.id}
+                  initialTitle={template.title}
+                  initialSubject={template.subject}
+                  initialBody={template.body}
+                />
 
-                <form action={deleteEmailTemplate}>
+                <form action={deleteEmailTemplate} className="mt-4">
                   <input type="hidden" name="id" value={template.id} />
                   <ConfirmSubmit
                     confirmText="Diese Vorlage wirklich löschen? Dies kann nicht rückgängig gemacht werden."
@@ -204,14 +177,5 @@ export default async function EmailTemplatesAdminPage({ searchParams }: Props) {
         )}
       </section>
     </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</span>
-      {children}
-    </label>
   );
 }

@@ -12,6 +12,8 @@ model User {
   id                       String         @id @default(cuid())
   email                    String?        @unique
   name                     String?
+  fullName                 String?
+  roleTitle                String?
   password                 String
   role                     Role           @default(CUSTOMER)
   clientId                 String?
@@ -100,26 +102,27 @@ model Project {
 }
 
 model ProjectWebsite {
-  projectId      String           @id
-  domain         String?
-  priority       WebsitePriority  @default(NONE)
-  pStatus        ProductionStatus @default(NONE)
-  cms            CMS              @default(JOOMLA)
-  cmsOther       String?
-  webDate        DateTime?
-  demoDate       DateTime?
-  onlineDate     DateTime?
-  lastMaterialAt DateTime?
-  effortBuildMin Int?
-  effortDemoMin  Int?
-  seo            SEOStatus        @default(NEIN)
-  textit         TextitStatus     @default(NEIN)
-  accessible     Boolean?
-  note           String?
-  demoLink       String?
-  materialStatus MaterialStatus   @default(ANGEFORDERT)
-  isWTAssignment Boolean          @default(false)
-  project        Project          @relation(fields: [projectId], references: [id])
+  projectId       String           @id
+  domain          String?
+  priority        WebsitePriority  @default(NONE)
+  pStatus         ProductionStatus @default(NONE)
+  cms             CMS              @default(JOOMLA)
+  cmsOther        String?
+  webDate         DateTime?
+  webterminType   WebterminType?
+  demoDate        DateTime?
+  onlineDate      DateTime?
+  lastMaterialAt  DateTime?
+  effortBuildMin  Int?
+  effortDemoMin   Int?
+  seo             SEOStatus        @default(NEIN)
+  textit          TextitStatus     @default(NEIN)
+  accessible      Boolean?
+  note            String?
+  demoLink        String?
+  materialStatus  MaterialStatus   @default(ANGEFORDERT)
+  isWTAssignment  Boolean          @default(false)
+  project         Project          @relation(fields: [projectId], references: [id])
 }
 
 model ProjectFilm {
@@ -187,6 +190,10 @@ model Server {
   mysqlUrl        String?
   froxlorApiKey   String?
   froxlorApiSecret String?
+  sshHost         String?
+  sshPort         Int?     @default(22)
+  sshUsername     String?
+  sshPassword     String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   clients         Client[]
@@ -419,6 +426,12 @@ enum MaterialStatus {
   TEILWEISE
   VOLLSTAENDIG
   NV
+}
+
+enum WebterminType {
+  TELEFONISCH
+  BEIM_KUNDEN
+  IN_DER_AGENTUR
 }
 
 enum AgentCategory {

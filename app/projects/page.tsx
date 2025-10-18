@@ -444,8 +444,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
     <div className="p-6 space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold">Webseitenprojekte</h1>
-        {canEdit && (<Link href="/projects/new" className="px-3 py-1.5 rounded bg-black text-white">Neues Projekt</Link>)}
-        {role === "ADMIN" && (
+        {role === "ADMIN" && session.user.role === "ADMIN" && (
           <DangerActionButton action={deleteAllProjects} confirmText="Wirklich ALLE Projekte dauerhaft löschen?">ALLE Projekte löschen</DangerActionButton>
         )}
       </div>
@@ -579,7 +578,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
             <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
               <Th href={mkSort("status")} active={sp.sort==="status"} dir={sp.dir}>Status</Th>
               <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir} width={120}>Kundennr.</Th>
-              <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir} width={280}>Kunde</Th>
+              <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir} width={200}>Kunde</Th>
               <Th href={mkSort("domain")} active={sp.sort==="domain"} dir={sp.dir}>Domain</Th>
               <Th href={mkSort("priority")} active={sp.sort==="priority"} dir={sp.dir}>Prio</Th>
               <Th href={mkSort("pStatus")} active={sp.sort==="pStatus"} dir={sp.dir}>P-Status</Th>
@@ -605,6 +604,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
             {projects.map((p) => {
               const materialStatus = (p.website?.materialStatus ?? "ANGEFORDERT") as MaterialStatus;
               const workdayInfo = getRemainingWorkdays(materialStatus, p.website?.lastMaterialAt, p.website?.demoDate);
+              const materialStatusClass = materialStatus === "VOLLSTAENDIG" ? "bg-green-100 px-2 py-1 rounded" : undefined;
               const hasAgent = Boolean(p.agent);
               const badgeClass = hasAgent ? (p.agent?.color ? AGENT_BADGE_BASE_CLASS : AGENT_BADGE_EMPTY_CLASS) : undefined;
               const badgeStyle = hasAgent ? agentBadgeStyle(p.agent?.color) : undefined;
@@ -660,16 +660,16 @@ export default async function ProjectsPage({ searchParams }: Props) {
                       )}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap">{p.client?.name ?? "-"}</td>
+                  <td className="max-w-[200px] truncate" title={p.client?.name ?? ""}>{p.client?.name ?? "-"}</td>
                   <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="domain" type="text" display={p.website?.domain ?? "-"} value={p.website?.domain ?? ""} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="priority" type="select" display={labelForWebsitePriority(p.website?.priority)} value={p.website?.priority ?? "NONE"} options={priorityOptions} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="pStatus" type="select" display={labelForProductionStatus(p.website?.pStatus)} value={p.website?.pStatus ?? "NONE"} options={pStatusOptions} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="cms" type="select" display={p.website?.cms === "SHOPWARE" ? "Shop" : p.website?.cms ?? "-"} value={p.website?.cms ?? ""} options={cmsOptions} canEdit={canEdit} /></td>
                   <td><InlineCell target="project" id={p.id} name="agentId" type="select" display={agentDisplayName} value={effectiveAgentId} options={agentOptions} canEdit={canEdit} displayClassName={badgeClass} displayStyle={badgeStyle} /></td>
-                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="webDate" type="datetime" display={fmtDateTime(p.website?.webDate)} value={p.website?.webDate ? new Date(p.website.webDate).toISOString() : ""} canEdit={canEdit} /></td>
+                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="webDate" type="datetime-with-type" display={fmtDateTime(p.website?.webDate)} value={p.website?.webDate ? new Date(p.website.webDate).toISOString() : ""} extraValue={p.website?.webterminType ?? ""} canEdit={canEdit} /></td>
                   <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="demoDate" type="date" display={fmtDate(p.website?.demoDate)} value={p.website?.demoDate ? new Date(p.website.demoDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
                   <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="onlineDate" type="date" display={fmtDate(p.website?.onlineDate)} value={p.website?.onlineDate ? new Date(p.website.onlineDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
-                  <td><InlineCell target="website" id={p.id} name="materialStatus" type="select" display={labelForMaterialStatus(materialStatus)} value={materialStatus} options={materialStatusOptions} canEdit={canEdit} /></td>
+                  <td><InlineCell target="website" id={p.id} name="materialStatus" type="select" display={labelForMaterialStatus(materialStatus)} value={materialStatus} options={materialStatusOptions} canEdit={canEdit} displayClassName={materialStatusClass} /></td>
                   <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="lastMaterialAt" type="date" display={fmtDate(p.website?.lastMaterialAt)} value={p.website?.lastMaterialAt ? new Date(p.website.lastMaterialAt).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="effortBuildMin" type="number" display={mm(p.website?.effortBuildMin)} value={p.website?.effortBuildMin != null ? p.website.effortBuildMin / 60 : ""} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="effortDemoMin" type="number" display={mm(p.website?.effortDemoMin)} value={p.website?.effortDemoMin != null ? p.website.effortDemoMin / 60 : ""} canEdit={canEdit} /></td>

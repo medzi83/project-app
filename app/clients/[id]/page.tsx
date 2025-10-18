@@ -10,6 +10,7 @@ import { deriveProjectStatus, labelForProjectStatus } from "@/lib/project-status
 import type { ProjectStatus, ProjectType } from "@prisma/client";
 import { EmailLogItem } from "@/components/EmailLogItem";
 import { deriveFilmStatus, getFilmStatusDate, FILM_STATUS_LABELS } from "@/lib/film-status";
+import { ClientStatusToggles } from "@/components/ClientStatusToggles";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -254,6 +255,7 @@ export default async function ClientDetailPage({ params }: Props) {
   // Fetch Froxlor customer data if server is available
   let froxlorCustomer: FroxlorCustomer | null = null;
   let froxlorDomains: FroxlorDomain[] = [];
+  let froxlorPhpConfigs: Record<string, string> = {}; // Map of phpsettingid -> description
   let froxlorError: string | null = null;
 
   if (canFetchFroxlor && client.server?.froxlorUrl && client.server?.froxlorApiKey && client.server?.froxlorApiSecret) {
@@ -270,6 +272,13 @@ export default async function ClientDetailPage({ params }: Props) {
 
       if (froxlorCustomer) {
         froxlorDomains = await froxlorClient.getCustomerDomains(froxlorCustomer.customerid);
+
+        // Load PHP configurations
+        const phpConfigs = await froxlorClient.getPhpConfigs();
+        froxlorPhpConfigs = phpConfigs.reduce((acc, config) => {
+          acc[config.id.toString()] = config.description;
+          return acc;
+        }, {} as Record<string, string>);
       } else {
         froxlorError = `Kunde ${client.customerNo} wurde auf dem Froxlor-Server nicht gefunden.`;
       }
@@ -323,14 +332,23 @@ export default async function ClientDetailPage({ params }: Props) {
             </p>
           )}
         </div>
-        {isAdmin && (
-          <Link
-            href={`/clients/${client.id}/edit`}
-            className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
-          >
-            Bearbeiten
-          </Link>
-        )}
+        <div className="flex items-center gap-3">
+          {isAdmin && (
+            <>
+              <ClientStatusToggles
+                clientId={client.id}
+                initialWorkStopped={client.workStopped}
+                initialFinished={client.finished}
+              />
+              <Link
+                href={`/clients/${client.id}/edit`}
+                className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
+              >
+                Bearbeiten
+              </Link>
+            </>
+          )}
+        </div>
       </header>
 
       {/* 2-Spalten Layout */}
@@ -592,7 +610,7 @@ export default async function ClientDetailPage({ params }: Props) {
                         <div className="flex gap-3 text-xs text-gray-500">
                           <span>SSL: {domain.ssl_redirect === "1" ? "Ja" : "Nein"}</span>
                           <span>LE: {domain.letsencrypt === "1" ? "Ja" : "Nein"}</span>
-                          <span>PHP: {domain.phpsettingid}</span>
+                          <span>PHP: {froxlorPhpConfigs[domain.phpsettingid] || domain.phpsettingid}</span>
                         </div>
                       </div>
                     );

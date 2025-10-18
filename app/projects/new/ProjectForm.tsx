@@ -10,6 +10,12 @@ const CMS = ["SHOPWARE", "JOOMLA", "LOGO", "PRINT", "OTHER"] as const;
 const PRODUCTION = ["NONE", "BEENDET", "MMW", "VOLLST_A_K"] as const;
 const SEO = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"] as const;
 const TEXTIT = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"] as const;
+const WEBTERMIN_TYPES: Option[] = [
+  { value: "", label: "(nicht gesetzt)" },
+  { value: "TELEFONISCH", label: "Telefonisch" },
+  { value: "BEIM_KUNDEN", label: "Beim Kunden" },
+  { value: "IN_DER_AGENTUR", label: "In der Agentur" },
+];
 const TRI: Option[] = [
   { value: "unknown", label: "(nicht gesetzt)" },
   { value: "yes", label: "Ja" },
@@ -241,6 +247,7 @@ export function UnifiedProjectForm({
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <DateField name="webDate" label="Webtermin" />
+          <SelectField name="webterminType" label="Art des Webtermins" options={WEBTERMIN_TYPES} defaultValue="" />
           <DateField name="demoDate" label="Demo an Kunden" />
           <DateField name="onlineDate" label="Online" />
           <DateField name="lastMaterialAt" label="Letzter Materialeingang" />

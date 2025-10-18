@@ -124,6 +124,15 @@ export default async function EditProjectPage({ params }: Props) {
             <input type="date" name="webDate" defaultValue={dInput(w?.webDate)} className="w-full p-2 border rounded" />
           </Field>
 
+          <Field label="Art des Webtermins">
+            <select name="webterminType" defaultValue={w?.webterminType ?? ""} className="w-full p-2 border rounded">
+              <option value="">(nicht gesetzt)</option>
+              <option value="TELEFONISCH">Telefonisch</option>
+              <option value="BEIM_KUNDEN">Beim Kunden</option>
+              <option value="IN_DER_AGENTUR">In der Agentur</option>
+            </select>
+          </Field>
+
           <Field label="Demo an Kunden">
             <input type="date" name="demoDate" defaultValue={dInput(w?.demoDate)} className="w-full p-2 border rounded" />
           </Field>

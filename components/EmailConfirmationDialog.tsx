@@ -29,6 +29,7 @@ type EmailData = {
     id: string;
     name: string;
     email: string | null;
+    contact: string | null;
   } | null;
   trigger: {
     name: string;
@@ -201,21 +202,12 @@ export function EmailConfirmationDialog({
               </Badge>
             </div>
 
-            {/* Email Address */}
+            {/* Email Address (read-only display) */}
             <div className="space-y-2">
               <Label htmlFor="toEmail">An (E-Mail-Adresse)</Label>
-              <Input
-                id="toEmail"
-                type="email"
-                value={toEmail}
-                onChange={(e) => setToEmail(e.target.value)}
-                placeholder="kunde@example.com"
-              />
-              {toEmail !== emailData.client?.email && (
-                <p className="text-xs text-blue-600">
-                  Die E-Mail-Adresse wird beim Kunden gespeichert.
-                </p>
-              )}
+              <div className="rounded border bg-gray-50 p-2 text-sm">
+                {toEmail || "-"}
+              </div>
             </div>
 
             {/* CC Emails */}
@@ -281,7 +273,7 @@ export function EmailConfirmationDialog({
           </Button>
           <Button
             onClick={handleSend}
-            disabled={loading || !toEmail || !emailData}
+            disabled={loading || !emailData}
           >
             {loading ? "Wird gesendet..." : "Jetzt senden"}
           </Button>

@@ -29,6 +29,7 @@ const CMS = z.enum(["SHOPWARE", "WORDPRESS", "JOOMLA", "LOGO", "PRINT", "CUSTOM"
 const ProductionStatus = z.enum(["NONE", "BEENDET", "MMW", "VOLLST_A_K"]);
 const SEOStatus = z.enum(["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"]);
 const TextitStatus = z.enum(["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"]);
+const WebterminType = z.enum(["TELEFONISCH", "BEIM_KUNDEN", "IN_DER_AGENTUR"]).nullable();
 const FilmScope = z.enum(["FILM", "DROHNE", "NACHDREH", "FILM_UND_DROHNE"]);
 const FilmPriority = z.enum(["NONE", "FILM_SOLO", "PRIO_1", "PRIO_2"]);
 const FilmStatus = z.enum(["AKTIV", "BEENDET", "WARTEN", "VERZICHT", "MMW"]);
@@ -121,6 +122,7 @@ const WebsiteProjectSchema = z.object({
   pStatus: ProductionStatus.default("NONE"),
 
   webDate: z.string().optional().transform(toDate),
+  webterminType: z.string().optional().transform((v) => v && v.trim() ? v as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" : null),
   demoDate: z.string().optional().transform(toDate),
   onlineDate: z.string().optional().transform(toDate),
   lastMaterialAt: z.string().optional().transform(toDate),
@@ -189,6 +191,7 @@ export async function createWebsiteProject(formData: FormData) {
           cmsOther,
           pStatus: data.pStatus,
           webDate: data.webDate,
+          webterminType: data.webterminType,
           demoDate: data.demoDate,
           onlineDate: data.onlineDate,
           lastMaterialAt: data.lastMaterialAt,
@@ -326,6 +329,7 @@ const UnifiedProjectSchema = z.object({
   cmsOther: z.string().optional().transform((v) => v?.trim() || null),
   pStatus: ProductionStatus.optional(),
   webDate: z.string().optional().transform(toDate),
+  webterminType: z.string().optional().transform((v) => v && v.trim() ? v as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" : null),
   demoDate: z.string().optional().transform(toDate),
   onlineDate: z.string().optional().transform(toDate),
   lastMaterialAt: z.string().optional().transform(toDate),
@@ -422,6 +426,7 @@ export async function createProject(formData: FormData) {
             cmsOther,
             pStatus: data.pStatus ?? "NONE",
             webDate: data.webDate,
+            webterminType: data.webterminType,
             demoDate: data.demoDate,
             onlineDate: data.onlineDate,
             lastMaterialAt: data.lastMaterialAt,
@@ -541,6 +546,7 @@ export async function createProject(formData: FormData) {
             cmsOther,
             pStatus: data.pStatus ?? "NONE",
             webDate: data.webDate,
+            webterminType: data.webterminType,
             demoDate: data.demoDate,
             onlineDate: data.onlineDate,
             lastMaterialAt: data.lastMaterialAt,

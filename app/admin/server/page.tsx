@@ -73,6 +73,20 @@ export default async function ServerAdminPage({ searchParams }: Props) {
               <Field label="Froxlor API Secret">
                 <input name="froxlorApiSecret" type="password" className="w-full rounded border p-2" placeholder="API Secret" />
               </Field>
+              <hr className="my-4" />
+              <div className="text-xs font-semibold text-gray-500 mb-2">SSH-Zugang (für Joomla-Installation)</div>
+              <Field label="SSH Host">
+                <input name="sshHost" className="w-full rounded border p-2" placeholder="z.B. srv01.example.com" />
+              </Field>
+              <Field label="SSH Port">
+                <input name="sshPort" type="number" defaultValue="22" className="w-full rounded border p-2" placeholder="22" />
+              </Field>
+              <Field label="SSH Username">
+                <input name="sshUsername" className="w-full rounded border p-2" placeholder="root" />
+              </Field>
+              <Field label="SSH Password">
+                <input name="sshPassword" type="password" className="w-full rounded border p-2" placeholder="SSH Password" />
+              </Field>
               <button type="submit" className="w-full rounded bg-black px-4 py-2 text-white">Speichern</button>
             </form>
           </div>
@@ -82,7 +96,7 @@ export default async function ServerAdminPage({ searchParams }: Props) {
       <section className="space-y-4 rounded-lg border p-4">
         <h2 className="text-lg font-semibold">Serverliste</h2>
         <div className="overflow-x-auto rounded border">
-          <table className="min-w-[900px] w-full text-sm">
+          <table className="min-w-[1200px] w-full text-sm">
             <thead className="bg-gray-50">
               <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
                 <th>Name</th>
@@ -90,6 +104,7 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                 <th>Froxlor</th>
                 <th>MySQL</th>
                 <th>Zugangsdaten</th>
+                <th>SSH</th>
                 <th>Test</th>
                 <th>Aktionen</th>
               </tr>
@@ -161,6 +176,40 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                       </div>
                     </td>
                     <td>
+                      <div className="space-y-2">
+                        <input
+                          form={formId}
+                          name="sshHost"
+                          defaultValue={server.sshHost ?? ""}
+                          className="w-full rounded border p-1 text-xs"
+                          placeholder="SSH Host"
+                        />
+                        <input
+                          form={formId}
+                          name="sshPort"
+                          type="number"
+                          defaultValue={server.sshPort ?? 22}
+                          className="w-full rounded border p-1 text-xs"
+                          placeholder="Port"
+                        />
+                        <input
+                          form={formId}
+                          name="sshUsername"
+                          defaultValue={server.sshUsername ?? ""}
+                          className="w-full rounded border p-1 text-xs"
+                          placeholder="Username"
+                        />
+                        <input
+                          form={formId}
+                          name="sshPassword"
+                          type="password"
+                          defaultValue={server.sshPassword ?? ""}
+                          className="w-full rounded border p-1 text-xs"
+                          placeholder="Password"
+                        />
+                      </div>
+                    </td>
+                    <td>
                       <TestConnectionButton
                         froxlorUrl={server.froxlorUrl}
                         froxlorApiKey={server.froxlorApiKey}
@@ -181,7 +230,7 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                 );
               })}
               {servers.length === 0 && (
-                <tr><td colSpan={7} className="py-8 text-center text-sm text-gray-500">Noch keine Server hinterlegt.</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-sm text-gray-500">Noch keine Server hinterlegt.</td></tr>
               )}
             </tbody>
           </table>

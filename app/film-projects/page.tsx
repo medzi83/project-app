@@ -541,7 +541,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
       <header className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold">Filmprojekte</h1>
         <span className="text-sm text-gray-500">{total} Projekt{total === 1 ? "" : "e"}</span>
-        {role === "ADMIN" && (
+        {session.user.role === "ADMIN" && (
           <DangerActionButton action={deleteAllFilmProjects} confirmText="Wirklich ALLE Filmprojekte dauerhaft löschen?">
             ALLE Projekte löschen
           </DangerActionButton>

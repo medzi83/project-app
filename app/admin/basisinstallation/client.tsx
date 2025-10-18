@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { testFroxlorConnection } from "./actions";
+import { testFroxlorConnection, getCustomerDetails } from "./actions";
 import CustomerForm from "./CustomerForm";
+import JoomlaInstallForm from "./JoomlaInstallForm";
 
 type Client = {
   id: string;
@@ -31,6 +32,12 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
     testing: boolean;
     result?: { success: boolean; message: string };
   }>({ testing: false });
+  const [customerDetails, setCustomerDetails] = useState<{
+    customerNo: string;
+    documentRoot: string;
+    standardDomain: string;
+  } | null>(null);
+  const [loadingCustomer, setLoadingCustomer] = useState(false);
 
   useEffect(() => {
     if (selectedServer) {
@@ -42,6 +49,32 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
       setConnectionStatus({ testing: false });
     }
   }, [selectedServer]);
+
+  // Load customer details when client with customerNo is selected
+  useEffect(() => {
+    if (selectedClient && selectedServer) {
+      const clientData = clients.find((c) => c.id === selectedClient);
+      if (clientData?.customerNo) {
+        setLoadingCustomer(true);
+        getCustomerDetails(selectedServer, clientData.customerNo).then((result) => {
+          if (result.success && result.customer) {
+            setCustomerDetails({
+              customerNo: result.customer.customerNo,
+              documentRoot: result.customer.documentRoot,
+              standardDomain: result.standardDomain || "",
+            });
+          } else {
+            setCustomerDetails(null);
+          }
+          setLoadingCustomer(false);
+        });
+      } else {
+        setCustomerDetails(null);
+      }
+    } else {
+      setCustomerDetails(null);
+    }
+  }, [selectedClient, selectedServer, clients]);
 
   const server = servers.find((s) => s.id === selectedServer);
   const client = clients.find((c) => c.id === selectedClient);
@@ -173,21 +206,33 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
           </div>
         )}
 
-        <div className="border-t pt-6">
-          <h3 className="mb-4 font-medium">Weitere Aktionen (in Vorbereitung)</h3>
-          <div className="grid gap-4 md:grid-cols-3">
-            <ActionCard
-              title="Domain verwalten"
-              description="Domain-Konfiguration für den Kunden"
-              disabled
-            />
-            <ActionCard
-              title="Joomla installieren"
-              description="Joomla-Backup via kickstart.php installieren"
-              disabled
+        {loadingCustomer && (
+          <div className="border-t pt-6">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+              Lade Kundendaten...
+            </div>
+          </div>
+        )}
+
+        {!loadingCustomer && customerDetails && (
+          <div className="border-t pt-6">
+            <JoomlaInstallForm
+              serverId={selectedServer}
+              customerNo={customerDetails.customerNo}
+              customerDocumentRoot={customerDetails.documentRoot}
+              standardDomain={customerDetails.standardDomain}
             />
           </div>
-        </div>
+        )}
+
+        {!loadingCustomer && selectedClient && selectedServer && !customerDetails && clients.find((c) => c.id === selectedClient)?.customerNo && (
+          <div className="border-t pt-6">
+            <div className="rounded border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+              Kundendaten konnten nicht geladen werden. Bitte stelle sicher, dass der Kunde in Froxlor existiert.
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );
