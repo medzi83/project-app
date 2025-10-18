@@ -3,6 +3,14 @@ import { getAuthSession } from "@/lib/authz";
 import { promises as fs } from "fs";
 import path from "path";
 
+// Allow large file uploads (200 MB max)
+export const maxDuration = 300; // 5 minutes
+export const dynamic = 'force-dynamic';
+
+// Note: For production on Vercel, you may need to configure bodyParser
+// Vercel has a 4.5 MB limit on serverless functions by default
+// For larger files, consider using direct upload to storage or streaming
+
 export async function POST(request: NextRequest) {
   const session = await getAuthSession();
 

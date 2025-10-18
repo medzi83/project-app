@@ -11,6 +11,8 @@ type Props = {
   backupSize: number;
 };
 
+const CHUNK_SIZE = 3 * 1024 * 1024; // 3 MB chunks (safe for Vercel)
+
 export default function JoomlaBackupClient({
   kickstartExists,
   backupExists,
@@ -23,6 +25,7 @@ export default function JoomlaBackupClient({
   const [uploadingBackup, setUploadingBackup] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
@@ -30,6 +33,37 @@ export default function JoomlaBackupClient({
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
+  };
+
+  const uploadFileInChunks = async (file: File, type: string) => {
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const start = chunkIndex * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+
+      const formData = new FormData();
+      formData.append("chunk", chunk);
+      formData.append("fileName", file.name);
+      formData.append("chunkIndex", chunkIndex.toString());
+      formData.append("totalChunks", totalChunks.toString());
+      formData.append("type", type);
+
+      const res = await fetch("/api/admin/joomla-backup/upload-chunk", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Upload fehlgeschlagen");
+      }
+
+      // Update progress
+      const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+      setUploadProgress(progress);
+    }
   };
 
   const handleKickstartUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,28 +78,17 @@ export default function JoomlaBackupClient({
     setUploadingKickstart(true);
     setError(null);
     setSuccess(null);
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("type", "kickstart");
+    setUploadProgress(0);
 
     try {
-      const res = await fetch("/api/admin/joomla-backup/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Upload fehlgeschlagen");
-      }
-
+      await uploadFileInChunks(file, "kickstart");
       setSuccess("kickstart.php erfolgreich hochgeladen");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload fehlgeschlagen");
     } finally {
       setUploadingKickstart(false);
+      setUploadProgress(0);
     }
   };
 
@@ -81,28 +104,17 @@ export default function JoomlaBackupClient({
     setUploadingBackup(true);
     setError(null);
     setSuccess(null);
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("type", "backup");
+    setUploadProgress(0);
 
     try {
-      const res = await fetch("/api/admin/joomla-backup/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Upload fehlgeschlagen");
-      }
-
+      await uploadFileInChunks(file, "backup");
       setSuccess(`Backup ${file.name} erfolgreich hochgeladen`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload fehlgeschlagen");
     } finally {
       setUploadingBackup(false);
+      setUploadProgress(0);
     }
   };
 
@@ -177,9 +189,17 @@ export default function JoomlaBackupClient({
           </div>
 
           {uploadingKickstart && (
-            <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
-              Wird hochgeladen...
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+                Wird hochgeladen... {uploadProgress}%
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full bg-blue-600 transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
             </div>
           )}
         </section>
@@ -233,9 +253,17 @@ export default function JoomlaBackupClient({
           </div>
 
           {uploadingBackup && (
-            <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
-              Wird hochgeladen...
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+                Wird hochgeladen... {uploadProgress}%
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full bg-blue-600 transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
             </div>
           )}
         </section>
@@ -246,6 +274,7 @@ export default function JoomlaBackupClient({
         <ul className="space-y-1 text-sm text-blue-800">
           <li>• Die Dateien werden für alle Joomla-Installationen verwendet</li>
           <li>• Beim Upload wird die alte Datei automatisch überschrieben</li>
+          <li>• Große Dateien werden automatisch in kleineren Teilen hochgeladen</li>
           <li>• Stelle sicher, dass die kickstart.php mit dem Backup kompatibel ist</li>
           <li>
             • Nach dem Upload können die Dateien in der Basisinstallation verwendet werden
