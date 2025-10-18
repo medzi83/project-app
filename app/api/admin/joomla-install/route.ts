@@ -17,10 +17,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { serverId, customerNo, folderName, dbPassword } = body;
 
-    console.log("Joomla install request:", { serverId, customerNo, folderName, hasDbPassword: !!dbPassword });
-
     if (!serverId || !customerNo || !folderName || !dbPassword) {
-      console.error("Missing required fields:", { serverId: !!serverId, customerNo: !!customerNo, folderName: !!folderName, dbPassword: !!dbPassword });
       return NextResponse.json(
         { error: `Missing required fields. Received: serverId=${!!serverId}, customerNo=${!!customerNo}, folderName=${!!folderName}, dbPassword=${!!dbPassword}` },
         { status: 400 }
@@ -186,46 +183,54 @@ export async function POST(request: NextRequest) {
       const backupFileName = path.basename(backupPath);
       await sftp.put(backupPath, `${targetPath}/${backupFileName}`);
 
-      // Set permissions (755 for directory, 644 for files)
-      await sftp.chmod(targetPath, 0o755);
-      await sftp.chmod(`${targetPath}/kickstart.php`, 0o644);
-      await sftp.chmod(`${targetPath}/${backupFileName}`, 0o644);
+      // Close SFTP before running chown
+      await sftp.end();
 
       // Change owner to customer username (important!)
+      // This MUST be done before extraction, so PHP can write files
       const customerUsername = customer.loginname;
       try {
         // Use exec to run chown command
-        // Note: This requires SSH access with sufficient permissions
-        await sftp.end();
-
-        // Reconnect to run chown via exec
         const { Client } = await import("ssh2");
         const sshClient = new Client();
 
         await new Promise<void>((resolve, reject) => {
           sshClient
             .on("ready", () => {
-              sshClient.exec(
+              // Set ownership and permissions in one go
+              // 775 for directory (rwxrwxr-x) so PHP/www-data can write
+              // 664 for files (rw-rw-r--) so they can be read/written
+              const commands = [
                 `chown -R ${customerUsername}:${customerUsername} ${targetPath}`,
-                (err, stream) => {
-                  if (err) {
-                    reject(err);
-                    return;
-                  }
+                `chmod -R 775 ${targetPath}`,
+                `chmod 664 ${targetPath}/*.php ${targetPath}/*.jpa ${targetPath}/*.zip 2>/dev/null || true`,
+              ].join(" && ");
 
-                  stream
-                    .on("close", () => {
-                      sshClient.end();
-                      resolve();
-                    })
-                    .on("data", (data: Buffer) => {
-                      console.log("STDOUT:", data.toString());
-                    })
-                    .stderr.on("data", (data: Buffer) => {
-                      console.log("STDERR:", data.toString());
-                    });
+              sshClient.exec(commands, (err, stream) => {
+                if (err) {
+                  reject(err);
+                  return;
                 }
-              );
+
+                let stdout = "";
+                let stderr = "";
+
+                stream
+                  .on("close", (code: number) => {
+                    sshClient.end();
+                    if (code !== 0) {
+                      reject(new Error(`chown/chmod failed with code ${code}: ${stderr}`));
+                    } else {
+                      resolve();
+                    }
+                  })
+                  .on("data", (data: Buffer) => {
+                    stdout += data.toString();
+                  })
+                  .stderr.on("data", (data: Buffer) => {
+                    stderr += data.toString();
+                  });
+              });
             })
             .on("error", reject)
             .connect({
@@ -236,8 +241,9 @@ export async function POST(request: NextRequest) {
             });
         });
       } catch (chownError) {
-        console.error("Warning: Could not change file ownership:", chownError);
-        // Continue anyway - files are uploaded
+        console.error("Error: Could not change file ownership:", chownError);
+        // This is critical - we should not continue if chown fails
+        throw new Error(`Failed to set file ownership: ${chownError instanceof Error ? chownError.message : String(chownError)}`);
       }
 
       return NextResponse.json({

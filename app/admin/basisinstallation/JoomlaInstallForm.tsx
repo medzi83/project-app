@@ -19,13 +19,25 @@ export default function JoomlaInstallForm({
   const [folderName, setFolderName] = useState("");
   const [dbPassword, setDbPassword] = useState("");
   const [installing, setInstalling] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [currentStep, setCurrentStep] = useState<string>("");
   const [result, setResult] = useState<{
     success: boolean;
     message: string;
     installUrl?: string;
     databaseName?: string;
     databasePassword?: string;
+    filesExtracted?: number;
+    bytesProcessed?: number;
   } | null>(null);
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
+  };
 
   const handleInstall = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,10 +68,14 @@ export default function JoomlaInstallForm({
     }
 
     setInstalling(true);
+    setExtracting(false);
     setResult(null);
+    setCurrentStep("Vorbereitung...");
 
     try {
-      const res = await fetch("/api/admin/joomla-install", {
+      // Step 1: Upload files and create database
+      setCurrentStep("Lade Dateien hoch und erstelle Datenbank...");
+      const uploadRes = await fetch("/api/admin/joomla-install", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -70,18 +86,48 @@ export default function JoomlaInstallForm({
         }),
       });
 
-      const data = await res.json();
+      const uploadData = await uploadRes.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || "Installation fehlgeschlagen");
+      if (!uploadRes.ok) {
+        throw new Error(uploadData.error || "Upload fehlgeschlagen");
       }
 
+      const installUrl = uploadData.installUrl;
+      const databaseName = uploadData.databaseName;
+
+      // Step 2: Extract archive automatically
+      setCurrentStep("Extrahiere Joomla-Backup und konfiguriere Datenbank...");
+      setInstalling(false);
+      setExtracting(true);
+
+      const extractRes = await fetch("/api/admin/joomla-extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serverId,
+          customerNo,
+          folderName,
+          installUrl,
+          databaseName,
+          databasePassword: dbPassword,
+        }),
+      });
+
+      const extractData = await extractRes.json();
+
+      if (!extractRes.ok) {
+        throw new Error(extractData.message || "Extraktion fehlgeschlagen");
+      }
+
+      setCurrentStep("Installation abgeschlossen!");
       setResult({
         success: true,
-        message: data.message || "Installation erfolgreich vorbereitet",
-        installUrl: data.installUrl,
-        databaseName: data.databaseName,
+        message: "Joomla wurde erfolgreich installiert und extrahiert!",
+        installUrl: installUrl.replace("/kickstart.php", ""),
+        databaseName: databaseName,
         databasePassword: dbPassword,
+        filesExtracted: extractData.filesExtracted,
+        bytesProcessed: extractData.bytesProcessed,
       });
 
       // Reset form on success
@@ -94,6 +140,8 @@ export default function JoomlaInstallForm({
       });
     } finally {
       setInstalling(false);
+      setExtracting(false);
+      setCurrentStep("");
     }
   };
 
@@ -157,6 +205,20 @@ export default function JoomlaInstallForm({
           </p>
         </div>
 
+        {(installing || extracting) && (
+          <div className="rounded border border-blue-200 bg-blue-50 p-4 text-sm">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+              <div>
+                <div className="font-medium text-blue-900">
+                  {installing ? "Installation wird vorbereitet..." : "Backup wird extrahiert..."}
+                </div>
+                <div className="text-blue-700 text-xs mt-1">{currentStep}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {result && (
           <div
             className={`rounded border p-3 text-sm ${
@@ -173,7 +235,16 @@ export default function JoomlaInstallForm({
               <div className="mt-3 space-y-2 pt-2 border-t border-green-200">
                 <div className="font-mono text-xs bg-white rounded p-2">
                   <div><strong>Datenbank:</strong> {result.databaseName}</div>
+                  <div><strong>Benutzer:</strong> {result.databaseName}</div>
                   <div><strong>Passwort:</strong> {result.databasePassword}</div>
+                  {result.filesExtracted && (
+                    <div className="mt-2 pt-2 border-t border-green-200">
+                      <div><strong>Extrahierte Dateien:</strong> {result.filesExtracted}</div>
+                      {result.bytesProcessed && (
+                        <div><strong>Verarbeitete Daten:</strong> {formatBytes(result.bytesProcessed)}</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -185,7 +256,7 @@ export default function JoomlaInstallForm({
                   rel="noopener noreferrer"
                   className="inline-block rounded bg-green-700 px-4 py-2 text-white font-medium hover:bg-green-800"
                 >
-                  → Installation starten
+                  → Webseite öffnen
                 </a>
               </div>
             )}
@@ -193,21 +264,22 @@ export default function JoomlaInstallForm({
         )}
 
         <div className="flex gap-3">
-          <Button type="submit" disabled={installing || !folderName || !dbPassword}>
-            {installing ? "Installation läuft..." : "Joomla-Installation vorbereiten"}
+          <Button type="submit" disabled={installing || extracting || !folderName || !dbPassword}>
+            {installing || extracting ? "Installation läuft..." : "Joomla automatisch installieren"}
           </Button>
         </div>
       </form>
 
       <div className="mt-6 rounded bg-gray-50 p-4 text-xs text-gray-600">
-        <div className="font-medium mb-2">Was passiert bei der Installation?</div>
+        <div className="font-medium mb-2">Was passiert bei der automatischen Installation?</div>
         <ol className="list-decimal list-inside space-y-1">
-          <li>Eine MySQL-Datenbank wird in Froxlor angelegt (z.B. E25065sql1)</li>
-          <li>Ein Ordner wird im Document Root des Kunden angelegt</li>
+          <li>Eine MySQL-Datenbank wird in Froxlor automatisch angelegt</li>
+          <li>Ein Ordner wird im Document Root des Kunden erstellt</li>
           <li>kickstart.php und die Backup-Datei werden per SFTP hochgeladen</li>
           <li>Dateien erhalten die korrekten Berechtigungen (Owner: Kunde)</li>
-          <li>Du erhältst Datenbank-Zugangsdaten und die Installations-URL</li>
-          <li>Klicke "Installation starten" um kickstart.php zu öffnen</li>
+          <li>Das Backup wird automatisch extrahiert (via Kickstart API)</li>
+          <li>Die Joomla-Installation ist sofort einsatzbereit!</li>
+          <li>Du erhältst Datenbank-Zugangsdaten und kannst die Seite öffnen</li>
         </ol>
       </div>
     </div>
