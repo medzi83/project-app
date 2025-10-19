@@ -223,7 +223,7 @@ export async function POST(request: NextRequest) {
 
       // Stream large backup file directly from Vautron 6 to target server
       // This avoids loading the entire file into memory
-      const sourceStream = await sftpStorage.get(`${BACKUP_PATH}/${backupFileName}`) as Readable;
+      const sourceStream = (await sftpStorage.get(`${BACKUP_PATH}/${backupFileName}`) as unknown) as Readable;
       await sftpTarget.put(sourceStream, `${targetPath}/${backupFileName}`);
 
       // Close both connections
