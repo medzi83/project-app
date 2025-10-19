@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { FroxlorClient } from "@/lib/froxlor";
 import SftpClient from "ssh2-sftp-client";
+import { Readable } from "stream";
 
 export async function POST(request: NextRequest) {
   const session = await getAuthSession();
@@ -222,7 +223,7 @@ export async function POST(request: NextRequest) {
 
       // Stream large backup file directly from Vautron 6 to target server
       // This avoids loading the entire file into memory
-      const sourceStream = await sftpStorage.get(`${BACKUP_PATH}/${backupFileName}`);
+      const sourceStream = await sftpStorage.get(`${BACKUP_PATH}/${backupFileName}`) as Readable;
       await sftpTarget.put(sourceStream, `${targetPath}/${backupFileName}`);
 
       // Close both connections
