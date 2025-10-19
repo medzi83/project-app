@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { FroxlorClient } from "@/lib/froxlor";
 import { generateJoomlaConfiguration } from "@/lib/joomla-config";
 import SftpClient from "ssh2-sftp-client";
+import os from "os";
 
 // Increase timeout for large archive extractions (5 minutes)
 export const maxDuration = 300;
@@ -65,7 +66,11 @@ export async function POST(request: NextRequest) {
     // Find backup file name
     const path = await import("path");
     const fs = await import("fs/promises");
-    const storageDir = path.join(process.cwd(), "storage", "joomla");
+    // Use /tmp for Vercel compatibility (writable filesystem)
+    const isProduction = process.env.NODE_ENV === 'production';
+    const storageDir = isProduction
+      ? path.join(os.tmpdir(), "joomla-uploads")
+      : path.join(process.cwd(), "storage", "joomla");
     const files = await fs.readdir(storageDir);
     const backupFile = files.find((f) => f.endsWith(".jpa") || f.endsWith(".zip"));
 

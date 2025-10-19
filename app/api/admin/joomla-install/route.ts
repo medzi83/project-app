@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { FroxlorClient } from "@/lib/froxlor";
 import { promises as fs } from "fs";
 import path from "path";
+import os from "os";
 import SftpClient from "ssh2-sftp-client";
 
 export async function POST(request: NextRequest) {
@@ -94,7 +95,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if backup files exist
-    const storageDir = path.join(process.cwd(), "storage", "joomla");
+    // Use /tmp for Vercel compatibility (writable filesystem)
+    const isProduction = process.env.NODE_ENV === 'production';
+    const storageDir = isProduction
+      ? path.join(os.tmpdir(), "joomla-uploads")
+      : path.join(process.cwd(), "storage", "joomla");
     let kickstartPath: string | null = null;
     let backupPath: string | null = null;
 

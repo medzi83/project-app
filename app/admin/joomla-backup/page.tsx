@@ -3,13 +3,18 @@ import { redirect } from "next/navigation";
 import JoomlaBackupClient from "./client";
 import { promises as fs } from "fs";
 import path from "path";
+import os from "os";
 
 export default async function JoomlaBackupPage() {
   const session = await getAuthSession();
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/");
 
-  const storageDir = path.join(process.cwd(), "storage", "joomla");
+  // Use /tmp for Vercel compatibility (writable filesystem)
+  const isProduction = process.env.NODE_ENV === 'production';
+  const storageDir = isProduction
+    ? path.join(os.tmpdir(), "joomla-uploads")
+    : path.join(process.cwd(), "storage", "joomla");
 
   // Check for existing files
   let kickstartExists = false;

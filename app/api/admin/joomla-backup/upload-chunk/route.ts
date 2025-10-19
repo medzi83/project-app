@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/authz";
 import { promises as fs } from "fs";
 import path from "path";
+import os from "os";
 
 export const maxDuration = 300; // 5 minutes
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
 
-    const storageDir = path.join(process.cwd(), "storage", "joomla");
+    // Use /tmp for Vercel compatibility (writable filesystem)
+    const isProduction = process.env.NODE_ENV === 'production';
+    const storageDir = isProduction
+      ? path.join(os.tmpdir(), "joomla-uploads")
+      : path.join(process.cwd(), "storage", "joomla");
     const tempDir = path.join(storageDir, "temp");
 
     // Create directories if they don't exist
