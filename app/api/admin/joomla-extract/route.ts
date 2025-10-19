@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { FroxlorClient } from "@/lib/froxlor";
 import { generateJoomlaConfiguration } from "@/lib/joomla-config";
-import SftpClient from "ssh2-sftp-client";
-import os from "os";
 
 // Increase timeout for large archive extractions (5 minutes)
 export const maxDuration = 300;
@@ -63,20 +61,59 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find backup file name
-    const path = await import("path");
-    const fs = await import("fs/promises");
-    // Use /tmp for Vercel compatibility (writable filesystem)
-    const isProduction = process.env.NODE_ENV === 'production';
-    const storageDir = isProduction
-      ? path.join(os.tmpdir(), "joomla-uploads")
-      : path.join(process.cwd(), "storage", "joomla");
-    const files = await fs.readdir(storageDir);
-    const backupFile = files.find((f) => f.endsWith(".jpa") || f.endsWith(".zip"));
+    // Find backup file name from Vautron 6 storage server
+    const VAUTRON_6_IP = "109.235.60.55";
+    const BACKUP_PATH = "/var/customers/basis-backup";
+
+    const storageServer = await prisma.server.findFirst({
+      where: {
+        OR: [
+          { sshHost: VAUTRON_6_IP },
+          { ip: VAUTRON_6_IP }
+        ]
+      },
+    });
+
+    if (!storageServer || !storageServer.sshHost || !storageServer.sshUsername || !storageServer.sshPassword) {
+      return NextResponse.json(
+        { success: false, message: "Storage server (Vautron 6) not found or missing SSH credentials" },
+        { status: 500 }
+      );
+    }
+
+    let backupFile: string | null = null;
+
+    const SftpClient = await import("ssh2-sftp-client");
+    const sftpCheck = new SftpClient.default();
+    try {
+      await sftpCheck.connect({
+        host: storageServer.sshHost,
+        port: storageServer.sshPort || 22,
+        username: storageServer.sshUsername,
+        password: storageServer.sshPassword,
+      });
+
+      const files = await sftpCheck.list(BACKUP_PATH);
+      const backup = files.find((f: any) =>
+        f.type === '-' && (f.name.endsWith(".jpa") || f.name.endsWith(".zip"))
+      );
+
+      if (backup) {
+        backupFile = backup.name;
+      }
+
+      await sftpCheck.end();
+    } catch (error) {
+      await sftpCheck.end();
+      return NextResponse.json(
+        { success: false, message: "Failed to check backup files on storage server" },
+        { status: 500 }
+      );
+    }
 
     if (!backupFile) {
       return NextResponse.json(
-        { success: false, message: "No backup file found in storage" },
+        { success: false, message: "No backup file found on storage server" },
         { status: 404 }
       );
     }

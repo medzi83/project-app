@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { FroxlorClient } from "@/lib/froxlor";
-import { promises as fs } from "fs";
-import path from "path";
-import os from "os";
 import SftpClient from "ssh2-sftp-client";
 
 export async function POST(request: NextRequest) {
@@ -94,37 +91,64 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if backup files exist
-    // Use /tmp for Vercel compatibility (writable filesystem)
-    const isProduction = process.env.NODE_ENV === 'production';
-    const storageDir = isProduction
-      ? path.join(os.tmpdir(), "joomla-uploads")
-      : path.join(process.cwd(), "storage", "joomla");
-    let kickstartPath: string | null = null;
-    let backupPath: string | null = null;
+    // Get files from Vautron 6 storage server
+    const VAUTRON_6_IP = "109.235.60.55";
+    const BACKUP_PATH = "/var/customers/basis-backup";
 
-    try {
-      const files = await fs.readdir(storageDir);
+    const storageServer = await prisma.server.findFirst({
+      where: {
+        OR: [
+          { sshHost: VAUTRON_6_IP },
+          { ip: VAUTRON_6_IP }
+        ]
+      },
+    });
 
-      const kickstartFile = files.find((f) => f === "kickstart.php");
-      if (kickstartFile) {
-        kickstartPath = path.join(storageDir, kickstartFile);
-      }
-
-      const backupFile = files.find((f) => f.endsWith(".jpa") || f.endsWith(".zip"));
-      if (backupFile) {
-        backupPath = path.join(storageDir, backupFile);
-      }
-    } catch (error) {
+    if (!storageServer || !storageServer.sshHost || !storageServer.sshUsername || !storageServer.sshPassword) {
       return NextResponse.json(
-        { error: "Joomla backup files not found. Please upload them first." },
-        { status: 400 }
+        { error: "Storage server (Vautron 6) not found or missing SSH credentials" },
+        { status: 500 }
       );
     }
 
-    if (!kickstartPath || !backupPath) {
+    // Check what files exist on Vautron 6
+    let kickstartExists = false;
+    let backupFileName: string | null = null;
+
+    const sftpCheck = new SftpClient();
+    try {
+      await sftpCheck.connect({
+        host: storageServer.sshHost,
+        port: storageServer.sshPort || 22,
+        username: storageServer.sshUsername,
+        password: storageServer.sshPassword,
+      });
+
+      const files = await sftpCheck.list(BACKUP_PATH);
+
+      if (files.find((f: any) => f.name === "kickstart.php")) {
+        kickstartExists = true;
+      }
+
+      const backupFile = files.find((f: any) =>
+        f.type === '-' && (f.name.endsWith(".jpa") || f.name.endsWith(".zip"))
+      );
+      if (backupFile) {
+        backupFileName = backupFile.name;
+      }
+
+      await sftpCheck.end();
+    } catch (error) {
+      await sftpCheck.end();
       return NextResponse.json(
-        { error: "kickstart.php or backup file missing. Please upload both files first." },
+        { error: "Failed to check backup files on storage server" },
+        { status: 500 }
+      );
+    }
+
+    if (!kickstartExists || !backupFileName) {
+      return NextResponse.json(
+        { error: "kickstart.php or backup file missing on storage server. Please upload both files first." },
         { status: 400 }
       );
     }
@@ -160,96 +184,116 @@ export async function POST(request: NextRequest) {
           standardDomain,
           folderName,
           targetPath,
-          kickstartFile: path.basename(kickstartPath),
-          backupFile: path.basename(backupPath),
+          kickstartFile: "kickstart.php",
+          backupFile: backupFileName,
         },
       }, { status: 400 });
     }
 
-    // Upload files via SFTP
-    const sftp = new SftpClient();
+    // Step 1: Connect to both servers and stream files directly
+    const sftpStorage = new SftpClient();
+    const sftpTarget = new SftpClient();
 
     try {
-      // Connect to server
-      await sftp.connect({
+      // Connect to Vautron 6 (storage)
+      await sftpStorage.connect({
+        host: storageServer.sshHost,
+        port: storageServer.sshPort || 22,
+        username: storageServer.sshUsername,
+        password: storageServer.sshPassword,
+        readyTimeout: 60000, // 60 seconds
+      });
+
+      // Connect to target server
+      await sftpTarget.connect({
         host: server.sshHost,
         port: server.sshPort || 22,
         username: server.sshUsername,
         password: server.sshPassword,
+        readyTimeout: 60000, // 60 seconds
       });
 
       // Create target directory
-      await sftp.mkdir(targetPath, true);
+      await sftpTarget.mkdir(targetPath, true);
 
-      // Upload kickstart.php
-      await sftp.put(kickstartPath, `${targetPath}/kickstart.php`);
+      // Download kickstart.php from Vautron 6 (small file - can use buffer)
+      const kickstartBuffer = await sftpStorage.get(`${BACKUP_PATH}/kickstart.php`) as Buffer;
+      await sftpTarget.put(kickstartBuffer, `${targetPath}/kickstart.php`);
 
-      // Upload backup file
-      const backupFileName = path.basename(backupPath);
-      await sftp.put(backupPath, `${targetPath}/${backupFileName}`);
+      // Stream large backup file directly from Vautron 6 to target server
+      // This avoids loading the entire file into memory
+      const sourceStream = await sftpStorage.get(`${BACKUP_PATH}/${backupFileName}`);
+      await sftpTarget.put(sourceStream, `${targetPath}/${backupFileName}`);
 
-      // Close SFTP before running chown
-      await sftp.end();
+      // Close both connections
+      await sftpStorage.end();
+      await sftpTarget.end();
+    } catch (error) {
+      await sftpStorage.end();
+      await sftpTarget.end();
+      return NextResponse.json(
+        { error: `Failed to transfer files from storage server: ${error instanceof Error ? error.message : 'Unknown error'}` },
+        { status: 500 }
+      );
+    }
+
+    // Step 2: Set ownership and permissions
+    try {
 
       // Change owner to customer username (important!)
       // This MUST be done before extraction, so PHP can write files
       const customerUsername = customer.loginname;
-      try {
-        // Use exec to run chown command
-        const { Client } = await import("ssh2");
-        const sshClient = new Client();
 
-        await new Promise<void>((resolve, reject) => {
-          sshClient
-            .on("ready", () => {
-              // Set ownership and permissions in one go
-              // 775 for directory (rwxrwxr-x) so PHP/www-data can write
-              // 664 for files (rw-rw-r--) so they can be read/written
-              const commands = [
-                `chown -R ${customerUsername}:${customerUsername} ${targetPath}`,
-                `chmod -R 775 ${targetPath}`,
-                `chmod 664 ${targetPath}/*.php ${targetPath}/*.jpa ${targetPath}/*.zip 2>/dev/null || true`,
-              ].join(" && ");
+      // Use exec to run chown command
+      const { Client } = await import("ssh2");
+      const sshClient = new Client();
 
-              sshClient.exec(commands, (err, stream) => {
-                if (err) {
-                  reject(err);
-                  return;
-                }
+      await new Promise<void>((resolve, reject) => {
+        sshClient
+          .on("ready", () => {
+            // Set ownership and permissions in one go
+            // 775 for directory (rwxrwxr-x) so PHP/www-data can write
+            // 664 for files (rw-rw-r--) so they can be read/written
+            const commands = [
+              `chown -R ${customerUsername}:${customerUsername} ${targetPath}`,
+              `chmod -R 775 ${targetPath}`,
+              `chmod 664 ${targetPath}/*.php ${targetPath}/*.jpa ${targetPath}/*.zip 2>/dev/null || true`,
+            ].join(" && ");
 
-                let stdout = "";
-                let stderr = "";
+            sshClient.exec(commands, (err, stream) => {
+              if (err) {
+                reject(err);
+                return;
+              }
 
-                stream
-                  .on("close", (code: number) => {
-                    sshClient.end();
-                    if (code !== 0) {
-                      reject(new Error(`chown/chmod failed with code ${code}: ${stderr}`));
-                    } else {
-                      resolve();
-                    }
-                  })
-                  .on("data", (data: Buffer) => {
-                    stdout += data.toString();
-                  })
-                  .stderr.on("data", (data: Buffer) => {
-                    stderr += data.toString();
-                  });
-              });
-            })
-            .on("error", reject)
-            .connect({
-              host: server.sshHost!,
-              port: server.sshPort || 22,
-              username: server.sshUsername!,
-              password: server.sshPassword!,
+              let stdout = "";
+              let stderr = "";
+
+              stream
+                .on("close", (code: number) => {
+                  sshClient.end();
+                  if (code !== 0) {
+                    reject(new Error(`chown/chmod failed with code ${code}: ${stderr}`));
+                  } else {
+                    resolve();
+                  }
+                })
+                .on("data", (data: Buffer) => {
+                  stdout += data.toString();
+                })
+                .stderr.on("data", (data: Buffer) => {
+                  stderr += data.toString();
+                });
             });
-        });
-      } catch (chownError) {
-        console.error("Error: Could not change file ownership:", chownError);
-        // This is critical - we should not continue if chown fails
-        throw new Error(`Failed to set file ownership: ${chownError instanceof Error ? chownError.message : String(chownError)}`);
-      }
+          })
+          .on("error", reject)
+          .connect({
+            host: server.sshHost!,
+            port: server.sshPort || 22,
+            username: server.sshUsername!,
+            password: server.sshPassword!,
+          });
+      });
 
       return NextResponse.json({
         success: true,
@@ -262,14 +306,14 @@ export async function POST(request: NextRequest) {
           standardDomain,
           folderName,
           targetPath,
-          kickstartFile: path.basename(kickstartPath),
+          kickstartFile: "kickstart.php",
           backupFile: backupFileName,
           databaseName,
         },
       });
-    } catch (uploadError) {
-      await sftp.end();
-      throw new Error(`SFTP upload failed: ${uploadError instanceof Error ? uploadError.message : String(uploadError)}`);
+    } catch (chownError) {
+      console.error("Error: Could not change file ownership:", chownError);
+      throw new Error(`Failed to set file ownership: ${chownError instanceof Error ? chownError.message : String(chownError)}`);
     }
   } catch (error) {
     console.error("Error installing Joomla:", error);

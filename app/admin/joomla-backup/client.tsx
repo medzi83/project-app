@@ -35,35 +35,22 @@ export default function JoomlaBackupClient({
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
   };
 
-  const uploadFileInChunks = async (file: File, type: string) => {
-    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  const uploadFileDirect = async (file: File, type: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", type);
 
-    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-      const start = chunkIndex * CHUNK_SIZE;
-      const end = Math.min(start + CHUNK_SIZE, file.size);
-      const chunk = file.slice(start, end);
+    const res = await fetch("/api/admin/joomla-backup/upload", {
+      method: "POST",
+      body: formData,
+    });
 
-      const formData = new FormData();
-      formData.append("chunk", chunk);
-      formData.append("fileName", file.name);
-      formData.append("chunkIndex", chunkIndex.toString());
-      formData.append("totalChunks", totalChunks.toString());
-      formData.append("type", type);
-
-      const res = await fetch("/api/admin/joomla-backup/upload-chunk", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Upload fehlgeschlagen");
-      }
-
-      // Update progress
-      const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
-      setUploadProgress(progress);
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Upload fehlgeschlagen");
     }
+
+    return await res.json();
   };
 
   const handleKickstartUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,17 +65,15 @@ export default function JoomlaBackupClient({
     setUploadingKickstart(true);
     setError(null);
     setSuccess(null);
-    setUploadProgress(0);
 
     try {
-      await uploadFileInChunks(file, "kickstart");
-      setSuccess("kickstart.php erfolgreich hochgeladen");
+      await uploadFileDirect(file, "kickstart");
+      setSuccess("kickstart.php erfolgreich hochgeladen zu Vautron 6");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload fehlgeschlagen");
     } finally {
       setUploadingKickstart(false);
-      setUploadProgress(0);
     }
   };
 
@@ -104,17 +89,15 @@ export default function JoomlaBackupClient({
     setUploadingBackup(true);
     setError(null);
     setSuccess(null);
-    setUploadProgress(0);
 
     try {
-      await uploadFileInChunks(file, "backup");
-      setSuccess(`Backup ${file.name} erfolgreich hochgeladen`);
+      await uploadFileDirect(file, "backup");
+      setSuccess(`Backup ${file.name} erfolgreich hochgeladen zu Vautron 6`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload fehlgeschlagen");
     } finally {
       setUploadingBackup(false);
-      setUploadProgress(0);
     }
   };
 

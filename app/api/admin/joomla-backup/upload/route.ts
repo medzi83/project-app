@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/authz";
-import { promises as fs } from "fs";
-import path from "path";
+import { prisma } from "@/lib/prisma";
+import SftpClient from "ssh2-sftp-client";
 
 // Allow large file uploads (200 MB max)
 export const maxDuration = 300; // 5 minutes
 export const dynamic = 'force-dynamic';
 
-// Note: For production on Vercel, you may need to configure bodyParser
-// Vercel has a 4.5 MB limit on serverless functions by default
-// For larger files, consider using direct upload to storage or streaming
+const VAUTRON_6_IP = "109.235.60.55";
+const BACKUP_PATH = "/var/customers/basis-backup";
 
 export async function POST(request: NextRequest) {
   const session = await getAuthSession();
@@ -46,41 +45,74 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const storageDir = path.join(process.cwd(), "storage", "joomla");
-
-    // Create directory if it doesn't exist
-    try {
-      await fs.access(storageDir);
-    } catch {
-      await fs.mkdir(storageDir, { recursive: true });
-    }
-
-    // Delete old backup files if uploading a new backup
-    if (type === "backup") {
-      const files = await fs.readdir(storageDir);
-      const oldBackups = files.filter((f) => f.endsWith(".jpa") || f.endsWith(".zip"));
-      for (const oldBackup of oldBackups) {
-        await fs.unlink(path.join(storageDir, oldBackup));
-      }
-    }
-
-    // Save the file
-    const fileName = type === "kickstart" ? "kickstart.php" : file.name;
-    const filePath = path.join(storageDir, fileName);
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    await fs.writeFile(filePath, buffer);
-
-    return NextResponse.json({
-      success: true,
-      message: `${type === "kickstart" ? "kickstart.php" : "Backup"} successfully uploaded`,
-      fileName,
+    // Get Vautron 6 server credentials from database
+    const storageServer = await prisma.server.findFirst({
+      where: {
+        OR: [
+          { sshHost: VAUTRON_6_IP },
+          { ip: VAUTRON_6_IP }
+        ]
+      },
     });
+
+    if (!storageServer || !storageServer.sshHost || !storageServer.sshUsername || !storageServer.sshPassword) {
+      return NextResponse.json(
+        { error: "Storage server (Vautron 6) not found or missing SSH credentials" },
+        { status: 500 }
+      );
+    }
+
+    // Connect to Vautron 6 via SFTP
+    const sftp = new SftpClient();
+
+    try {
+      await sftp.connect({
+        host: storageServer.sshHost,
+        port: storageServer.sshPort || 22,
+        username: storageServer.sshUsername,
+        password: storageServer.sshPassword,
+        readyTimeout: 60000, // 60 seconds
+      });
+
+      // Ensure backup directory exists
+      await sftp.mkdir(BACKUP_PATH, true);
+
+      // Delete old backup files if uploading a new backup
+      if (type === "backup") {
+        try {
+          const files = await sftp.list(BACKUP_PATH);
+          const oldBackups = files.filter((f: any) =>
+            f.type === '-' && (f.name.endsWith(".jpa") || f.name.endsWith(".zip"))
+          );
+          for (const oldBackup of oldBackups) {
+            await sftp.delete(`${BACKUP_PATH}/${oldBackup.name}`);
+          }
+        } catch (error) {
+          // Ignore if no old files exist
+        }
+      }
+
+      // Upload file directly to Vautron 6
+      const fileName = type === "kickstart" ? "kickstart.php" : file.name;
+      const remotePath = `${BACKUP_PATH}/${fileName}`;
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      await sftp.put(buffer, remotePath);
+      await sftp.end();
+
+      return NextResponse.json({
+        success: true,
+        message: `${type === "kickstart" ? "kickstart.php" : "Backup"} successfully uploaded to Vautron 6`,
+        fileName,
+      });
+    } catch (error) {
+      await sftp.end();
+      throw error;
+    }
   } catch (error) {
-    console.error("Error uploading file:", error);
+    console.error("Error uploading file to Vautron 6:", error);
     return NextResponse.json(
-      { error: "Failed to upload file" },
+      { error: error instanceof Error ? error.message : "Failed to upload file" },
       { status: 500 }
     );
   }

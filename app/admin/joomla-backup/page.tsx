@@ -1,22 +1,18 @@
 import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
 import JoomlaBackupClient from "./client";
-import { promises as fs } from "fs";
-import path from "path";
-import os from "os";
+import { prisma } from "@/lib/prisma";
+import SftpClient from "ssh2-sftp-client";
 
 export default async function JoomlaBackupPage() {
   const session = await getAuthSession();
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/");
 
-  // Use /tmp for Vercel compatibility (writable filesystem)
-  const isProduction = process.env.NODE_ENV === 'production';
-  const storageDir = isProduction
-    ? path.join(os.tmpdir(), "joomla-uploads")
-    : path.join(process.cwd(), "storage", "joomla");
+  const VAUTRON_6_IP = "109.235.60.55";
+  const BACKUP_PATH = "/var/customers/basis-backup";
 
-  // Check for existing files
+  // Check for existing files on Vautron 6
   let kickstartExists = false;
   let backupExists = false;
   let backupFileName = "";
@@ -24,25 +20,52 @@ export default async function JoomlaBackupPage() {
   let backupSize = 0;
 
   try {
-    await fs.access(storageDir);
-    const files = await fs.readdir(storageDir);
+    // Get Vautron 6 server credentials
+    const storageServer = await prisma.server.findFirst({
+      where: {
+        OR: [
+          { sshHost: VAUTRON_6_IP },
+          { ip: VAUTRON_6_IP }
+        ]
+      },
+    });
 
-    const kickstartFile = files.find((f) => f === "kickstart.php");
-    if (kickstartFile) {
-      kickstartExists = true;
-      const stats = await fs.stat(path.join(storageDir, kickstartFile));
-      kickstartSize = stats.size;
-    }
+    if (storageServer && storageServer.sshHost && storageServer.sshUsername && storageServer.sshPassword) {
+      const sftp = new SftpClient();
 
-    const backupFile = files.find((f) => f.endsWith(".jpa") || f.endsWith(".zip"));
-    if (backupFile) {
-      backupExists = true;
-      backupFileName = backupFile;
-      const stats = await fs.stat(path.join(storageDir, backupFile));
-      backupSize = stats.size;
+      try {
+        await sftp.connect({
+          host: storageServer.sshHost,
+          port: storageServer.sshPort || 22,
+          username: storageServer.sshUsername,
+          password: storageServer.sshPassword,
+        });
+
+        const files = await sftp.list(BACKUP_PATH);
+
+        const kickstartFile = files.find((f: any) => f.name === "kickstart.php");
+        if (kickstartFile) {
+          kickstartExists = true;
+          kickstartSize = kickstartFile.size;
+        }
+
+        const backupFile = files.find((f: any) =>
+          f.type === '-' && (f.name.endsWith(".jpa") || f.name.endsWith(".zip"))
+        );
+        if (backupFile) {
+          backupExists = true;
+          backupFileName = backupFile.name;
+          backupSize = backupFile.size;
+        }
+
+        await sftp.end();
+      } catch (error) {
+        await sftp.end();
+        // Failed to check files on storage server
+      }
     }
   } catch (error) {
-    // Directory doesn't exist yet, will be created on first upload
+    // Storage server not found or connection failed
   }
 
   return (
