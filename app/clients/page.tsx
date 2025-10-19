@@ -96,32 +96,32 @@ export default async function ClientsPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Kunden</h1>
-          <p className="text-sm text-gray-500">Alle Kunden mit Kontaktdaten, Projekten und Leistungen im Überblick.</p>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">Kunden</h1>
+          <p className="text-sm text-gray-600 mt-1">Alle Kunden mit Kontaktdaten, Projekten und Leistungen im Überblick.</p>
         </div>
       </header>
 
-      <section className="rounded-lg border bg-white">
+      <section className="rounded-2xl border border-blue-100 bg-white shadow-lg overflow-hidden">
         {isAdmin && (
-          <div className="flex items-center justify-end gap-2 p-3 border-b text-xs text-gray-500">
+          <div className="flex items-center justify-end gap-2 px-4 py-3 border-b border-blue-100 bg-gradient-to-r from-blue-50/50 to-indigo-50/30 text-xs text-blue-700 font-medium">
             Admin: Kunden löschen über Auswahl und Button unten.
           </div>
         )}
-        <div className="p-3 border-b">
+        <div className="p-4 border-b border-blue-100 bg-gradient-to-r from-slate-50 to-blue-50/30">
           <form method="get" className="flex flex-wrap items-center gap-3">
             <input
               type="search"
               name="search"
               defaultValue={searchQuery}
               placeholder="Suche nach Name oder Kundennummer..."
-              className="flex-1 rounded border px-3 py-2 text-sm"
+              className="flex-1 rounded-lg border-2 border-gray-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
             />
             <select
               name="agency"
               defaultValue={agencyFilter}
-              className="rounded border px-3 py-2 text-sm"
+              className="rounded-lg border-2 border-gray-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
             >
               <option value="">Alle Agenturen</option>
               {agencies.map((agency) => (
@@ -131,32 +131,32 @@ export default async function ClientsPage({ searchParams }: Props) {
               ))}
             </select>
             <input type="hidden" name="ps" value={pageSize} />
-            <button type="submit" className="rounded bg-black px-4 py-2 text-sm text-white">
+            <button type="submit" className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all active:scale-95">
               Suchen
             </button>
             {(searchQuery || agencyFilter) && (
-              <Link href="/clients" className="text-sm underline">
+              <Link href="/clients" className="text-sm text-blue-600 hover:text-blue-800 font-medium underline transition-colors">
                 Zurücksetzen
               </Link>
             )}
           </form>
         </div>
-        <div className="flex items-center justify-between gap-2 p-3 border-b text-sm">
-          <div className="text-gray-600">Zeige {from}–{to} von {total}</div>
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-blue-100 bg-gradient-to-r from-gray-50 to-slate-50 text-sm">
+          <div className="text-gray-700 font-medium">Zeige {from}–{to} von {total}</div>
           <div className="flex items-center gap-3">
-            <Link className={pageSize===50?"font-semibold underline":"underline"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</Link>
-            <Link className={pageSize===100?"font-semibold underline":"underline"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</Link>
-            <span className="mx-2">|</span>
-            <Link className={page===1?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Zurück</Link>
-            <span>Seite {page} / {totalPages}</span>
-            <Link className={page>=totalPages?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter</Link>
+            <Link className={pageSize===50?"px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-sm":"px-3 py-1.5 rounded-lg border-2 border-gray-300 text-gray-700 hover:border-blue-400 hover:bg-blue-50 transition-all"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</Link>
+            <Link className={pageSize===100?"px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-sm":"px-3 py-1.5 rounded-lg border-2 border-gray-300 text-gray-700 hover:border-blue-400 hover:bg-blue-50 transition-all"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</Link>
+            <span className="mx-1 text-gray-400">|</span>
+            <Link className={page===1?"pointer-events-none opacity-50 px-3 py-1.5 rounded-lg border-2 border-gray-300 text-gray-500":"px-3 py-1.5 rounded-lg border-2 border-gray-300 text-gray-700 hover:border-blue-400 hover:bg-blue-50 transition-all font-medium"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>← Zurück</Link>
+            <span className="font-semibold text-gray-900">Seite {page} / {totalPages}</span>
+            <Link className={page>=totalPages?"pointer-events-none opacity-50 px-3 py-1.5 rounded-lg border-2 border-gray-300 text-gray-500":"px-3 py-1.5 rounded-lg border-2 border-gray-300 text-gray-700 hover:border-blue-400 hover:bg-blue-50 transition-all font-medium"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter →</Link>
           </div>
         </div>
         <div className="overflow-x-auto">
           <form action={deleteSelectedClients}>
           <table className="min-w-[900px] w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr className="[&>th]:px-3 [&>th]:py-2 text-left uppercase tracking-wide text-xs text-gray-500">
+            <thead className="bg-gradient-to-r from-indigo-50 to-blue-50">
+              <tr className="[&>th]:px-3 [&>th]:py-3 text-left uppercase tracking-wide text-xs text-indigo-700 font-bold">
                 {isAdmin && (
                   <th className="w-8">
                     <SelectAllCheckbox />

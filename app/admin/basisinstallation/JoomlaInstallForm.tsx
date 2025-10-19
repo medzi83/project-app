@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -8,16 +8,48 @@ type Props = {
   customerNo: string;
   customerDocumentRoot: string;
   standardDomain: string;
+  clientId: string;
+  clientProjects: {
+    id: string;
+    title: string;
+    status: string;
+  }[];
 };
+
+// Generate a random password with 10 characters (uppercase, lowercase, numbers)
+function generatePassword(): string {
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const allChars = uppercase + lowercase + numbers;
+
+  let password = '';
+
+  // Ensure at least one of each type
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+  password += lowercase[Math.floor(Math.random() * lowercase.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+
+  // Fill remaining 7 characters randomly
+  for (let i = 0; i < 7; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+
+  // Shuffle the password
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+}
 
 export default function JoomlaInstallForm({
   serverId,
   customerNo,
   customerDocumentRoot,
   standardDomain,
+  clientId,
+  clientProjects,
 }: Props) {
   const [folderName, setFolderName] = useState("");
   const [dbPassword, setDbPassword] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState("");
   const [installing, setInstalling] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [currentStep, setCurrentStep] = useState<string>("");
@@ -30,6 +62,11 @@ export default function JoomlaInstallForm({
     filesExtracted?: number;
     bytesProcessed?: number;
   } | null>(null);
+
+  // Generate password on mount
+  useEffect(() => {
+    setDbPassword(generatePassword());
+  }, []);
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return "0 Bytes";
@@ -110,6 +147,8 @@ export default function JoomlaInstallForm({
           installUrl,
           databaseName,
           databasePassword: dbPassword,
+          clientId,
+          projectId: selectedProjectId || null,
         }),
       });
 
@@ -159,6 +198,30 @@ export default function JoomlaInstallForm({
       </div>
 
       <form onSubmit={handleInstall} className="space-y-4">
+        {clientProjects.length > 0 && (
+          <div>
+            <label htmlFor="projectId" className="block text-sm font-medium mb-2">
+              Projekt zuordnen (optional)
+            </label>
+            <select
+              id="projectId"
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full rounded border p-2"
+              disabled={installing || extracting}
+            >
+              <option value="">Kein Projekt zuordnen</option>
+              {clientProjects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.title} ({project.status})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Wählen Sie ein Projekt aus, um die Installation automatisch zuzuordnen
+            </p>
+          </div>
+        )}
         <div>
           <label htmlFor="folderName" className="block text-sm font-medium mb-2">
             Ordnername für die Installation
@@ -190,18 +253,31 @@ export default function JoomlaInstallForm({
           <label htmlFor="dbPassword" className="block text-sm font-medium mb-2">
             Datenbank-Passwort
           </label>
-          <input
-            type="password"
-            id="dbPassword"
-            value={dbPassword}
-            onChange={(e) => setDbPassword(e.target.value)}
-            placeholder="Sicheres Passwort für die MySQL-Datenbank"
-            className="w-full rounded border p-2"
-            disabled={installing}
-            required
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              id="dbPassword"
+              value={dbPassword}
+              onChange={(e) => setDbPassword(e.target.value)}
+              placeholder="Sicheres Passwort für die MySQL-Datenbank"
+              className="flex-1 rounded border p-2 font-mono"
+              disabled={installing}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setDbPassword(generatePassword())}
+              disabled={installing}
+              className="px-4 py-2 rounded border border-blue-600 bg-blue-50 text-blue-700 hover:bg-blue-100 transition font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              title="Neues Passwort generieren"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
           <p className="mt-1 text-xs text-gray-500">
-            Froxlor erstellt automatisch eine Datenbank (z.B. E25065sql1)
+            Automatisch generiert: 10 Zeichen mit Groß-/Kleinbuchstaben und Zahlen. Sie können es anpassen oder neu generieren.
           </p>
         </div>
 

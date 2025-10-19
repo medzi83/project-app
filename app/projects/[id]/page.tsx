@@ -28,6 +28,15 @@ export default async function ProjectDetail({ params }: Props) {
       client: true,
       agent: true,
       website: true,
+      joomlaInstallations: {
+        include: {
+          server: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -264,6 +273,56 @@ export default async function ProjectDetail({ params }: Props) {
                 )}
               </dd>
             </div>
+
+            {/* Joomla Installation */}
+            {project.joomlaInstallations && project.joomlaInstallations.length > 0 && (
+              <div>
+                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                  Joomla Installation{project.joomlaInstallations.length > 1 ? "en" : ""}
+                </dt>
+                <dd className="space-y-2">
+                  {project.joomlaInstallations.map((installation) => (
+                    <div key={installation.id} className="rounded-lg border border-green-200 bg-green-50/40 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-medium text-gray-900 truncate">
+                              {installation.standardDomain}/{installation.folderName}
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700 border border-green-200 flex-shrink-0">
+                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Zugeordnet
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-600 space-y-0.5">
+                            <div>
+                              <span className="text-gray-500">Server:</span>{" "}
+                              <span className="font-medium">{installation.server.name}</span>
+                            </div>
+                            <div className="font-mono text-[11px] text-gray-500 truncate">
+                              {installation.installPath}
+                            </div>
+                          </div>
+                        </div>
+                        <a
+                          href={installation.installUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 transition text-xs font-medium whitespace-nowrap flex-shrink-0"
+                        >
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          Öffnen
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </dd>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>

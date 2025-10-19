@@ -31,12 +31,15 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   // Load dev mode data if actual session user is admin (not effective user)
   const devMode = session?.user?.role === "ADMIN" ? await loadDevModeData(effectiveUser) : undefined;
 
+  // Load agencies with icons
+  const agencies = await loadAgencies();
+
   return (
     <html lang="de">
       <body>
         <AuthSessionProvider session={session}>
           {shell ? (
-            <AppShell user={shell} counts={counts} devMode={devMode}>
+            <AppShell user={shell} counts={counts} devMode={devMode} agencies={agencies}>
               {children}
             </AppShell>
           ) : (
@@ -80,4 +83,20 @@ async function loadDevModeData(effectiveUser: Awaited<ReturnType<typeof getEffec
       categories: a.categories,
     })),
   };
+}
+
+async function loadAgencies() {
+  const agencies = await prisma.agency.findMany({
+    where: {
+      logoIconPath: { not: null },
+    },
+    select: {
+      id: true,
+      name: true,
+      logoIconPath: true,
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return agencies;
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { FroxlorClient } from "@/lib/froxlor";
 import { generateJoomlaConfiguration } from "@/lib/joomla-config";
+import { getAuthSession } from "@/lib/authz";
 
 // Increase timeout for large archive extractions (5 minutes)
 export const maxDuration = 300;
@@ -24,8 +25,17 @@ type KickstartResponse = {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication - only admins can install Joomla
+    const session = await getAuthSession();
+    if (!session || session.user.role !== "ADMIN") {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
-    const { serverId, customerNo, folderName, installUrl, databaseName, databasePassword } = body;
+    const { serverId, customerNo, folderName, installUrl, databaseName, databasePassword, clientId, projectId } = body;
 
     if (!serverId || !customerNo || !folderName || !installUrl || !databaseName || !databasePassword) {
       return NextResponse.json(
@@ -337,6 +347,47 @@ echo "=== POST-PROCESSING COMPLETE ==="
     } catch (postProcessError) {
       console.error("ERROR: Post-processing failed:", postProcessError);
       throw new Error(`Failed to post-process installation: ${postProcessError instanceof Error ? postProcessError.message : String(postProcessError)}`);
+    }
+
+    // Save installation data to database
+    try {
+      // Find client by customerNo
+      const client = await prisma.client.findUnique({
+        where: { customerNo },
+      });
+
+      if (client) {
+        // Get standard domain from installUrl
+        const urlObj = new URL(installUrl);
+        const standardDomain = urlObj.hostname;
+
+        const targetPath = `${customer.documentroot}/${folderName}`;
+        const finalInstallUrl = installUrl.replace("/kickstart.php", "");
+
+        await prisma.joomlaInstallation.create({
+          data: {
+            clientId: client.id,
+            serverId: serverId,
+            customerNo: customerNo,
+            folderName: folderName,
+            installPath: targetPath,
+            installUrl: finalInstallUrl,
+            databaseName: databaseName,
+            databasePassword: databasePassword,
+            standardDomain: standardDomain,
+            filesExtracted: extractionResult.filesExtracted,
+            bytesProcessed: extractionResult.bytesProcessed ? BigInt(extractionResult.bytesProcessed) : BigInt(0),
+            projectId: projectId || null,
+          },
+        });
+
+        console.log(`✓ Saved Joomla installation to database for client ${client.name}`);
+      } else {
+        console.warn(`⚠ Client with customerNo ${customerNo} not found, skipping database save`);
+      }
+    } catch (dbError) {
+      console.error("Failed to save installation to database:", dbError);
+      // Don't throw - installation was successful, just logging failed
     }
 
     return NextResponse.json({

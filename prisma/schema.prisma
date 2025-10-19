@@ -36,23 +36,24 @@ model User {
 }
 
 model Client {
-  id          String    @id @default(cuid())
-  name        String
-  contact     String?
-  email       String?
-  phone       String?
-  notes       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  customerNo  String?   @unique
-  agencyId    String?
-  serverId    String?
-  workStopped Boolean   @default(false)
-  finished    Boolean   @default(false)
-  server      Server?   @relation(fields: [serverId], references: [id])
-  agency      Agency?   @relation(fields: [agencyId], references: [id], onDelete: SetNull)
-  projects    Project[]
-  users       User[]
+  id                 String              @id @default(cuid())
+  name               String
+  contact            String?
+  email              String?
+  phone              String?
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  customerNo         String?             @unique
+  agencyId           String?
+  serverId           String?
+  workStopped        Boolean             @default(false)
+  finished           Boolean             @default(false)
+  server             Server?             @relation(fields: [serverId], references: [id])
+  agency             Agency?             @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  projects           Project[]
+  users              User[]
+  joomlaInstallations JoomlaInstallation[]
 
   @@index([name])
   @@index([agencyId])
@@ -72,6 +73,7 @@ model Agency {
   website       String?
   notes         String?
   logoPath      String?
+  logoIconPath  String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   clients       Client[]
@@ -80,22 +82,23 @@ model Agency {
 }
 
 model Project {
-  id        String          @id @default(cuid())
+  id        String               @id @default(cuid())
   title     String
-  type      ProjectType     @default(WEBSITE)
-  status    ProjectStatus   @default(WEBTERMIN)
+  type      ProjectType          @default(WEBSITE)
+  status    ProjectStatus        @default(WEBTERMIN)
   important String?
   clientId  String
   agentId   String?
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  agent     User?           @relation("AgentProjects", fields: [agentId], references: [id])
-  client    Client          @relation(fields: [clientId], references: [id])
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  agent     User?                @relation("AgentProjects", fields: [agentId], references: [id])
+  client    Client               @relation(fields: [clientId], references: [id])
   notes     ProjectNote[]
   website   ProjectWebsite?
   film      ProjectFilm?
   emailQueue EmailQueue[]
   emailLogs  EmailLog[]
+  joomlaInstallations JoomlaInstallation[]
 
   @@index([clientId, status])
   @@index([agentId])
@@ -182,21 +185,22 @@ model ProjectNote {
 }
 
 model Server {
-  id              String   @id @default(cuid())
-  name            String
-  hostname        String?
-  ip              String
-  froxlorUrl      String?
-  mysqlUrl        String?
-  froxlorApiKey   String?
-  froxlorApiSecret String?
-  sshHost         String?
-  sshPort         Int?     @default(22)
-  sshUsername     String?
-  sshPassword     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  clients         Client[]
+  id                  String              @id @default(cuid())
+  name                String
+  hostname            String?
+  ip                  String
+  froxlorUrl          String?
+  mysqlUrl            String?
+  froxlorApiKey       String?
+  froxlorApiSecret    String?
+  sshHost             String?
+  sshPort             Int?                @default(22)
+  sshUsername         String?
+  sshPassword         String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  clients             Client[]
+  joomlaInstallations JoomlaInstallation[]
 }
 
 model MailServer {
@@ -494,4 +498,31 @@ enum FeedbackStatus {
   IN_PROGRESS
   RESOLVED
   DISMISSED
+}
+
+model JoomlaInstallation {
+  id               String   @id @default(cuid())
+  clientId         String
+  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  serverId         String
+  server           Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  projectId        String?
+  project          Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  customerNo       String
+  folderName       String
+  installPath      String
+  installUrl       String
+  databaseName     String
+  databasePassword String
+  standardDomain   String
+  filesExtracted   Int?
+  bytesProcessed   BigInt?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([serverId])
+  @@index([projectId])
+  @@index([customerNo])
+  @@index([createdAt])
 }

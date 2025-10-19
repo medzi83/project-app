@@ -11,6 +11,7 @@ import type { ProjectStatus, ProjectType } from "@prisma/client";
 import { EmailLogItem } from "@/components/EmailLogItem";
 import { deriveFilmStatus, getFilmStatusDate, FILM_STATUS_LABELS } from "@/lib/film-status";
 import { ClientStatusToggles } from "@/components/ClientStatusToggles";
+import { InstallationProjectAssignment } from "./InstallationProjectAssignment";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -102,6 +103,25 @@ export default async function ClientDetailPage({ params }: Props) {
     include: {
       server: true,
       agency: true,
+      joomlaInstallations: {
+        include: {
+          server: {
+            select: {
+              name: true,
+              ip: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
       projects: {
         include: {
           website: true,
@@ -187,6 +207,25 @@ export default async function ClientDetailPage({ params }: Props) {
             include: {
               server: true,
               agency: true,
+              joomlaInstallations: {
+                include: {
+                  server: {
+                    select: {
+                      name: true,
+                      ip: true,
+                    },
+                  },
+                  project: {
+                    select: {
+                      id: true,
+                      title: true,
+                    },
+                  },
+                },
+                orderBy: {
+                  createdAt: "desc",
+                },
+              },
               projects: {
                 include: {
                   website: true,
@@ -505,8 +544,39 @@ export default async function ClientDetailPage({ params }: Props) {
             {client.projects.length === 0 ? (
               <p className="text-sm text-gray-500">Keine Projekte vorhanden.</p>
             ) : (
-              <div className="space-y-2">
-                {client.projects.map((project) => {
+              <>
+                {/* Show warning for UMSETZUNG projects without installation */}
+                {isAdmin && client.projects.some((p) =>
+                  p.type === "WEBSITE" &&
+                  p.status === "UMSETZUNG" &&
+                  !client.joomlaInstallations.some((inst) => inst.project?.id === p.id)
+                ) && (
+                  <div className="mb-3 rounded-lg border border-orange-200 bg-orange-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <svg className="h-5 w-5 text-orange-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-orange-900">
+                          Projekte im Status "Umsetzung" ohne Installation
+                        </p>
+                        <p className="text-xs text-orange-700 mt-1">
+                          Bitte ordnen Sie den Projekten eine Installation zu oder erstellen Sie eine neue.
+                        </p>
+                        {client.server && (
+                          <Link
+                            href={`/admin/basisinstallation?server=${client.server.id}&customer=${client.customerNo}`}
+                            className="inline-block mt-2 text-xs text-orange-800 hover:text-orange-900 font-medium underline"
+                          >
+                            → Neue Installation erstellen
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  {client.projects.map((project) => {
                   const typeLabel = project.type === "WEBSITE" ? "Webseite"
                     : project.type === "FILM" ? "Film"
                     : project.type === "SOCIAL" ? "Social Media"
@@ -563,10 +633,128 @@ export default async function ClientDetailPage({ params }: Props) {
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                  })}
+                </div>
+              </>
             )}
           </section>
+
+          {/* Joomla Installations */}
+          {client.joomlaInstallations.length > 0 && (
+            <section className="rounded-lg border bg-white p-4">
+              <h2 className="text-base font-medium mb-3">
+                Joomla Installationen ({client.joomlaInstallations.length})
+              </h2>
+              <div className="space-y-3">
+                {client.joomlaInstallations.map((installation) => {
+                  const hasProject = !!installation.project;
+                  return (
+                    <div
+                      key={installation.id}
+                      className={`rounded border p-3 ${
+                        hasProject
+                          ? 'border-green-200 bg-green-50/40'
+                          : 'border-blue-100 bg-blue-50/30'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="font-medium text-sm">
+                              {installation.standardDomain}/{installation.folderName}
+                            </div>
+                            {hasProject ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700 border border-green-200">
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Zugeordnet
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700 border border-orange-200">
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                Nicht zugeordnet
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-600 space-y-0.5">
+                            <div>
+                              <span className="text-gray-500">Server:</span>{" "}
+                              <span className="font-medium">{installation.server.name}</span>
+                            </div>
+                            <div className="font-mono text-[11px]">
+                              {installation.installPath}
+                            </div>
+                            {installation.project && (
+                              <div className="mt-1 flex items-center gap-1">
+                                <svg className="h-3.5 w-3.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span className="text-gray-500">Projekt:</span>{" "}
+                                <Link
+                                  href={`/projects/${installation.project.id}`}
+                                  className="text-green-700 hover:underline font-medium"
+                                >
+                                  {installation.project.title}
+                                </Link>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      <a
+                        href={installation.installUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-3 inline-flex items-center gap-1 px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition text-xs font-medium whitespace-nowrap"
+                      >
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        Öffnen
+                      </a>
+                    </div>
+
+                    <div className="pt-2 border-t border-blue-200/50 grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-gray-500">Datenbank:</span>{" "}
+                        <span className="font-mono">{installation.databaseName}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">DB-Passwort:</span>{" "}
+                        <span className="font-mono">{installation.databasePassword}</span>
+                      </div>
+                      {installation.filesExtracted && (
+                        <div>
+                          <span className="text-gray-500">Dateien:</span>{" "}
+                          <span>{installation.filesExtracted.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-gray-500">Installiert:</span>{" "}
+                        <span>{formatDateOnly(installation.createdAt)}</span>
+                      </div>
+                    </div>
+
+                    {isAdmin && (
+                      <div className="pt-2 border-t border-blue-200/50 mt-2">
+                        <div className="text-xs text-gray-500 mb-1">
+                          {installation.project ? "Projektzuordnung:" : "Projekt zuordnen:"}
+                        </div>
+                        <InstallationProjectAssignment
+                          installationId={installation.id}
+                          clientProjects={client.projects.filter((p) => p.type === "WEBSITE")}
+                          currentProjectId={installation.project?.id}
+                        />
+                      </div>
+                    )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {/* Domains */}
           {(canFetchFroxlor || froxlorError) && (

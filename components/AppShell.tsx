@@ -3,6 +3,7 @@
 import React from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap, Megaphone, MessageSquareHeart, ExternalLink, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import DevModeToggle from "@/components/DevModeToggle";
 import FeedbackDialog from "@/components/FeedbackDialog";
+import { GlobalClientSearch } from "@/components/GlobalClientSearch";
 
 export type Role = "ADMIN" | "AGENT";
 
@@ -42,14 +44,21 @@ type DevModeData = {
   availableAgents: Array<{ id: string; name: string | null; categories: string[] }>;
 };
 
+type Agency = {
+  id: string;
+  name: string;
+  logoIconPath: string | null;
+};
+
 type AppShellProps = {
   user: User;
   counts?: Counts;
   devMode?: DevModeData;
+  agencies?: Agency[];
   children: React.ReactNode;
 };
 
-export default function AppShell({ user, counts, devMode, children }: AppShellProps) {
+export default function AppShell({ user, counts, devMode, agencies, children }: AppShellProps) {
   const [open, setOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
   const navigationRole = user.role;
@@ -59,8 +68,8 @@ export default function AppShell({ user, counts, devMode, children }: AppShellPr
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="sticky top-0 z-40 border-b bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
+      <div className="sticky top-0 z-40 border-b border-white/20 bg-white/80 backdrop-blur-lg shadow-sm">
         <div className="flex w-full items-center gap-3 px-4 py-3">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
@@ -77,11 +86,37 @@ export default function AppShell({ user, counts, devMode, children }: AppShellPr
             </SheetContent>
           </Sheet>
 
-          <Link href="/" className="font-semibold tracking-tight">Projektverwaltung</Link>
+          <div className="flex items-center gap-3">
+            <Link href="/" className="font-bold text-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">Projektverwaltung</Link>
+            {agencies && agencies.length > 0 && (
+              <div className="flex items-center gap-2">
+                {agencies.filter(a => a.logoIconPath).map((agency) => (
+                  <div key={agency.id} className="group relative">
+                    <Image
+                      src={agency.logoIconPath!}
+                      alt={agency.name}
+                      width={24}
+                      height={24}
+                      className="h-6 w-6 object-contain rounded opacity-70 hover:opacity-100 transition-opacity"
+                      unoptimized
+                    />
+                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap bg-gray-900 text-white text-xs px-2 py-1 rounded shadow-lg">
+                      {agency.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="ml-auto flex items-center gap-2">
+            {/* Global Client Search */}
             {(navigationRole === "ADMIN" || navigationRole === "AGENT") && (
-              <Button asChild size="sm" className="gap-2">
+              <GlobalClientSearch />
+            )}
+
+            {(navigationRole === "ADMIN" || navigationRole === "AGENT") && (
+              <Button asChild size="sm" className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all">
                 <Link href="/projects/new">
                   <PlusCircle className="h-4 w-4" />
                   Projekt anlegen
@@ -129,7 +164,7 @@ export default function AppShell({ user, counts, devMode, children }: AppShellPr
       </div>
 
       <div className="grid w-full grid-cols-1 md:grid-cols-[260px_1fr]">
-        <aside className="hidden border-r bg-white md:block">
+        <aside className="hidden border-r border-white/40 bg-white/60 backdrop-blur-md md:block shadow-sm">
           <Sidebar user={user} counts={counts} />
         </aside>
 
@@ -210,10 +245,10 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
 
       <div className="mt-auto space-y-2 p-3">
         <Separator />
-        <div className="flex items-center justify-between rounded-xl bg-gray-50 p-3">
+        <div className="flex items-center justify-between rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-3 shadow-sm">
           <div>
-            <p className="text-xs text-muted-foreground">Angemeldet als</p>
-            <p className="text-sm font-medium">{user.name}</p>
+            <p className="text-xs text-blue-600 font-medium">Angemeldet als</p>
+            <p className="text-sm font-semibold text-gray-900">{user.name}</p>
           </div>
           <RoleBadge role={user.role} />
         </div>
@@ -255,22 +290,27 @@ function SidebarLink({ item, activePath, onNavigate }: { item: NavItem; activePa
       href={item.href}
       onClick={onNavigate}
       className={[
-        "group flex items-center justify-between rounded-xl px-2 py-2 text-sm transition",
-        isActive ? "bg-gray-100 font-medium text-gray-900" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+        "group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-all",
+        isActive
+          ? "bg-gradient-to-r from-blue-500 to-indigo-600 font-medium text-white shadow-md"
+          : "text-gray-700 hover:bg-white/80 hover:text-gray-900 hover:shadow-sm",
       ].join(" ")}
     >
-      <span className="flex items-center gap-2">
-        {Icon && <Icon className="h-4 w-4 opacity-80" />}
+      <span className="flex items-center gap-2.5">
+        {Icon && <Icon className={`h-4 w-4 ${isActive ? 'opacity-100' : 'opacity-70'}`} />}
         {item.label}
       </span>
-      {item.badge && <Badge variant="outline" className="ml-2">{item.badge}</Badge>}
+      {item.badge && <Badge variant={isActive ? "secondary" : "outline"} className="ml-2">{item.badge}</Badge>}
     </Link>
   );
 }
 
 function RoleBadge({ role }: { role: Role }) {
   return (
-    <Badge variant={role === "ADMIN" ? "default" : "secondary"} className="uppercase">
+    <Badge
+      variant={role === "ADMIN" ? "default" : "secondary"}
+      className={`uppercase font-semibold ${role === "ADMIN" ? "bg-gradient-to-r from-purple-600 to-pink-600 border-0" : ""}`}
+    >
       {role.toLowerCase()}
     </Badge>
   );

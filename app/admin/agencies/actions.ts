@@ -129,7 +129,7 @@ function deduceExtension(file: File): typeof SUPPORTED_LOGO_EXTENSIONS[number] {
   throw new Error("Nur PNG, JPG, SVG oder WEBP werden als Logo akzeptiert.");
 }
 
-async function saveAgencyLogo(agencyId: string, file: File): Promise<string> {
+async function saveAgencyLogo(agencyId: string, file: File, type: "logo" | "icon"): Promise<string> {
   if (!file.size) {
     throw new Error("Hochgeladene Datei ist leer.");
   }
@@ -140,7 +140,7 @@ async function saveAgencyLogo(agencyId: string, file: File): Promise<string> {
   const ext = deduceExtension(file);
   const buffer = Buffer.from(await file.arrayBuffer());
   const directory = await ensureLogoDirectory();
-  const filename = `${agencyId}-${Date.now()}.${ext}`;
+  const filename = `${agencyId}-${type}.${ext}`;
   const filePath = path.join(directory, filename);
 
   await fs.writeFile(filePath, buffer);
@@ -181,24 +181,45 @@ export async function createAgency(formData: FormData) {
     data: parsed as ParsedAgencyData,
   });
 
-  let logoError: string | undefined;
+  const logoErrors: string[] = [];
+  let logoPath: string | undefined;
+  let logoIconPath: string | undefined;
+
+  // Handle main logo
   const logo = formData.get("logo");
   if (logo instanceof File && logo.size > 0) {
     try {
-      const storedPath = await saveAgencyLogo(agency.id, logo);
-      await prisma.agency.update({
-        where: { id: agency.id },
-        data: { logoPath: storedPath },
-      });
+      logoPath = await saveAgencyLogo(agency.id, logo, "logo");
     } catch (error) {
-      logoError = error instanceof Error ? error.message : "Logo konnte nicht gespeichert werden.";
+      logoErrors.push(error instanceof Error ? error.message : "Haupt-Logo konnte nicht gespeichert werden.");
     }
+  }
+
+  // Handle icon logo
+  const logoIcon = formData.get("logoIcon");
+  if (logoIcon instanceof File && logoIcon.size > 0) {
+    try {
+      logoIconPath = await saveAgencyLogo(agency.id, logoIcon, "icon");
+    } catch (error) {
+      logoErrors.push(error instanceof Error ? error.message : "Icon-Logo konnte nicht gespeichert werden.");
+    }
+  }
+
+  // Update agency with logo paths if any were uploaded
+  if (logoPath || logoIconPath) {
+    await prisma.agency.update({
+      where: { id: agency.id },
+      data: {
+        ...(logoPath ? { logoPath } : {}),
+        ...(logoIconPath ? { logoIconPath } : {}),
+      },
+    });
   }
 
   await revalidateAgencyDependencies();
   baseRedirect({
     success: "Agentur wurde angelegt.",
-    ...(logoError ? { warning: logoError } : {}),
+    ...(logoErrors.length > 0 ? { warning: logoErrors.join(" ") } : {}),
   });
 }
 
@@ -219,36 +240,14 @@ export async function updateAgency(formData: FormData) {
     baseRedirect({ error: parsed.error });
   }
 
-  const removeLogo = sanitizeString(formData.get("removeLogo")) === "1";
-  let newLogoPath: string | null | undefined;
-  let logoError: string | undefined;
-
-  const logo = formData.get("logo");
-  if (logo instanceof File && logo.size > 0) {
-    try {
-      newLogoPath = await saveAgencyLogo(existing.id, logo);
-    } catch (error) {
-      logoError = error instanceof Error ? error.message : "Logo konnte nicht gespeichert werden.";
-    }
-  }
-
-  if (removeLogo) {
-    await removeLogoIfExists(existing.logoPath);
-    newLogoPath = null;
-  }
-
   await prisma.agency.update({
     where: { id: existing.id },
-    data: {
-      ...(parsed as ParsedAgencyData),
-      ...(newLogoPath !== undefined ? { logoPath: newLogoPath } : {}),
-    },
+    data: parsed as ParsedAgencyData,
   });
 
   await revalidateAgencyDependencies();
   baseRedirect({
     success: "Agentur wurde aktualisiert.",
-    ...(logoError ? { warning: logoError } : {}),
   });
 }
 
@@ -261,7 +260,7 @@ export async function deleteAgency(formData: FormData) {
 
   const agency = await prisma.agency.findUnique({
     where: { id: agencyId },
-    select: { id: true, logoPath: true, clients: { select: { id: true } } },
+    select: { id: true, logoPath: true, logoIconPath: true, clients: { select: { id: true } } },
   });
 
   if (!agency) {
@@ -274,6 +273,7 @@ export async function deleteAgency(formData: FormData) {
 
   await prisma.agency.delete({ where: { id: agency.id } });
   await removeLogoIfExists(agency.logoPath);
+  await removeLogoIfExists(agency.logoIconPath);
 
   await revalidateAgencyDependencies();
   baseRedirect({ success: "Agentur wurde gelöscht." });

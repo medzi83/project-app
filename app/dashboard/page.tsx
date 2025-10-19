@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { buildWebsiteStatusWhere, DONE_PRODUCTION_STATUSES, deriveProjectStatus } from "@/lib/project-status";
 import { getEffectiveUser, getAuthSession } from "@/lib/authz";
 import { NoticeBoard, type NoticeBoardEntry } from "@/components/NoticeBoard";
+import { InstallationWarningsSlideout } from "./InstallationWarningsSlideout";
 
 export const metadata = { title: "Dashboard" };
 
@@ -755,6 +756,55 @@ export default async function DashboardPage({
       })
     : [];
 
+  // Admin only: Projects that need installation attention
+  const projectsNeedingInstallation = userRole === "ADMIN"
+    ? await prisma.project.findMany({
+        where: {
+          type: "WEBSITE",
+          status: "UMSETZUNG",
+          joomlaInstallations: {
+            none: {},
+          },
+        },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          client: {
+            select: {
+              id: true,
+              name: true,
+              customerNo: true,
+            },
+          },
+        },
+        orderBy: { updatedAt: "desc" },
+      })
+    : [];
+
+  // Admin only: Installations not assigned to any project
+  const unassignedInstallations = userRole === "ADMIN"
+    ? await prisma.joomlaInstallation.findMany({
+        where: {
+          projectId: null,
+        },
+        select: {
+          id: true,
+          folderName: true,
+          standardDomain: true,
+          installUrl: true,
+          client: {
+            select: {
+              id: true,
+              name: true,
+              customerNo: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+
   type AgentAgendaEntry = {
     id: string;
     projectUrl: string;
@@ -765,6 +815,8 @@ export default async function DashboardPage({
     taskDate: Date | null;
     isWorkStopped: boolean;
     category: "appointment" | "task";
+    hasInstallation: boolean;
+    installationUrl?: string | null;
   };
 
   const upcomingAgendaConditions: Prisma.ProjectWhereInput[] = [];
@@ -873,14 +925,21 @@ export default async function DashboardPage({
               shootDate: true,
             },
           },
+          joomlaInstallations: {
+            select: {
+              id: true,
+              folderName: true,
+              installUrl: true,
+            },
+          },
         },
         orderBy: { updatedAt: "desc" },
         take: 12,
       })
     : [];
 
-  const agentAgendaEntries: AgentAgendaEntry[] = upcomingAgentProjects
-    .map((project) => {
+  const agentAgendaEntries = upcomingAgentProjects
+    .map((project): AgentAgendaEntry | null => {
       const typeLabel = project.type === "WEBSITE"
         ? "Webseite"
         : project.type === "FILM"
@@ -943,6 +1002,9 @@ export default async function DashboardPage({
         return null;
       }
 
+      const hasInstallation = project.joomlaInstallations && project.joomlaInstallations.length > 0;
+      const installationUrl = hasInstallation ? project.joomlaInstallations[0].installUrl : null;
+
       return {
         id: project.id,
         projectUrl,
@@ -953,6 +1015,8 @@ export default async function DashboardPage({
         taskDate,
         isWorkStopped: Boolean(project.client?.workStopped),
         category,
+        hasInstallation,
+        installationUrl,
       } satisfies AgentAgendaEntry;
     })
     .filter((entry): entry is AgentAgendaEntry => entry !== null);
@@ -969,40 +1033,61 @@ export default async function DashboardPage({
       : null,
   ].filter((group): group is { key: string; title: string; items: AgentAgendaEntry[] } => group !== null);
 
-  const renderAgendaEntry = (entry: AgentAgendaEntry) => (
-    <Link
-      key={entry.id}
-      href={entry.projectUrl}
-      className={`block rounded-lg border p-3 transition-colors ${
-        entry.isWorkStopped
-          ? "border-orange-200 bg-orange-50 hover:border-orange-400"
-          : "border-blue-200 bg-white hover:border-blue-400"
-      }`}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-sm truncate">{entry.customerLabel}</span>
-            {entry.isWorkStopped && (
-              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-orange-700 bg-orange-200 rounded">
-                ARBEITSSTOPP
-              </span>
+  const renderAgendaEntry = (entry: AgentAgendaEntry) => {
+    // Nur Installation-Status für Website-Projekte in Umsetzung anzeigen
+    const showInstallationStatus = entry.category === "task" && entry.taskType === "In Umsetzung";
+
+    return (
+      <Link
+        key={entry.id}
+        href={entry.projectUrl}
+        className={`block rounded-lg border p-3 transition-colors ${
+          entry.isWorkStopped
+            ? "border-orange-200 bg-orange-50 hover:border-orange-400"
+            : "border-blue-200 bg-white hover:border-blue-400"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-sm truncate">{entry.customerLabel}</span>
+              {entry.isWorkStopped && (
+                <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-orange-700 bg-orange-200 rounded">
+                  ARBEITSSTOPP
+                </span>
+              )}
+              {showInstallationStatus && (
+                entry.hasInstallation ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-green-700 bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-300 rounded-full shadow-sm">
+                    ✓ Demo installiert
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-amber-700 bg-gradient-to-r from-amber-100 to-yellow-100 border-2 border-amber-400 rounded-full shadow-sm">
+                    ⚠ Demo fehlt
+                  </span>
+                )
+              )}
+            </div>
+            {entry.title && entry.title !== entry.typeLabel && entry.title !== "Website" && entry.title !== "Film" && entry.title !== "Social Media" && (
+              <div className="text-xs text-gray-600 mt-0.5 truncate">
+                {entry.title}
+              </div>
+            )}
+            <div className="text-xs font-medium text-blue-700 mt-1">
+              {entry.taskType}
+              {entry.taskDate && ` · ${formatDate(entry.taskDate)}`}
+            </div>
+            {showInstallationStatus && entry.hasInstallation && entry.installationUrl && (
+              <div className="text-xs text-green-600 mt-1 truncate">
+                Demo-URL: {entry.installationUrl}
+              </div>
             )}
           </div>
-          {entry.title && entry.title !== entry.typeLabel && entry.title !== "Website" && entry.title !== "Film" && entry.title !== "Social Media" && (
-            <div className="text-xs text-gray-600 mt-0.5 truncate">
-              {entry.title}
-            </div>
-          )}
-          <div className="text-xs font-medium text-blue-700 mt-1">
-            {entry.taskType}
-            {entry.taskDate && ` · ${formatDate(entry.taskDate)}`}
-          </div>
+          <span className="text-xs text-blue-700 whitespace-nowrap">Details →</span>
         </div>
-        <span className="text-xs text-blue-700 whitespace-nowrap">Details →</span>
-      </div>
-    </Link>
-  );
+      </Link>
+    );
+  };
 
   // Zuletzt aktualisierte Projekte
   const recentProjects = await prisma.project.findMany({
@@ -1049,23 +1134,18 @@ export default async function DashboardPage({
   return (
     <main className="p-6 space-y-6">
       {(isAgentView || allowedProjectTypes.length > 0) && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+        <div className="rounded-xl border border-blue-200/50 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 shadow-sm">
           <p className="text-sm font-medium text-blue-900">
             {effectiveUser?.isDevMode ? "🔧 Dev-Modus: " : ""}
             {isAgentView
               ? `Hallo ${effectiveUser?.name ?? "Agent"}, schön dass du da bist!`
               : `Gefilterte Ansicht: ${effectiveUser?.name ?? "-"}`}
-            {allowedProjectTypes.length > 0 && (
-              <span className="ml-2 text-blue-700">
-                ({allowedProjectTypes.join(", ")})
-              </span>
-            )}
           </p>
         </div>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">Dashboard</h1>
         <div className="flex items-center gap-2 text-sm">
           {scopeLinks.map((link) => {
             const active = link.key === scope;
@@ -1075,8 +1155,8 @@ export default async function DashboardPage({
                 href={link.href}
                 className={
                   active
-                    ? "px-3 py-1.5 rounded bg-black text-white"
-                    : "px-3 py-1.5 rounded border text-gray-700 hover:bg-gray-50"
+                    ? "px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md font-medium transition-all"
+                    : "px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-white hover:shadow-sm transition-all"
                 }
               >
                 {link.label}
@@ -1087,26 +1167,34 @@ export default async function DashboardPage({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="space-y-4 rounded-2xl border bg-white p-5 sm:p-6 shadow-sm">
+        <section className="space-y-4 rounded-2xl border border-purple-100 bg-gradient-to-br from-white to-purple-50/30 p-5 sm:p-6 shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">Wichtige Hinweise</h2>
-            <Link href="/notices" className="text-sm text-blue-600 hover:underline">
-              Hinweis-Historie
+            <h2 className="text-lg font-bold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent">Wichtige Hinweise</h2>
+            <Link href="/notices" className="text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors">
+              Hinweis-Historie →
             </Link>
           </div>
           <NoticeBoard notices={noticeBoardEntries} canAcknowledge={isAgentView} />
         </section>
 
+        {/* Admin: Installation Warnings - Slideout */}
+        {userRole === "ADMIN" && (
+          <InstallationWarningsSlideout
+            projectsNeedingInstallation={projectsNeedingInstallation}
+            unassignedInstallations={unassignedInstallations}
+          />
+        )}
+
         {isAgentView && workStoppedProjects.length > 0 && (
-          <section className="rounded-2xl border border-orange-300 bg-orange-50 p-5 sm:p-6 shadow-sm">
+          <section className="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-red-50/40 p-5 sm:p-6 shadow-lg">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 text-2xl">⚠️</div>
               <div className="flex-1">
-                <h2 className="text-lg font-semibold text-orange-900 mb-2">
+                <h2 className="text-lg font-bold bg-gradient-to-r from-orange-700 to-red-600 bg-clip-text text-transparent mb-2">
                   Projekte mit Arbeitsstopp ({workStoppedProjects.length})
                 </h2>
-                <p className="text-sm text-orange-800 mb-4">
-                  Diese Projekte befinden sich im Status „Arbeitsstopp“. Bitte keine weiteren Arbeiten durchführen.
+                <p className="text-sm text-orange-900 font-medium mb-4">
+                  Diese Projekte befinden sich im Status „Arbeitsstopp". Bitte keine weiteren Arbeiten durchführen.
                 </p>
                 <div className="space-y-2">
                   {workStoppedProjects.map((project) => {
@@ -1147,14 +1235,14 @@ export default async function DashboardPage({
       </div>
 
       {isAgentView && agentAgendaGroups.length > 0 && (
-        <section className="rounded-2xl border border-blue-300 bg-blue-50 p-5 sm:p-6 shadow-sm">
+        <section className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50/50 p-5 sm:p-6 shadow-lg">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 text-2xl">📅</div>
             <div className="flex-1">
-              <h2 className="text-lg font-semibold text-blue-900 mb-2">
+              <h2 className="text-lg font-bold bg-gradient-to-r from-blue-700 to-cyan-600 bg-clip-text text-transparent mb-2">
                 Aktuelle Termine und Aufgaben ({agentAgendaEntries.length})
               </h2>
-              <p className="text-sm text-blue-800 mb-4">
+              <p className="text-sm text-blue-900 font-medium mb-4">
                 {userCategories.includes("WEBSEITE" as AgentCategory) && userCategories.includes("FILM" as AgentCategory)
                   ? "Anstehende Webtermine, Projekte in Umsetzung sowie Scouting- und Drehtermine."
                   : userCategories.includes("FILM" as AgentCategory)
@@ -1179,38 +1267,49 @@ export default async function DashboardPage({
       )}
 
       {/* KPI-Kacheln */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
-        {overviewTiles.map((tile) => (
-          <Link
-            key={tile.key}
-            href={tile.href}
-            className="rounded-xl border bg-white p-3 sm:p-4 shadow-sm transition hover:border-black"
-          >
-            <div className="text-xs uppercase tracking-wide text-gray-500">{tile.label}</div>
-            <div className="mt-2 text-2xl font-semibold sm:text-3xl">{tile.count}</div>
-          </Link>
-        ))}
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+        {overviewTiles.map((tile, index) => {
+          const gradients = [
+            "from-blue-500 to-indigo-600",
+            "from-purple-500 to-pink-600",
+            "from-green-500 to-emerald-600",
+            "from-orange-500 to-red-600",
+            "from-cyan-500 to-blue-600"
+          ];
+          const gradient = gradients[index % gradients.length];
 
-        <div className="rounded-xl border bg-white p-3 sm:p-4 shadow-sm">
-          <div className="text-xs uppercase tracking-wide text-gray-500">Letztes Projekt-Update</div>
-          <div className="mt-2 text-sm font-medium sm:text-lg">
+          return (
+            <Link
+              key={tile.key}
+              href={tile.href}
+              className={`group rounded-2xl bg-gradient-to-br ${gradient} p-5 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1`}
+            >
+              <div className="text-xs uppercase tracking-wide text-white/80 font-semibold">{tile.label}</div>
+              <div className="mt-3 text-3xl sm:text-4xl font-bold text-white">{tile.count}</div>
+            </Link>
+          );
+        })}
+
+        <div className="rounded-2xl bg-gradient-to-br from-slate-600 to-gray-700 p-5 shadow-lg">
+          <div className="text-xs uppercase tracking-wide text-white/80 font-semibold">Letztes Projekt-Update</div>
+          <div className="mt-3 text-base font-bold text-white sm:text-lg">
             {formatDate(recentProjects[0]?.updatedAt)}
           </div>
         </div>
       </section>
 
       {/* Statusuebersicht */}
-      <section className="rounded-2xl border">
-        <div className="px-4 py-3 border-b bg-gray-50">
-          <h2 className="font-medium">Projektstatus</h2>
+      <section className="rounded-2xl border border-indigo-100 bg-white shadow-lg overflow-hidden">
+        <div className="px-5 py-4 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+          <h2 className="font-bold text-lg bg-gradient-to-r from-indigo-700 to-purple-600 bg-clip-text text-transparent">Projektstatus</h2>
         </div>
-        <div className="space-y-6 p-4">
+        <div className="space-y-6 p-5">
           {statusSections.map((section) => (
             <div key={section.key} className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">{section.label}</h3>
-                <Link href={withScope(section.href)} className="text-xs text-blue-600 underline">
-                  Alle anzeigen
+                <h3 className="text-base font-bold text-gray-800">{section.label}</h3>
+                <Link href={withScope(section.href)} className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                  Alle anzeigen →
                 </Link>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-8 gap-3">
@@ -1218,13 +1317,13 @@ export default async function DashboardPage({
                   <Link
                     key={`${section.key}-${tile.key}`}
                     href={tile.href}
-                    className="rounded-xl border bg-white p-3 shadow-sm transition hover:border-black"
+                    className="group rounded-xl border-2 border-gray-200 bg-gradient-to-br from-white to-gray-50 p-3 shadow-sm hover:shadow-md hover:border-indigo-400 transition-all transform hover:-translate-y-0.5"
                   >
-                    <div className="text-xs uppercase tracking-wide text-gray-500">{tile.label}</div>
-                    <div className="mt-1 flex items-baseline gap-2">
-                      <div className="text-2xl font-semibold">{tile.count}</div>
+                    <div className="text-xs uppercase tracking-wide text-gray-600 font-semibold group-hover:text-indigo-700 transition-colors">{tile.label}</div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <div className="text-2xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{tile.count}</div>
                       {tile.staleCount > 0 && (
-                        <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-orange-700 bg-orange-100 rounded-full border border-orange-300">
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold text-orange-700 bg-gradient-to-r from-orange-100 to-red-100 rounded-full border-2 border-orange-300">
                           <span title="Projekte, die länger als 4 Wochen in diesem Status sind">⚠️ {tile.staleCount}</span>
                         </div>
                       )}
@@ -1238,13 +1337,13 @@ export default async function DashboardPage({
       </section>
 
       {!isAgentView && (
-        <section className="rounded-2xl border overflow-hidden">
-          <div className="px-4 py-3 border-b bg-gray-50">
-            <h2 className="font-medium">Zuletzt aktualisierte Projekte</h2>
+        <section className="rounded-2xl border border-green-100 bg-white shadow-lg overflow-hidden">
+          <div className="px-5 py-4 border-b border-green-100 bg-gradient-to-r from-green-50 to-emerald-50">
+            <h2 className="font-bold text-lg bg-gradient-to-r from-green-700 to-emerald-600 bg-clip-text text-transparent">Zuletzt aktualisierte Projekte</h2>
           </div>
-          <div className="divide-y">
+          <div className="divide-y divide-gray-100">
             {recentProjects.length === 0 ? (
-              <div className="p-4 text-sm text-gray-500">Noch keine Projekte vorhanden.</div>
+              <div className="p-6 text-sm text-gray-500">Noch keine Projekte vorhanden.</div>
             ) : (
               recentProjects.map((p) => {
                 const { label, detail } = activityInfo(p);
@@ -1253,18 +1352,18 @@ export default async function DashboardPage({
                   <Link
                     key={p.id}
                     href={`/projects/${p.id}`}
-                    className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50"
+                    className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-gradient-to-r hover:from-green-50/50 hover:to-emerald-50/30 transition-all group"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
-                        <div className="font-semibold truncate">{customerLabel || "Kunde unbekannt"}</div>
+                        <div className="font-bold text-gray-900 truncate group-hover:text-green-700 transition-colors">{customerLabel || "Kunde unbekannt"}</div>
                         <div className="font-medium text-sm text-gray-600 truncate">{p.title ?? `Projekt #${p.id}`}</div>
                       </div>
-                      <div className="text-xs text-gray-500 mt-0.5 truncate">
+                      <div className="text-xs text-gray-500 mt-1 truncate">
                         {label} - {detail} - aktualisiert: {formatDate(p.updatedAt)} - erstellt: {formatDate(p.createdAt)}
                       </div>
                     </div>
-                    <span className="text-sm text-blue-600 shrink-0">Details</span>
+                    <span className="text-sm text-green-600 group-hover:text-green-700 font-medium shrink-0">Details →</span>
                   </Link>
                 );
               })

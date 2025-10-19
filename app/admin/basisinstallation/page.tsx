@@ -14,6 +14,19 @@ export default async function BasisinstallationPage() {
       id: true,
       name: true,
       customerNo: true,
+      projects: {
+        where: {
+          type: "WEBSITE",
+        },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
     },
   });
 

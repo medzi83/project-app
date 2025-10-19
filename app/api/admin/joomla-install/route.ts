@@ -212,6 +212,8 @@ export async function POST(request: NextRequest) {
         username: server.sshUsername,
         password: server.sshPassword,
         readyTimeout: 60000, // 60 seconds
+        keepaliveInterval: 10000,
+        keepaliveCountMax: 30,
       });
 
       // Create target directory
@@ -226,75 +228,55 @@ export async function POST(request: NextRequest) {
       const sourceStream = (await sftpStorage.get(`${BACKUP_PATH}/${backupFileName}`) as unknown) as Readable;
       await sftpTarget.put(sourceStream, `${targetPath}/${backupFileName}`);
 
-      // Close both connections
+      // Close storage connection, keep target connection open
       await sftpStorage.end();
-      await sftpTarget.end();
-    } catch (error) {
-      await sftpStorage.end();
-      await sftpTarget.end();
-      return NextResponse.json(
-        { error: `Failed to transfer files from storage server: ${error instanceof Error ? error.message : 'Unknown error'}` },
-        { status: 500 }
-      );
-    }
 
-    // Step 2: Set ownership and permissions
-    try {
+      // Step 2: Set ownership and permissions using target server's SSH connection
+      // Use the underlying SSH2 connection from sftpTarget
+      const { Client } = await import("ssh2");
+      const sshClient = (sftpTarget as any).client;
 
-      // Change owner to customer username (important!)
-      // This MUST be done before extraction, so PHP can write files
+      if (!sshClient) {
+        throw new Error("Could not access SSH client from SFTP connection");
+      }
+
       const customerUsername = customer.loginname;
 
-      // Use exec to run chown command
-      const { Client } = await import("ssh2");
-      const sshClient = new Client();
+      const commands = [
+        `chown -R ${customerUsername}:${customerUsername} ${targetPath}`,
+        `chmod -R 775 ${targetPath}`,
+        `chmod 664 ${targetPath}/*.php ${targetPath}/*.jpa ${targetPath}/*.zip 2>/dev/null || true`,
+      ].join(" && ");
 
       await new Promise<void>((resolve, reject) => {
-        sshClient
-          .on("ready", () => {
-            // Set ownership and permissions in one go
-            // 775 for directory (rwxrwxr-x) so PHP/www-data can write
-            // 664 for files (rw-rw-r--) so they can be read/written
-            const commands = [
-              `chown -R ${customerUsername}:${customerUsername} ${targetPath}`,
-              `chmod -R 775 ${targetPath}`,
-              `chmod 664 ${targetPath}/*.php ${targetPath}/*.jpa ${targetPath}/*.zip 2>/dev/null || true`,
-            ].join(" && ");
+        sshClient.exec(commands, (err: Error, stream: any) => {
+          if (err) {
+            reject(err);
+            return;
+          }
 
-            sshClient.exec(commands, (err, stream) => {
-              if (err) {
-                reject(err);
-                return;
+          let stdout = "";
+          let stderr = "";
+
+          stream
+            .on("close", (code: number) => {
+              if (code !== 0) {
+                reject(new Error(`chown/chmod failed with code ${code}: ${stderr}`));
+              } else {
+                resolve();
               }
-
-              let stdout = "";
-              let stderr = "";
-
-              stream
-                .on("close", (code: number) => {
-                  sshClient.end();
-                  if (code !== 0) {
-                    reject(new Error(`chown/chmod failed with code ${code}: ${stderr}`));
-                  } else {
-                    resolve();
-                  }
-                })
-                .on("data", (data: Buffer) => {
-                  stdout += data.toString();
-                })
-                .stderr.on("data", (data: Buffer) => {
-                  stderr += data.toString();
-                });
+            })
+            .on("data", (data: Buffer) => {
+              stdout += data.toString();
+            })
+            .stderr.on("data", (data: Buffer) => {
+              stderr += data.toString();
             });
-          })
-          .on("error", reject)
-          .connect({
-            host: server.sshHost!,
-            port: server.sshPort || 22,
-            username: server.sshUsername!,
-            password: server.sshPassword!,
-          });
+        });
       });
+
+      // Now close the SFTP connection
+      await sftpTarget.end();
 
       return NextResponse.json({
         success: true,
@@ -312,12 +294,23 @@ export async function POST(request: NextRequest) {
           databaseName,
         },
       });
-    } catch (chownError) {
-      console.error("Error: Could not change file ownership:", chownError);
-      throw new Error(`Failed to set file ownership: ${chownError instanceof Error ? chownError.message : String(chownError)}`);
+    } catch (error) {
+      // Clean up connections
+      try {
+        await sftpStorage.end();
+      } catch {}
+      try {
+        await sftpTarget.end();
+      } catch {}
+
+      console.error("Error installing Joomla:", error);
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Installation failed" },
+        { status: 500 }
+      );
     }
   } catch (error) {
-    console.error("Error installing Joomla:", error);
+    console.error("Error installing Joomla (outer):", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Installation failed" },
       { status: 500 }
