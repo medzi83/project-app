@@ -134,11 +134,11 @@ export function GlobalClientSearch() {
           setIsOpen(true);
           setTimeout(() => inputRef.current?.focus(), 100);
         }}
-        className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 rounded-lg shadow-md hover:shadow-lg transition-all"
       >
         <Search className="h-4 w-4" />
         <span className="hidden sm:inline">Kunde suchen</span>
-        <kbd className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono bg-white border border-gray-300 rounded">
+        <kbd className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono bg-white/20 border border-white/30 rounded text-white">
           <span className="text-[10px]">⌘</span>K
         </kbd>
       </button>

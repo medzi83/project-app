@@ -385,6 +385,7 @@ function replacePlaceholders(text: string, project: ProjectWithDetails): string 
     "{{project.webDate}}": formatDateTime(project.website?.webDate ?? null),
     "{{project.webterminType}}": formatWebterminType(project.website?.webterminType),
     "{{project.demoDate}}": formatDate(project.website?.demoDate ?? null),
+    "{{project.lastMaterialAt}}": formatDate(project.website?.lastMaterialAt ?? null),
     "{{project.agentName}}": project.agent?.name ?? "",
 
     "{{client.name}}": project.client?.name ?? "",

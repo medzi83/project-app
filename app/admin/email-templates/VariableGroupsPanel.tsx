@@ -13,18 +13,18 @@ type VariableGroupsPanelProps = {
 };
 
 export default function VariableGroupsPanel({ groups }: VariableGroupsPanelProps) {
-  const [openGroupIndex, setOpenGroupIndex] = useState<number | null>(0);
+  const [openGroupIndex, setOpenGroupIndex] = useState<number | null>(null);
 
   const toggleGroup = (index: number) => {
     setOpenGroupIndex((prev) => (prev === index ? null : index));
   };
 
   return (
-    <aside className="space-y-4 rounded border border-gray-200 bg-gray-50 p-4 text-sm">
+    <aside className="space-y-4 rounded border border-gray-200 bg-gray-50 p-4 text-sm sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Verfuegbare Variablen</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Verfügbare Variablen</p>
         <p className="mt-1 text-xs text-gray-500">
-          Fuege diese Platzhalter in den HTML Inhalt ein. Die App ersetzt sie spaeter mit den passenden Daten.
+          Füge diese Platzhalter in den HTML-Inhalt ein. Die App ersetzt sie später mit den passenden Daten.
         </p>
       </div>
 

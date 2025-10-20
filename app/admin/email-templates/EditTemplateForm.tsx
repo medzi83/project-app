@@ -3,61 +3,92 @@
 import { useState, type ReactNode } from "react";
 import { updateEmailTemplate } from "./actions";
 import RichHtmlEditor from "./RichHtmlEditor";
+import VariableGroupsPanel, { type VariableGroup } from "./VariableGroupsPanel";
+import SendTestEmailForm from "./SendTestEmailForm";
+
+type Agency = {
+  id: string;
+  name: string;
+};
 
 type Props = {
   id: string;
   initialTitle: string;
   initialSubject: string;
   initialBody: string;
+  variableGroups?: VariableGroup[];
+  agencies: Agency[];
 };
 
-export default function EditTemplateForm({ id, initialTitle, initialSubject, initialBody }: Props) {
+export default function EditTemplateForm({ id, initialTitle, initialSubject, initialBody, variableGroups, agencies }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [subject, setSubject] = useState(initialSubject);
   const [body, setBody] = useState(initialBody);
+  const [showTestEmail, setShowTestEmail] = useState(false);
 
   return (
-    <form action={updateEmailTemplate} className="space-y-3">
-      <input type="hidden" name="id" value={id} />
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="space-y-3">
+        <form action={updateEmailTemplate} className="space-y-3">
+          <input type="hidden" name="id" value={id} />
 
-      <Field label="Technischer Titel *">
-        <input
-          name="title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-          className="w-full rounded border px-3 py-2 text-sm"
-        />
-      </Field>
+          <Field label="Technischer Titel *">
+            <input
+              name="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              className="w-full rounded border px-3 py-2 text-sm"
+            />
+          </Field>
 
-      <Field label="Betreff *">
-        <input
-          name="subject"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          required
-          className="w-full rounded border px-3 py-2 text-sm"
-        />
-      </Field>
+          <Field label="Betreff *">
+            <input
+              name="subject"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              required
+              className="w-full rounded border px-3 py-2 text-sm"
+            />
+          </Field>
 
-      <Field label="HTML-Inhalt *">
-        <RichHtmlEditor
-          name="body"
-          value={body}
-          onChange={setBody}
-          placeholder="<p>E-Mail-Inhalt...</p>"
-        />
-      </Field>
+          <Field label="HTML-Inhalt *">
+            <RichHtmlEditor
+              name="body"
+              value={body}
+              onChange={setBody}
+              placeholder="<p>E-Mail-Inhalt...</p>"
+            />
+          </Field>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          className="rounded border border-black px-4 py-2 text-sm font-medium text-black hover:bg-gray-50"
-        >
-          Änderungen speichern
-        </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              className="rounded border border-black px-4 py-2 text-sm font-medium text-black hover:bg-gray-50"
+            >
+              Änderungen speichern
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowTestEmail(!showTestEmail)}
+              className="rounded border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              {showTestEmail ? 'Test-E-Mail schließen' : 'Test-E-Mail senden'}
+            </button>
+          </div>
+        </form>
+
+        {showTestEmail && (
+          <div className="mt-6 border-t pt-6">
+            <SendTestEmailForm templateId={id} agencies={agencies} />
+          </div>
+        )}
       </div>
-    </form>
+
+      {variableGroups && variableGroups.length > 0 && (
+        <VariableGroupsPanel groups={variableGroups} />
+      )}
+    </div>
   );
 }
 

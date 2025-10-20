@@ -37,6 +37,7 @@ const VARIABLE_GROUPS: VariableGroup[] = [
       { placeholder: "{{project.webDate}}", description: "Geplanter Webtermin (Datum und Uhrzeit)" },
       { placeholder: "{{project.webterminType}}", description: "Art des Webtermins (Telefonisch, Beim Kunden, In der Agentur)" },
       { placeholder: "{{project.demoDate}}", description: "Termin für Demo" },
+      { placeholder: "{{project.lastMaterialAt}}", description: "Letzter Materialeingang (Datum)" },
       { placeholder: "{{project.agentName}}", description: "Name des zuständigen Agents" },
     ],
   },
@@ -74,6 +75,14 @@ const VARIABLE_GROUPS: VariableGroup[] = [
       { placeholder: "{{agent.roleTitle}}", description: "Rollenbezeichnung des Agents" },
       { placeholder: "{{agent.email}}", description: "E-Mail des Agents" },
       { placeholder: "{{agent.categories}}", description: "Kommagetrennte Agent Kategorien" },
+    ],
+  },
+  {
+    label: "Agentur",
+    items: [
+      { placeholder: "{{agency.name}}", description: "Name der Agentur" },
+      { placeholder: "{{agency.phone}}", description: "Telefonnummer der Agentur" },
+      { placeholder: "{{agency.email}}", description: "E-Mail-Adresse der Agentur" },
     ],
   },
 ];
@@ -160,9 +169,11 @@ export default async function EmailTemplatesAdminPage({ searchParams }: Props) {
                   initialTitle={template.title}
                   initialSubject={template.subject}
                   initialBody={template.body}
+                  variableGroups={VARIABLE_GROUPS}
+                  agencies={agencies}
                 />
 
-                <form action={deleteEmailTemplate} className="mt-4">
+                <form action={deleteEmailTemplate} className="mt-6 border-t pt-6">
                   <input type="hidden" name="id" value={template.id} />
                   <ConfirmSubmit
                     confirmText="Diese Vorlage wirklich löschen? Dies kann nicht rückgängig gemacht werden."
