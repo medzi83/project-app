@@ -3,6 +3,11 @@ import { getAuthSession } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import SftpClient from "ssh2-sftp-client";
 
+// Vercel Region Configuration: Run in Frankfurt, Germany
+export const runtime = 'nodejs';
+export const preferredRegion = 'fra1';
+
+
 // Allow large file uploads (200 MB max)
 export const maxDuration = 300; // 5 minutes
 export const dynamic = 'force-dynamic';

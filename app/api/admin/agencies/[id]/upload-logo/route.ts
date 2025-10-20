@@ -5,6 +5,11 @@ import { writeFile, mkdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 
+// Vercel Region Configuration: Run in Frankfurt, Germany
+export const runtime = 'nodejs';
+export const preferredRegion = 'fra1';
+
+
 type RouteContext = {
   params: Promise<{ id: string }>;
 };

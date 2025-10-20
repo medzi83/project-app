@@ -6,6 +6,10 @@ import { getAuthSession, getEffectiveUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import type { ReactNode } from "react";
 
+// Vercel Region Configuration: Run SSR in Frankfurt, Germany
+export const runtime = 'nodejs';
+export const preferredRegion = 'fra1';
+
 type RootLayoutProps = {
   children: ReactNode;
 };

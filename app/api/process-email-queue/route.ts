@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/authz";
 import { processEmailQueue } from "@/lib/email/send-service";
 
+// Vercel Region Configuration: Run in Frankfurt, Germany
+export const runtime = 'nodejs';
+export const preferredRegion = 'fra1';
+
+
 /**
  * API-Route zum manuellen Auslösen der E-Mail-Queue-Verarbeitung
  * Kann auch von einem Cron-Job aufgerufen werden

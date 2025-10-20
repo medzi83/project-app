@@ -3,6 +3,10 @@ import { getAuthSession } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+// Vercel Region Configuration: Run in Frankfurt, Germany
+export const runtime = 'nodejs';
+export const preferredRegion = 'fra1';
+
 export async function POST(req: NextRequest) {
   try {
     // Authentifizierung prüfen

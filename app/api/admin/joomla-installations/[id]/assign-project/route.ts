@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 
+// Vercel Region Configuration: Run in Frankfurt, Germany
+export const runtime = 'nodejs';
+export const preferredRegion = 'fra1';
+
+
 type Params = {
   params: Promise<{ id: string }>;
 };

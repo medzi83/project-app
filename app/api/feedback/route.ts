@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole, getAuthSession } from "@/lib/authz";
 
+// Vercel Region Configuration: Run in Frankfurt, Germany
+export const runtime = 'nodejs';
+export const preferredRegion = 'fra1';
+
 export async function GET() {
   const session = await requireRole(["ADMIN", "AGENT"]);
   const feedbacks = await prisma.feedback.findMany({

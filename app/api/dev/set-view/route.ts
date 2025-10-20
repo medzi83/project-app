@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { requireRole } from "@/lib/authz";
 
+// Vercel Region Configuration: Run in Frankfurt, Germany
+export const runtime = 'nodejs';
+export const preferredRegion = 'fra1';
+
+
 export async function POST(request: Request) {
   try {
     // Nur Admins dürfen die Ansicht wechseln

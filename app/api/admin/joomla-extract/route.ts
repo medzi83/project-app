@@ -4,6 +4,11 @@ import { FroxlorClient } from "@/lib/froxlor";
 import { generateJoomlaConfiguration } from "@/lib/joomla-config";
 import { getAuthSession } from "@/lib/authz";
 
+// Vercel Region Configuration: Run in Frankfurt, Germany
+export const runtime = 'nodejs';
+export const preferredRegion = 'fra1';
+
+
 // Increase timeout for large archive extractions (5 minutes)
 export const maxDuration = 300;
 
