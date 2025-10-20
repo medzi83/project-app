@@ -1,11 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
-import { deleteEmailTemplate, updateEmailTemplate } from "./actions";
-import ConfirmSubmit from "@/components/ConfirmSubmit";
 import TemplateCreationTabs from "./TemplateCreationTabs";
-import TemplateSlideout from "./TemplateSlideout";
-import EditTemplateForm from "./EditTemplateForm";
+import TemplatesByCategory from "./TemplatesByCategory";
 import type { VariableGroup } from "./VariableGroupsPanel";
 import { DEFAULT_SIGNATURE_KEY } from "./constants";
 
@@ -156,35 +153,11 @@ export default async function EmailTemplatesAdminPage({ searchParams }: Props) {
         {templates.length === 0 ? (
           <p className="text-sm text-gray-500">Es sind noch keine Vorlagen vorhanden.</p>
         ) : (
-          <div className="space-y-3">
-            {templates.map((template) => (
-              <TemplateSlideout
-                key={template.id}
-                title={template.title}
-                subtitle={template.subject}
-                meta={`Stand ${fmtDate(template.updatedAt)}`}
-              >
-                <EditTemplateForm
-                  id={template.id}
-                  initialTitle={template.title}
-                  initialSubject={template.subject}
-                  initialBody={template.body}
-                  variableGroups={VARIABLE_GROUPS}
-                  agencies={agencies}
-                />
-
-                <form action={deleteEmailTemplate} className="mt-6 border-t pt-6">
-                  <input type="hidden" name="id" value={template.id} />
-                  <ConfirmSubmit
-                    confirmText="Diese Vorlage wirklich löschen? Dies kann nicht rückgängig gemacht werden."
-                    className="rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
-                  >
-                    Vorlage löschen
-                  </ConfirmSubmit>
-                </form>
-              </TemplateSlideout>
-            ))}
-          </div>
+          <TemplatesByCategory
+            templates={templates}
+            variableGroups={VARIABLE_GROUPS}
+            agencies={agencies}
+          />
         )}
       </section>
     </div>

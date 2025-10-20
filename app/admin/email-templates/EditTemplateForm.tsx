@@ -5,6 +5,7 @@ import { updateEmailTemplate } from "./actions";
 import RichHtmlEditor from "./RichHtmlEditor";
 import VariableGroupsPanel, { type VariableGroup } from "./VariableGroupsPanel";
 import SendTestEmailForm from "./SendTestEmailForm";
+import { EMAIL_TEMPLATE_CATEGORIES, type EmailTemplateCategoryKey } from "./constants";
 
 type Agency = {
   id: string;
@@ -16,14 +17,16 @@ type Props = {
   initialTitle: string;
   initialSubject: string;
   initialBody: string;
+  initialCategory: EmailTemplateCategoryKey;
   variableGroups?: VariableGroup[];
   agencies: Agency[];
 };
 
-export default function EditTemplateForm({ id, initialTitle, initialSubject, initialBody, variableGroups, agencies }: Props) {
+export default function EditTemplateForm({ id, initialTitle, initialSubject, initialBody, initialCategory, variableGroups, agencies }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [subject, setSubject] = useState(initialSubject);
   const [body, setBody] = useState(initialBody);
+  const [category, setCategory] = useState<EmailTemplateCategoryKey>(initialCategory);
   const [showTestEmail, setShowTestEmail] = useState(false);
 
   return (
@@ -40,6 +43,22 @@ export default function EditTemplateForm({ id, initialTitle, initialSubject, ini
               required
               className="w-full rounded border px-3 py-2 text-sm"
             />
+          </Field>
+
+          <Field label="Kategorie *">
+            <select
+              name="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value as EmailTemplateCategoryKey)}
+              required
+              className="w-full rounded border px-3 py-2 text-sm"
+            >
+              {Object.entries(EMAIL_TEMPLATE_CATEGORIES).map(([key, { label }]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <Field label="Betreff *">

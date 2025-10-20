@@ -37,6 +37,8 @@ export default function InlineCell({
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null>(null);
+  const initialValueRef = useRef<string>("");
+  const initialExtraValueRef = useRef<string>("");
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -57,13 +59,41 @@ export default function InlineCell({
     );
   }
 
-  const enterEdit = () => setEditing(true);
+  const enterEdit = () => {
+    // Store initial values when entering edit mode
+    const vStr = vToString(value, type);
+    initialValueRef.current = vStr;
+    initialExtraValueRef.current = extraValue ?? "";
+    setEditing(true);
+  };
+
   const cancel = () => setEditing(false);
 
   function submitForm(fd: FormData) {
-    startTransition(async () => {
-      await updateInlineField(fd);
+    // Check if value actually changed
+    const newValue = fd.get("value") as string;
+    const newExtraValue = fd.get("extraValue") as string | null;
+
+    const valueChanged = newValue !== initialValueRef.current;
+    const extraValueChanged = type === "datetime-with-type" && (newExtraValue ?? "") !== initialExtraValueRef.current;
+
+    if (!valueChanged && !extraValueChanged) {
+      // No changes, just exit edit mode without submitting
       setEditing(false);
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await updateInlineField(fd);
+      setEditing(false);
+
+      // If email was triggered, don't refresh - let the email confirmation dialog handle it
+      // The dialog will reload the page when closed (via EmailConfirmationHandler.handleComplete)
+      if (result?.emailTriggered) {
+        return;
+      }
+
+      // No email triggered, safe to refresh immediately
       router.refresh();
     });
   }
@@ -76,8 +106,8 @@ export default function InlineCell({
       </span>
     );
 
-    const baseButtonClass = "inline-flex w-full items-start justify-start gap-2 rounded px-1 py-0.5 text-left cursor-text bg-transparent";
-    const interactiveClass = "transition hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black";
+    const baseButtonClass = "inline-flex w-full items-start justify-start gap-2 rounded px-2 py-1 text-left cursor-pointer bg-transparent min-h-[2rem]";
+    const interactiveClass = "transition-all duration-150 hover:bg-blue-50 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500";
     const buttonClassName = `${baseButtonClass} ${interactiveClass}`;
 
     return (
@@ -164,6 +194,10 @@ export default function InlineCell({
           name="value" type="date" defaultValue={vStr}
           ref={(el: HTMLInputElement | null) => { inputRef.current = el; }}
           className="p-1 border rounded"
+          onChange={() => {
+            // Submit immediately when date is selected from calendar
+            formRef.current?.requestSubmit();
+          }}
           onBlur={() => formRef.current?.requestSubmit()}
           onKeyDown={(e) => {
             if (e.key === "Escape") { e.preventDefault(); cancel(); }
@@ -177,6 +211,10 @@ export default function InlineCell({
           name="value" type="datetime-local" defaultValue={vStr}
           ref={(el: HTMLInputElement | null) => { inputRef.current = el; }}
           className="p-1 border rounded"
+          onChange={() => {
+            // Submit immediately when datetime is selected
+            formRef.current?.requestSubmit();
+          }}
           onBlur={() => formRef.current?.requestSubmit()}
           onKeyDown={(e) => {
             if (e.key === "Escape") { e.preventDefault(); cancel(); }

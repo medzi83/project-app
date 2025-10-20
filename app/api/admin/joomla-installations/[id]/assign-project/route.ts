@@ -59,7 +59,12 @@ export async function PATCH(
 
     const updated = await prisma.joomlaInstallation.update({
       where: { id },
-      data: { projectId: projectId || null },
+      data: {
+        projectId: projectId || null,
+        // When explicitly setting to null (no project), mark as dismissed
+        // When setting to a project, clear the dismissed flag
+        projectAssignmentDismissed: projectId ? false : true,
+      },
     });
 
     // Convert BigInt to string for JSON serialization

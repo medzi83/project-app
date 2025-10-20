@@ -782,28 +782,7 @@ export default async function DashboardPage({
       })
     : [];
 
-  // Admin only: Installations not assigned to any project
-  const unassignedInstallations = userRole === "ADMIN"
-    ? await prisma.joomlaInstallation.findMany({
-        where: {
-          projectId: null,
-        },
-        select: {
-          id: true,
-          folderName: true,
-          standardDomain: true,
-          installUrl: true,
-          client: {
-            select: {
-              id: true,
-              name: true,
-              customerNo: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      })
-    : [];
+  // Removed: unassignedInstallations - no longer showing standalone installations in dashboard
 
   type AgentAgendaEntry = {
     id: string;
@@ -1181,7 +1160,6 @@ export default async function DashboardPage({
         {userRole === "ADMIN" && (
           <InstallationWarningsSlideout
             projectsNeedingInstallation={projectsNeedingInstallation}
-            unassignedInstallations={unassignedInstallations}
           />
         )}
 

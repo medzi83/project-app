@@ -225,17 +225,26 @@ model MailServer {
   @@index([name])
 }
 
+enum EmailTemplateCategory {
+  GENERAL
+  WEBSITE
+  FILM
+  SOCIAL_MEDIA
+}
+
 model EmailTemplate {
-  id        String         @id @default(cuid())
+  id        String                 @id @default(cuid())
   title     String
   subject   String
   body      String
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  category  EmailTemplateCategory  @default(GENERAL)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
   triggers  EmailTrigger[]
 
   @@unique([title])
   @@index([createdAt])
+  @@index([category])
 }
 
 model EmailSignature {
@@ -501,28 +510,30 @@ enum FeedbackStatus {
 }
 
 model JoomlaInstallation {
-  id               String   @id @default(cuid())
-  clientId         String
-  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  serverId         String
-  server           Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  projectId        String?
-  project          Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  customerNo       String
-  folderName       String
-  installPath      String
-  installUrl       String
-  databaseName     String
-  databasePassword String
-  standardDomain   String
-  filesExtracted   Int?
-  bytesProcessed   BigInt?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                        String   @id @default(cuid())
+  clientId                  String
+  client                    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  serverId                  String
+  server                    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  projectId                 String?
+  project                   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectAssignmentDismissed Boolean  @default(false)
+  customerNo                String
+  folderName                String
+  installPath               String
+  installUrl                String
+  databaseName              String
+  databasePassword          String
+  standardDomain            String
+  filesExtracted            Int?
+  bytesProcessed            BigInt?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   @@index([clientId])
   @@index([serverId])
   @@index([projectId])
   @@index([customerNo])
   @@index([createdAt])
+  @@index([projectAssignmentDismissed])
 }

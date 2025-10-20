@@ -121,8 +121,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
         if (response.exists && response.customer) {
           setExistingCustomer(response.customer);
           // Convert diskspace from KB to GB (diskspace is in KB in Froxlor)
+          // Froxlor stores in KB: 5 GB = 5000 MB × 1024 = 5120000 KB
           const diskspaceGB = response.customer.diskspace
-            ? Math.round(parseInt(response.customer.diskspace) / 1000)
+            ? Math.round(parseInt(response.customer.diskspace) / 1024 / 1024)
             : 2;
           // Parse allowed_phpconfigs from string like "[1,2]" to array
           const phpConfigsStr = response.customer.allowed_phpconfigs || "[1]";
@@ -166,8 +167,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
     if (response.exists && response.customer) {
       setExistingCustomer(response.customer);
       // Convert diskspace from KB to GB (diskspace is in KB in Froxlor)
+      // Froxlor stores in KB: 5 GB = 5000 MB × 1024 = 5120000 KB
       const diskspaceGB = response.customer.diskspace
-        ? Math.round(parseInt(response.customer.diskspace) / 1000)
+        ? Math.round(parseInt(response.customer.diskspace) / 1024 / 1024)
         : 2;
       // Parse allowed_phpconfigs from string like "[1,2]" to array
       const phpConfigsStr = response.customer.allowed_phpconfigs || "[1]";
@@ -217,27 +219,34 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
     setResult(response);
 
     if (response.success) {
-      // Reset form on success
-      setTimeout(() => {
-        setCustomerNumber("");
-        setExistingCustomer(null);
-        setAllDomains([]);
-        setFormData({
-          firstname: "",
-          name: "",
-          company: "",
-          email: "server@eventomaxx.de",
-          loginname: "",
-          password: "dkNM95z31Z31",
-          diskspace_gb: "2",
-          mysqls: "1",
-          ftps: "1",
-          documentroot: "",
-          leregistered: false,
-          deactivated: false,
-        });
-        setResult(null);
-      }, 3000);
+      // Bei Update (existingCustomer): Keine Reset, nur Success-Message ausblenden
+      if (existingCustomer) {
+        setTimeout(() => {
+          setResult(null);
+        }, 3000);
+      } else {
+        // Bei neuem Kunden: Formular zurücksetzen
+        setTimeout(() => {
+          setCustomerNumber("");
+          setExistingCustomer(null);
+          setAllDomains([]);
+          setFormData({
+            firstname: "",
+            name: "",
+            company: "",
+            email: "server@eventomaxx.de",
+            loginname: "",
+            password: "dkNM95z31Z31",
+            diskspace_gb: "2",
+            mysqls: "1",
+            ftps: "1",
+            documentroot: "",
+            leregistered: false,
+            deactivated: false,
+          });
+          setResult(null);
+        }, 3000);
+      }
     }
   };
 

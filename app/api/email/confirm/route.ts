@@ -1,14 +1,14 @@
-"use server";
-
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { sendProjectEmail } from "@/lib/email/send-service";
 import { QueueStatus } from "@prisma/client";
 
+// Vercel Region Configuration: Run in Frankfurt, Germany
+export const preferredRegion = 'fra1';
+
 /**
  * GET - Fetch email details for confirmation
- * Note: preferredRegion cannot be used with "use server" - will use default region
  */
 export async function GET(request: NextRequest) {
   const session = await getAuthSession();
@@ -23,58 +23,76 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing queueId" }, { status: 400 });
   }
 
-  const queuedEmail = await prisma.emailQueue.findUnique({
-    where: { id: queueId },
-    include: {
+  try {
+    const queuedEmail = await prisma.emailQueue.findUnique({
+      where: { id: queueId },
+      include: {
+        project: {
+          include: {
+            client: {
+              include: {
+                agency: {
+                  select: {
+                    id: true,
+                    name: true,
+                    logoIconPath: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        trigger: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!queuedEmail) {
+      return NextResponse.json({ error: "Email not found" }, { status: 404 });
+    }
+
+    if (queuedEmail.status !== QueueStatus.PENDING_CONFIRMATION) {
+      return NextResponse.json(
+        { error: "Email is not pending confirmation" },
+        { status: 400 }
+      );
+    }
+
+    const clientRecord = queuedEmail.project.client;
+
+    return NextResponse.json({
+      id: queuedEmail.id,
+      toEmail: queuedEmail.toEmail,
+      ccEmails: queuedEmail.ccEmails,
+      subject: queuedEmail.subject,
+      body: queuedEmail.body,
       project: {
-        include: {
-          client: true,
-        },
+        id: queuedEmail.project.id,
+        title: queuedEmail.project.title,
       },
-      trigger: {
-        select: {
-          name: true,
-        },
-      },
-    },
-  });
-
-  if (!queuedEmail) {
-    return NextResponse.json({ error: "Email not found" }, { status: 404 });
-  }
-
-  if (queuedEmail.status !== QueueStatus.PENDING_CONFIRMATION) {
+      client: clientRecord
+        ? {
+            id: clientRecord.id,
+            name: clientRecord.name,
+            customerNo: clientRecord.customerNo ?? null,
+            email: clientRecord.email ?? null,
+            contact: clientRecord.contact ?? null,
+            agencyId: clientRecord.agencyId ?? null,
+            agency: clientRecord.agency ?? null,
+          }
+        : null,
+      trigger: queuedEmail.trigger,
+    });
+  } catch (error) {
+    console.error("Error fetching email data:", error);
     return NextResponse.json(
-      { error: "Email is not pending confirmation" },
-      { status: 400 }
+      { error: "Failed to fetch email data", details: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 }
     );
   }
-
-  const clientRecord = queuedEmail.project.client as
-    | { id: string; name: string; email?: string | null; contact?: string | null; agencyId?: string | null }
-    | null;
-
-  return NextResponse.json({
-    id: queuedEmail.id,
-    toEmail: queuedEmail.toEmail,
-    ccEmails: queuedEmail.ccEmails,
-    subject: queuedEmail.subject,
-    body: queuedEmail.body,
-    project: {
-      id: queuedEmail.project.id,
-      title: queuedEmail.project.title,
-    },
-    client: clientRecord
-      ? {
-          id: clientRecord.id,
-          name: clientRecord.name,
-          email: clientRecord.email ?? null,
-          contact: clientRecord.contact ?? null,
-          agencyId: clientRecord.agencyId ?? null,
-        }
-      : null,
-    trigger: queuedEmail.trigger,
-  });
 }
 
 /**
@@ -98,7 +116,11 @@ export async function POST(request: NextRequest) {
     include: {
       project: {
         include: {
-          client: true,
+          client: {
+            include: {
+              agency: true,
+            },
+          },
         },
       },
     },

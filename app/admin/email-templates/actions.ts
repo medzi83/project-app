@@ -27,6 +27,7 @@ const CreateTemplateSchema = z.object({
   body: z
     .string()
     .pipe(z.string().min(1, "Vorlagentext ist erforderlich")),
+  category: z.enum(["GENERAL", "WEBSITE", "FILM", "SOCIAL_MEDIA"]).default("GENERAL"),
 });
 
 const UpdateTemplateSchema = CreateTemplateSchema.extend({
@@ -110,11 +111,11 @@ export async function updateEmailTemplate(formData: FormData) {
     buildRedirect("error", parsed.message);
   }
 
-  const { id, title, subject, body } = parsed.data!;
+  const { id, title, subject, body, category } = parsed.data!;
   try {
     await prisma.emailTemplate.update({
       where: { id },
-      data: { title, subject, body },
+      data: { title, subject, body, category },
     });
   } catch (error) {
     buildRedirect("error", handlePrismaError(error));

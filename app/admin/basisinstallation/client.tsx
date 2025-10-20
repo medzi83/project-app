@@ -36,6 +36,7 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [selectedClient, setSelectedClient] = useState("");
   const [selectedServer, setSelectedServer] = useState("");
+  const [isNewCustomer, setIsNewCustomer] = useState(false); // Track wenn User neuen Kunden anlegen will
   const [connectionStatus, setConnectionStatus] = useState<{
     testing: boolean;
     result?: { success: boolean; message: string };
@@ -72,13 +73,14 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Check all servers when a client is selected
+  // Check all servers when a client is selected OR when creating new customer
   useEffect(() => {
-    if (selectedClient) {
+    if (selectedClient || isNewCustomer) {
       const clientData = clients.find((c) => c.id === selectedClient);
       setShowAllServers(false); // Reset when client changes
 
       if (clientData?.customerNo) {
+        // Existing customer WITH customerNo - check if customer exists on servers
         setCheckingServers(true);
         setServerAvailability({});
 
@@ -116,7 +118,7 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
           setCheckingServers(false);
         });
       } else {
-        // New customer without customerNo - just check server connections
+        // New customer OR customer without customerNo - just check server connections
         setCheckingServers(true);
         const checkPromises = servers.map(async (server) => {
           setServerAvailability((prev) => ({
@@ -144,7 +146,7 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
       setServerAvailability({});
       setCheckingServers(false);
     }
-  }, [selectedClient, clients, servers]);
+  }, [selectedClient, isNewCustomer, clients, servers]);
 
   // Test selected server connection
   useEffect(() => {
@@ -207,8 +209,8 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
   const serversToShow = (serversWithCustomer.length > 0 && !showAllServers) ? serversWithCustomer : servers;
 
   // Step completion checks
-  const step1Complete = selectedClient && selectedServer && connectionStatus.result?.success;
-  const step2Complete = step1Complete && (customerDetails !== null || (selectedClient && !client?.customerNo && currentStep >= 2));
+  const step1Complete = (selectedClient || isNewCustomer) && selectedServer && connectionStatus.result?.success;
+  const step2Complete = step1Complete && (customerDetails !== null || ((selectedClient && !client?.customerNo) || isNewCustomer) && currentStep >= 2);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -323,6 +325,7 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
                                 className="w-full text-left px-4 py-3 hover:bg-blue-50 transition border-b border-gray-100 last:border-b-0"
                                 onClick={() => {
                                   setSelectedClient(client.id);
+                                  setIsNewCustomer(false); // Deaktiviere "Neuer Kunde"-Modus
                                   setClientSearchTerm(
                                     `${client.name}${client.customerNo ? ` (${client.customerNo})` : ""}`
                                   );
@@ -376,13 +379,62 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <p>
-                      Wählen Sie einen bestehenden Kunden oder lassen Sie das Feld leer für einen neuen Kunden
+                      Wählen Sie einen bestehenden Kunden oder klicken Sie auf "Neuen Kunden anlegen"
                     </p>
                   </div>
+
+                  {/* Button für neuen Kunden */}
+                  {!selectedClient && !isNewCustomer && (
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsNewCustomer(true);
+                          setClientSearchTerm("");
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-50 border-2 border-green-200 text-green-700 rounded-lg font-medium hover:bg-green-100 hover:border-green-300 transition"
+                      >
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Neuen Kunden in Projektverwaltung anlegen
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Anzeige wenn neuer Kunde-Modus aktiv */}
+                  {isNewCustomer && !selectedClient && (
+                    <div className="mt-3 rounded-lg bg-green-50 border border-green-200 p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          <p className="font-medium text-green-900">Neuen Kunden anlegen</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsNewCustomer(false);
+                            setSelectedServer("");
+                          }}
+                          className="text-green-600 hover:text-green-800 p-1"
+                          title="Abbrechen"
+                        >
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <p className="text-sm text-green-700 mt-1">
+                        Sie können jetzt einen Server auswählen und in Schritt 2 die Kundendaten eingeben.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Server Availability Check */}
-                {selectedClient && (
+                {(selectedClient || isNewCustomer) && (
                   <div className="border-t pt-6">
                     <h3 className="text-sm font-medium text-gray-700 mb-4">
                       {serversWithCustomer.length > 0

@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -28,8 +27,14 @@ type EmailData = {
   client: {
     id: string;
     name: string;
+    customerNo: string | null;
     email: string | null;
     contact: string | null;
+    agency?: {
+      id: string;
+      name: string;
+      logoIconPath: string | null;
+    } | null;
   } | null;
   trigger: {
     name: string;
@@ -39,9 +44,11 @@ type EmailData = {
 export function EmailConfirmationDialog({
   queueIds,
   onComplete,
+  onBackToClientData,
 }: {
   queueIds: string[];
   onComplete: () => void;
+  onBackToClientData?: () => void;
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [emailData, setEmailData] = useState<EmailData | null>(null);
@@ -128,25 +135,18 @@ export function EmailConfirmationDialog({
       await fetch(`/api/email/confirm?queueId=${emailData.id}`, {
         method: "DELETE",
       });
-
-      // Move to next email or close dialog
-      if (currentIndex < queueIds.length - 1) {
-        setCurrentIndex(currentIndex + 1);
-      } else {
-        setIsOpen(false);
-        onComplete();
-      }
     } catch (err) {
       console.error("Error canceling email:", err);
-      // Continue anyway
-      if (currentIndex < queueIds.length - 1) {
-        setCurrentIndex(currentIndex + 1);
-      } else {
-        setIsOpen(false);
-        onComplete();
-      }
     } finally {
       setLoading(false);
+    }
+
+    // Move to next email or close dialog (after loading is reset)
+    if (currentIndex < queueIds.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      setIsOpen(false);
+      onComplete();
     }
   };
 
@@ -158,7 +158,7 @@ export function EmailConfirmationDialog({
         handleCancel();
       }
     }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-[40rem] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>E-Mail an Kunden versenden</DialogTitle>
           <DialogDescription>
@@ -186,13 +186,32 @@ export function EmailConfirmationDialog({
           <div className="space-y-4">
             {/* Project Info */}
             <div className="rounded border bg-gray-50 p-3">
-              <div className="text-xs text-gray-500 mb-1">Projekt</div>
-              <div className="font-medium">{emailData.project.title}</div>
-              {emailData.client && (
-                <div className="text-sm text-gray-600 mt-1">
-                  Kunde: {emailData.client.name}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="text-xs text-gray-500 mb-1">Projekt</div>
+                  <div className="font-medium">
+                    {emailData.project.title}
+                    {emailData.client?.customerNo && ` - ${emailData.client.customerNo}`}
+                  </div>
+                  {emailData.client && (
+                    <div className="text-sm text-gray-600 mt-1">
+                      Kunde: {emailData.client.name}
+                    </div>
+                  )}
                 </div>
-              )}
+                {emailData.client?.agency?.logoIconPath && (
+                  <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                    <img
+                      src={emailData.client.agency.logoIconPath}
+                      alt={emailData.client.agency.name}
+                      className="w-12 h-12 object-contain rounded"
+                    />
+                    <div className="text-xs text-gray-500 text-center">
+                      {emailData.client.agency.name}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Trigger Info */}
@@ -263,20 +282,39 @@ export function EmailConfirmationDialog({
           </div>
         )}
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            disabled={loading}
-          >
-            Abbrechen
-          </Button>
-          <Button
-            onClick={handleSend}
-            disabled={loading || !emailData}
-          >
-            {loading ? "Wird gesendet..." : "Jetzt senden"}
-          </Button>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <div className="flex gap-2 flex-1">
+            {onBackToClientData && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onBackToClientData}
+                disabled={loading}
+                className="text-xs"
+              >
+                ← Kundendaten ändern
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              disabled={loading}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              onClick={handleSend}
+              disabled={loading || !emailData}
+            >
+              {loading
+                ? "Wird gesendet..."
+                : emailData?.client?.agency
+                ? `Senden als ${emailData.client.agency.name}`
+                : "Jetzt senden"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

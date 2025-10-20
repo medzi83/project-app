@@ -20,6 +20,7 @@ export function EmailConfirmationHandler() {
   const [queueIds, setQueueIds] = useState<string[]>([]);
   const [emptyChecks, setEmptyChecks] = useState(0);
   const [isPolling, setIsPolling] = useState(true);
+  const [pollingReason, setPollingReason] = useState<"initial" | "userClick">("initial");
   const [missingClientData, setMissingClientData] = useState<MissingClientData>(null);
   const [checkingClientData, setCheckingClientData] = useState(false);
   const [clientDataChecked, setClientDataChecked] = useState(false);
@@ -31,6 +32,7 @@ export function EmailConfirmationHandler() {
   useEffect(() => {
     setIsPolling(true);
     setEmptyChecks(0);
+    setPollingReason("initial");
     setClientDataChecked(false);
     setMissingClientData(null);
   }, [pathname]);
@@ -125,15 +127,38 @@ export function EmailConfirmationHandler() {
     };
   }, [queueIds.length, isPolling]);
 
-  // Stop polling after 30 consecutive empty checks (60 seconds of no results)
+  // Stop polling based on reason:
+  // - Initial page load: 5 checks (10 seconds) to catch queued emails
+  // - User clicked field: 15 checks (30 seconds) to wait for user input
   useEffect(() => {
-    if (emptyChecks >= 30 && intervalRef.current) {
-      console.log("No pending emails found after 60 seconds, stopping polling");
+    const maxChecks = pollingReason === "initial" ? 5 : 15;
+
+    if (emptyChecks >= maxChecks && intervalRef.current) {
+      console.log(`No pending emails found after ${maxChecks * 2} seconds (${pollingReason}), stopping polling`);
       setIsPolling(false);
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-  }, [emptyChecks]);
+  }, [emptyChecks, pollingReason]);
+
+  // Restart polling when user clicks on an editable field
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      // Check if click is on or within an InlineCell button
+      const target = e.target as HTMLElement;
+      const isInlineCell = target.closest('button[title="Zum Bearbeiten klicken"]');
+
+      if (isInlineCell && !isPolling) {
+        console.log("User clicked on editable field, restarting email polling for 30 seconds");
+        setIsPolling(true);
+        setPollingReason("userClick");
+        setEmptyChecks(0);
+      }
+    };
+
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, [isPolling]);
 
   const handleComplete = () => {
     setQueueIds([]);
@@ -172,6 +197,33 @@ export function EmailConfirmationHandler() {
     // User canceled - remove this queue item and show next (if any)
     setMissingClientData(null);
     setQueueIds([]);
+  };
+
+  const handleBackToClientData = async () => {
+    // Fetch current client data and show pre-dialog again
+    try {
+      const res = await fetch(`/api/email/confirm?queueId=${queueIds[0]}`);
+      if (res.ok) {
+        const data = await res.json();
+        const client = data.client;
+
+        if (client) {
+          setMissingClientData({
+            clientId: client.id,
+            clientName: client.name,
+            currentEmail: client.email || null,
+            currentContact: client.contact || null,
+            currentAgencyId: client.agencyId || null,
+            missingEmail: false, // Allow editing even if not missing
+            missingContact: false,
+            missingAgency: false,
+          });
+          setClientDataChecked(false); // Reset to show pre-dialog again
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching client data:", error);
+    }
   };
 
   if (queueIds.length === 0) return null;
@@ -225,5 +277,11 @@ export function EmailConfirmationHandler() {
   }
 
   // Show email confirmation dialog only after client data check is complete
-  return <EmailConfirmationDialog queueIds={queueIds} onComplete={handleComplete} />;
+  return (
+    <EmailConfirmationDialog
+      queueIds={queueIds}
+      onComplete={handleComplete}
+      onBackToClientData={handleBackToClientData}
+    />
+  );
 }

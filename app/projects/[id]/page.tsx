@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
-import { deriveProjectStatus, labelForProjectStatus } from "@/lib/project-status";
+import { deriveProjectStatus, labelForProjectStatus, labelForWebsitePriority, labelForProductionStatus, labelForMaterialStatus, labelForSeoStatus, labelForTextitStatus, MATERIAL_STATUS_VALUES } from "@/lib/project-status";
 import { notFound, redirect } from "next/navigation";
+import InlineCell from "@/components/InlineCell";
+import type { WebsitePriority, ProductionStatus, MaterialStatus, SEOStatus, TextitStatus, CMS as PrismaCMS } from "@prisma/client";
 
 const fmtDate = (d?: Date | string | null) =>
   d ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(d)) : "-";
+const fmtDateTime = (d?: Date | string | null) =>
+  d ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(d)) : "-";
 const mm = (n?: number | null) => (n ? `${Math.floor(n / 60)}h ${n % 60}m` : "-");
 const yesNo = (v?: boolean | null) => (v === true ? "Ja" : v === false ? "Nein" : "-");
 const linkify = (u?: string | null) => {
@@ -14,6 +18,9 @@ const linkify = (u?: string | null) => {
   const href = hasProto ? u : `https://${u}`;
   return <a className="underline" href={href} target="_blank" rel="noreferrer">{u}</a>;
 };
+
+const PRIORITIES = ["NONE", "PRIO_1", "PRIO_2", "PRIO_3"] as const;
+const CMS = ["SHOPWARE", "JOOMLA", "LOGO", "PRINT", "OTHER"] as const;
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -117,6 +124,51 @@ export default async function ProjectDetail({ params }: Props) {
   if (session.user.role === "CUSTOMER" && project.clientId !== session.user.clientId) notFound();
 
   const website = project.website;
+  const role = session.user.role!;
+  const canEdit = ["ADMIN", "AGENT"].includes(role);
+
+  // Prepare options for InlineCell selects (same as in projects list)
+  const materialStatusOptions = MATERIAL_STATUS_VALUES.map((value) => ({ value, label: labelForMaterialStatus(value) }));
+  const priorityOptions = PRIORITIES.map((p) => ({ value: p, label: labelForWebsitePriority(p) }));
+  const cmsOptions = CMS.map((c) => ({ value: c, label: c === "SHOPWARE" ? "Shop" : c }));
+  const pStatusOptions = ["NONE", "BEENDET", "MMW", "VOLLST_A_K"].map((v) => ({ value: v, label: labelForProductionStatus(v) }));
+  const seoOptions = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"].map((v) => ({ value: v, label: labelForSeoStatus(v) }));
+  const textitOptions = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"].map((v) => ({ value: v, label: labelForTextitStatus(v) }));
+
+  // Import agent helpers
+  const { expandAgentsWithWTAliases, getAgentDisplayName, getEffectiveAgentId } = await import("@/lib/agent-helpers");
+
+  // Get all agents for dropdown
+  const agentsAll = await prisma.user.findMany({
+    where: { role: "AGENT" },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, email: true, categories: true, color: true }
+  });
+
+  const agentsActive = await prisma.user.findMany({
+    where: { role: "AGENT", active: true },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, email: true, categories: true, color: true }
+  });
+
+  // Nur aktive Agenten mit Kategorie WEBSEITE für die Dropdown-Auswahl
+  const websiteAgentsForDropdown = agentsAll.filter(a => a.categories.includes("WEBSEITE") && agentsActive.some(active => active.id === a.id));
+
+  // Expand with WT aliases for web projects
+  const websiteAgentsExpanded = expandAgentsWithWTAliases(websiteAgentsForDropdown);
+
+  const agentOptions = [
+    { value: "", label: "- ohne Agent -" },
+    ...websiteAgentsExpanded.map((a) => ({
+      value: a.id,
+      label: a.name ?? a.email ?? "",
+    })),
+  ];
+
+  // Determine agent display name and effective ID based on isWTAssignment
+  const isWTAssignment = project.website?.isWTAssignment ?? false;
+  const agentDisplayName = getAgentDisplayName(project.agentId, isWTAssignment, agentsAll);
+  const effectiveAgentId = getEffectiveAgentId(project.agentId, isWTAssignment);
 
   // Derive the correct status for website projects
   const displayStatus = project.type === "WEBSITE" && website
@@ -161,17 +213,6 @@ export default async function ProjectDetail({ params }: Props) {
           </svg>
           Zurück zur Übersicht
         </Link>
-        {["ADMIN", "AGENT"].includes(session.user.role ?? "") && (
-          <Link
-            href={`/projects/${project.id}/edit`}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Bearbeiten
-          </Link>
-        )}
       </div>
 
       {/* Project Header Card */}
@@ -264,13 +305,15 @@ export default async function ProjectDetail({ params }: Props) {
             <div>
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Domain</dt>
               <dd className="mt-1 text-sm text-gray-900">
-                {website?.domain ? (
-                  <a href={`https://${website.domain}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
-                    {website.domain}
-                  </a>
-                ) : (
-                  <span className="text-gray-400">-</span>
-                )}
+                <InlineCell
+                  target="website"
+                  id={project.id}
+                  name="domain"
+                  type="text"
+                  display={website?.domain ?? "-"}
+                  value={website?.domain ?? ""}
+                  canEdit={canEdit}
+                />
               </dd>
             </div>
 
@@ -327,12 +370,32 @@ export default async function ProjectDetail({ params }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Priorität</dt>
-                <dd className="mt-1 text-sm text-gray-900">{website?.priority ?? "-"}</dd>
+                <dd className="mt-1 text-sm text-gray-900">
+                  <InlineCell
+                    target="website"
+                    id={project.id}
+                    name="priority"
+                    type="select"
+                    display={labelForWebsitePriority(website?.priority)}
+                    value={website?.priority ?? "NONE"}
+                    options={priorityOptions}
+                    canEdit={canEdit}
+                  />
+                </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">CMS</dt>
                 <dd className="mt-1 text-sm text-gray-900">
-                  {website?.cms === "OTHER" && website?.cmsOther ? `OTHER (${website.cmsOther})` : website?.cms ?? "-"}
+                  <InlineCell
+                    target="website"
+                    id={project.id}
+                    name="cms"
+                    type="select"
+                    display={website?.cms === "SHOPWARE" ? "Shop" : website?.cms ?? "-"}
+                    value={website?.cms ?? ""}
+                    options={cmsOptions}
+                    canEdit={canEdit}
+                  />
                 </dd>
               </div>
             </div>
@@ -340,25 +403,67 @@ export default async function ProjectDetail({ params }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Produktionsstatus</dt>
-                <dd className="mt-1 text-sm text-gray-900">{website?.pStatus ?? "-"}</dd>
+                <dd className="mt-1 text-sm text-gray-900">
+                  <InlineCell
+                    target="website"
+                    id={project.id}
+                    name="pStatus"
+                    type="select"
+                    display={labelForProductionStatus(website?.pStatus)}
+                    value={website?.pStatus ?? "NONE"}
+                    options={pStatusOptions}
+                    canEdit={canEdit}
+                  />
+                </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Materialstatus</dt>
-                <dd className="mt-1 text-sm text-gray-900">{website?.materialStatus ?? "-"}</dd>
+                <dd className="mt-1 text-sm text-gray-900">
+                  <InlineCell
+                    target="website"
+                    id={project.id}
+                    name="materialStatus"
+                    type="select"
+                    display={labelForMaterialStatus(website?.materialStatus)}
+                    value={website?.materialStatus ?? "ANGEFORDERT"}
+                    options={materialStatusOptions}
+                    canEdit={canEdit}
+                  />
+                </dd>
               </div>
             </div>
 
             <div>
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Umsetzer</dt>
-              <dd className="mt-1 text-sm text-gray-900">{project.agent?.name ?? "-"}</dd>
+              <dd className="mt-1 text-sm text-gray-900">
+                <InlineCell
+                  target="project"
+                  id={project.id}
+                  name="agentId"
+                  type="select"
+                  display={agentDisplayName}
+                  value={effectiveAgentId}
+                  options={agentOptions}
+                  canEdit={canEdit}
+                />
+              </dd>
             </div>
 
-            {website?.note && (
-              <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Hinweis</dt>
-                <dd className="mt-1 text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">{website.note}</dd>
-              </div>
-            )}
+            <div>
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Hinweis</dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                <InlineCell
+                  target="website"
+                  id={project.id}
+                  name="note"
+                  type="textarea"
+                  display={website?.note ?? ""}
+                  value={website?.note ?? ""}
+                  canEdit={canEdit}
+                  displayClassName="block whitespace-pre-wrap"
+                />
+              </dd>
+            </div>
           </div>
         </div>
 
@@ -377,14 +482,18 @@ export default async function ProjectDetail({ params }: Props) {
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-blue-500"></div>
               <div className="flex-1">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Webtermin</dt>
-                <dd className="mt-1 text-sm font-medium text-gray-900">{fmtDate(website?.webDate)}</dd>
-                {website?.webterminType && (
-                  <dd className="mt-1 text-xs text-gray-600">
-                    {website.webterminType === "TELEFONISCH" ? "Telefonisch" :
-                     website.webterminType === "BEIM_KUNDEN" ? "Beim Kunden" :
-                     website.webterminType === "IN_DER_AGENTUR" ? "In der Agentur" : ""}
-                  </dd>
-                )}
+                <dd className="mt-1 text-sm font-medium text-gray-900">
+                  <InlineCell
+                    target="website"
+                    id={project.id}
+                    name="webDate"
+                    type="datetime-with-type"
+                    display={fmtDateTime(website?.webDate)}
+                    value={website?.webDate ? new Date(website.webDate).toISOString() : ""}
+                    extraValue={website?.webterminType ?? ""}
+                    canEdit={canEdit}
+                  />
+                </dd>
               </div>
             </div>
 
@@ -392,7 +501,17 @@ export default async function ProjectDetail({ params }: Props) {
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-orange-500"></div>
               <div className="flex-1">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Letzter Materialeingang</dt>
-                <dd className="mt-1 text-sm font-medium text-gray-900">{fmtDate(website?.lastMaterialAt)}</dd>
+                <dd className="mt-1 text-sm font-medium text-gray-900">
+                  <InlineCell
+                    target="website"
+                    id={project.id}
+                    name="lastMaterialAt"
+                    type="date"
+                    display={fmtDate(website?.lastMaterialAt)}
+                    value={website?.lastMaterialAt ? new Date(website.lastMaterialAt).toISOString().slice(0, 10) : ""}
+                    canEdit={canEdit}
+                  />
+                </dd>
               </div>
             </div>
 
@@ -400,7 +519,17 @@ export default async function ProjectDetail({ params }: Props) {
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-yellow-500"></div>
               <div className="flex-1">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Demo an Kunden</dt>
-                <dd className="mt-1 text-sm font-medium text-gray-900">{fmtDate(website?.demoDate)}</dd>
+                <dd className="mt-1 text-sm font-medium text-gray-900">
+                  <InlineCell
+                    target="website"
+                    id={project.id}
+                    name="demoDate"
+                    type="date"
+                    display={fmtDate(website?.demoDate)}
+                    value={website?.demoDate ? new Date(website.demoDate).toISOString().slice(0, 10) : ""}
+                    canEdit={canEdit}
+                  />
+                </dd>
               </div>
             </div>
 
@@ -408,7 +537,17 @@ export default async function ProjectDetail({ params }: Props) {
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-green-500"></div>
               <div className="flex-1">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Online</dt>
-                <dd className="mt-1 text-sm font-medium text-gray-900">{fmtDate(website?.onlineDate)}</dd>
+                <dd className="mt-1 text-sm font-medium text-gray-900">
+                  <InlineCell
+                    target="website"
+                    id={project.id}
+                    name="onlineDate"
+                    type="date"
+                    display={fmtDate(website?.onlineDate)}
+                    value={website?.onlineDate ? new Date(website.onlineDate).toISOString().slice(0, 10) : ""}
+                    canEdit={canEdit}
+                  />
+                </dd>
               </div>
             </div>
 
@@ -433,20 +572,48 @@ export default async function ProjectDetail({ params }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">SEO</dt>
-                <dd className="mt-1 text-sm text-gray-900">{website?.seo ?? "-"}</dd>
+                <dd className="mt-1 text-sm text-gray-900">
+                  <InlineCell
+                    target="website"
+                    id={project.id}
+                    name="seo"
+                    type="select"
+                    display={labelForSeoStatus(website?.seo)}
+                    value={website?.seo ?? ""}
+                    options={seoOptions}
+                    canEdit={canEdit}
+                  />
+                </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Textit</dt>
-                <dd className="mt-1 text-sm text-gray-900">{website?.textit ?? "-"}</dd>
+                <dd className="mt-1 text-sm text-gray-900">
+                  <InlineCell
+                    target="website"
+                    id={project.id}
+                    name="textit"
+                    type="select"
+                    display={labelForTextitStatus(website?.textit)}
+                    value={website?.textit ?? ""}
+                    options={textitOptions}
+                    canEdit={canEdit}
+                  />
+                </dd>
               </div>
             </div>
 
             <div>
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Barrierefrei</dt>
               <dd className="mt-1">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${website?.accessible ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
-                  {yesNo(website?.accessible)}
-                </span>
+                <InlineCell
+                  target="website"
+                  id={project.id}
+                  name="accessible"
+                  type="tri"
+                  display={website?.accessible == null ? "-" : website?.accessible ? "Ja" : "Nein"}
+                  value={website?.accessible ?? null}
+                  canEdit={canEdit}
+                />
               </dd>
             </div>
 
@@ -479,11 +646,31 @@ export default async function ProjectDetail({ params }: Props) {
           <div className="p-6 space-y-4">
             <div>
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Umsetzung</dt>
-              <dd className="mt-1 text-2xl font-semibold text-gray-900">{mm(website?.effortBuildMin)}</dd>
+              <dd className="mt-1 text-2xl font-semibold text-gray-900">
+                <InlineCell
+                  target="website"
+                  id={project.id}
+                  name="effortBuildMin"
+                  type="number"
+                  display={mm(website?.effortBuildMin)}
+                  value={website?.effortBuildMin != null ? website.effortBuildMin / 60 : ""}
+                  canEdit={canEdit}
+                />
+              </dd>
             </div>
             <div>
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Demo</dt>
-              <dd className="mt-1 text-2xl font-semibold text-gray-900">{mm(website?.effortDemoMin)}</dd>
+              <dd className="mt-1 text-2xl font-semibold text-gray-900">
+                <InlineCell
+                  target="website"
+                  id={project.id}
+                  name="effortDemoMin"
+                  type="number"
+                  display={mm(website?.effortDemoMin)}
+                  value={website?.effortDemoMin != null ? website.effortDemoMin / 60 : ""}
+                  canEdit={canEdit}
+                />
+              </dd>
             </div>
           </div>
         </div>

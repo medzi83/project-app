@@ -4,11 +4,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { createEmailTemplate } from "./actions";
 import RichHtmlEditor from "./RichHtmlEditor";
+import { EMAIL_TEMPLATE_CATEGORIES, type EmailTemplateCategoryKey } from "./constants";
 
 export default function CreateTemplateForm() {
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [category, setCategory] = useState<EmailTemplateCategoryKey>("GENERAL");
   const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
@@ -37,6 +39,21 @@ export default function CreateTemplateForm() {
             className="w-full rounded border px-3 py-2 text-sm"
             placeholder="z. B. onboarding_willkommen"
           />
+        </Field>
+        <Field label="Kategorie *">
+          <select
+            name="category"
+            value={category}
+            onChange={(event) => setCategory(event.target.value as EmailTemplateCategoryKey)}
+            required
+            className="w-full rounded border px-3 py-2 text-sm"
+          >
+            {Object.entries(EMAIL_TEMPLATE_CATEGORIES).map(([key, { label }]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
         </Field>
         <Field label="Betreff *">
           <input
@@ -98,6 +115,10 @@ export default function CreateTemplateForm() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Titel</p>
                 <p className="text-sm text-gray-800">{title || "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Kategorie</p>
+                <p className="text-sm text-gray-800">{EMAIL_TEMPLATE_CATEGORIES[category].label}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Betreff</p>

@@ -14,30 +14,16 @@ type Project = {
   } | null;
 };
 
-type Installation = {
-  id: string;
-  folderName: string;
-  standardDomain: string;
-  installUrl: string;
-  client: {
-    id: string;
-    name: string | null;
-    customerNo: string | null;
-  } | null;
-};
-
 type Props = {
   projectsNeedingInstallation: Project[];
-  unassignedInstallations: Installation[];
 };
 
 export function InstallationWarningsSlideout({
   projectsNeedingInstallation,
-  unassignedInstallations,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const totalCount = projectsNeedingInstallation.length + unassignedInstallations.length;
+  const totalCount = projectsNeedingInstallation.length;
 
   if (totalCount === 0) return null;
 
@@ -54,16 +40,14 @@ export function InstallationWarningsSlideout({
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold text-orange-900">
-                  Installationen & Zuordnungen
+                  Projekte ohne Installation
                 </h2>
                 <span className="text-sm font-medium text-orange-700 bg-orange-200 px-2.5 py-0.5 rounded-full">
                   {totalCount}
                 </span>
               </div>
               <p className="text-sm text-orange-700 mt-1">
-                {projectsNeedingInstallation.length > 0 && `${projectsNeedingInstallation.length} Projekt${projectsNeedingInstallation.length !== 1 ? 'e' : ''} ohne Installation`}
-                {projectsNeedingInstallation.length > 0 && unassignedInstallations.length > 0 && ' • '}
-                {unassignedInstallations.length > 0 && `${unassignedInstallations.length} nicht zugeordnet${unassignedInstallations.length !== 1 ? 'e' : ''}`}
+                {totalCount} Projekt{totalCount !== 1 ? 'e' : ''} in Umsetzung benötigt{totalCount === 1 ? '' : 'en'} eine Joomla-Installation
               </p>
             </div>
             <svg className="w-5 h-5 text-orange-700 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -93,10 +77,10 @@ export function InstallationWarningsSlideout({
             <div className="text-2xl">⚙️</div>
             <div>
               <h2 className="text-lg font-semibold text-orange-900">
-                Installationen & Zuordnungen
+                Projekte ohne Installation
               </h2>
               <p className="text-xs text-orange-700">
-                {totalCount} Aufgaben
+                {totalCount} Projekt{totalCount !== 1 ? 'e' : ''} benötigt{totalCount === 1 ? '' : 'en'} Installation
               </p>
             </div>
           </div>
@@ -111,81 +95,36 @@ export function InstallationWarningsSlideout({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {projectsNeedingInstallation.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-orange-900 uppercase tracking-wide mb-3 sticky top-0 bg-white py-2 -mt-2">
-                Projekte ohne Installation ({projectsNeedingInstallation.length})
-              </p>
-              <div className="space-y-2">
-                {projectsNeedingInstallation.map((project) => {
-                  const customerLabel = [project.client?.customerNo, project.client?.name].filter(Boolean).join(" - ") || "Kunde unbekannt";
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-2">
+            {projectsNeedingInstallation.map((project) => {
+              const customerLabel = [project.client?.customerNo, project.client?.name].filter(Boolean).join(" - ") || "Kunde unbekannt";
 
-                  return (
-                    <div key={project.id} className="rounded-lg border border-orange-200 bg-orange-50/30 p-3 hover:border-orange-300 transition-colors">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <Link
-                            href={`/projects/${project.id}`}
-                            className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline block truncate"
-                            onClick={() => setIsOpen(false)}
-                          >
-                            {project.title}
-                          </Link>
-                          <p className="text-xs text-gray-600 mt-0.5 truncate">{customerLabel}</p>
-                        </div>
-                        <Link
-                          href={`/clients/${project.client?.id}`}
-                          className="text-xs px-3 py-1.5 bg-orange-600 text-white rounded hover:bg-orange-700 whitespace-nowrap flex-shrink-0"
-                          onClick={() => setIsOpen(false)}
-                        >
-                          Erstellen →
-                        </Link>
-                      </div>
+              return (
+                <div key={project.id} className="rounded-lg border border-orange-200 bg-orange-50/30 p-3 hover:border-orange-300 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/projects/${project.id}`}
+                        className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline block truncate"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        {project.title}
+                      </Link>
+                      <p className="text-xs text-gray-600 mt-0.5 truncate">{customerLabel}</p>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {unassignedInstallations.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-orange-900 uppercase tracking-wide mb-3 sticky top-0 bg-white py-2 -mt-2">
-                Nicht zugeordnete Installationen ({unassignedInstallations.length})
-              </p>
-              <div className="space-y-2">
-                {unassignedInstallations.map((installation) => {
-                  const customerLabel = [installation.client?.customerNo, installation.client?.name].filter(Boolean).join(" - ") || "Kunde unbekannt";
-
-                  return (
-                    <div key={installation.id} className="rounded-lg border border-orange-200 bg-orange-50/30 p-3 hover:border-orange-300 transition-colors">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <a
-                            href={installation.installUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline block truncate"
-                          >
-                            {installation.standardDomain}/{installation.folderName}
-                          </a>
-                          <p className="text-xs text-gray-600 mt-0.5 truncate">{customerLabel}</p>
-                        </div>
-                        <Link
-                          href={`/clients/${installation.client?.id}`}
-                          className="text-xs px-3 py-1.5 bg-orange-600 text-white rounded hover:bg-orange-700 whitespace-nowrap flex-shrink-0"
-                          onClick={() => setIsOpen(false)}
-                        >
-                          Zuordnen →
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+                    <Link
+                      href={`/clients/${project.client?.id}`}
+                      className="text-xs px-3 py-1.5 bg-orange-600 text-white rounded hover:bg-orange-700 whitespace-nowrap flex-shrink-0"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Installation erstellen →
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </>

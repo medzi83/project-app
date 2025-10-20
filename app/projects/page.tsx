@@ -682,7 +682,6 @@ export default async function ProjectsPage({ searchParams }: Props) {
                   <td className="whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <Link href={`/projects/${p.id}`} className="underline">Details</Link>
-                      {canEdit && <Link href={`/projects/${p.id}/edit`} className="underline">Bearbeiten</Link>}
                       {role === "ADMIN" && (
                         <form action={deleteProject}>
                           <input type="hidden" name="projectId" value={p.id} />

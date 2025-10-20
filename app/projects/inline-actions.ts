@@ -52,7 +52,7 @@ function coerce(key: string, v: string | undefined) {
   return s;
 }
 
-export async function updateInlineField(formData: FormData) {
+export async function updateInlineField(formData: FormData): Promise<{ emailTriggered: boolean }> {
   const session = await getAuthSession();
   if (!session?.user || !["ADMIN","AGENT"].includes(session.user.role || "")) {
     throw new Error("FORBIDDEN");
@@ -62,6 +62,8 @@ export async function updateInlineField(formData: FormData) {
   const parsed = FormSchema.safeParse(raw);
   if (!parsed.success) throw new Error("Bad request");
   const { target, id, key, value, extraValue } = parsed.data;
+
+  let emailTriggered = false;
 
   if (target === "project") {
     const projectKey = ProjectKey.parse(key);
@@ -200,11 +202,14 @@ export async function updateInlineField(formData: FormData) {
 
     // Process email triggers and get confirmation queue IDs
     try {
-      await processTriggers(
+      const queueIds = await processTriggers(
         id,
         { [websiteKey]: parsedValue },
         { [websiteKey]: oldValue }
       );
+      if (queueIds && queueIds.length > 0) {
+        emailTriggered = true;
+      }
     } catch (error) {
       console.error("Error processing triggers:", error);
       // Don't fail the update if trigger processing fails
@@ -242,6 +247,7 @@ export async function updateInlineField(formData: FormData) {
   }
 
   revalidatePath("/projects");
+  return { emailTriggered };
 }
 
 
