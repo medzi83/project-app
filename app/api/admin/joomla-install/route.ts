@@ -6,7 +6,6 @@ import SftpClient from "ssh2-sftp-client";
 import { Readable } from "stream";
 
 // Vercel Region Configuration: Run in Frankfurt, Germany
-export const runtime = 'nodejs';
 export const preferredRegion = 'fra1';
 
 

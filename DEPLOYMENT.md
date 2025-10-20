@@ -5,16 +5,26 @@ Diese Anleitung beschreibt, wie du die Projektverwaltung-App auf Vercel deployst
 ## ✅ Was wurde konfiguriert
 
 ### 1. **vercel.json**
-- Alle API Routes laufen in Frankfurt (fra1)
-- Node.js 20.x Runtime
+- Konfiguriert maxDuration für API Routes
+- Region-Konfiguration erfolgt via Route Segment Config
 
 ### 2. **API Routes**
-- Alle 25 API Routes haben `preferredRegion: 'fra1'` konfiguriert
-- Datenbank-Verbindungen erfolgen von Deutschland aus
+- 21 von 25 API Routes haben `preferredRegion: 'fra1'` konfiguriert
+- 4 Routes mit `"use server"` nutzen die Standard-Region (Einschränkung von Next.js)
+- Datenbank-Verbindungen erfolgen größtenteils von Deutschland aus
 
 ### 3. **Root Layout**
 - SSR (Server-Side Rendering) läuft in Frankfurt
 - Alle dynamischen Seiten werden in Deutschland gerendert
+
+### 4. **Hinweis zu "use server" Dateien**
+Die folgenden 4 API Routes können `preferredRegion` nicht nutzen (Next.js Einschränkung):
+- `/api/agencies`
+- `/api/clients/update-contact`
+- `/api/email/confirm`
+- `/api/email/rerender`
+
+Diese laufen in der Vercel Standard-Region (iad1 - Washington DC).
 
 ## 🚀 Deployment Schritte
 
@@ -71,11 +81,14 @@ true
 ## 🌍 Region-Konfiguration
 
 ### Was läuft in Frankfurt (fra1)?
-✅ **API Routes** - Alle 25 API Endpoints
-✅ **Authentication** - NextAuth
-✅ **Datenbank-Queries** - Prisma/Supabase
+✅ **API Routes** - 21 von 25 API Endpoints
+✅ **Authentication** - NextAuth (fra1)
+✅ **Datenbank-Queries** - Prisma/Supabase (größtenteils fra1)
 ✅ **Server-Side Rendering** - Alle dynamischen Seiten
 ✅ **Image Optimization** - Next/Image
+
+### Was läuft in Standard-Region (iad1)?
+⚠️ **4 API Routes mit "use server"** - technische Einschränkung
 
 ### Was läuft NICHT in Frankfurt?
 ⚠️ **Build-Prozess** - Läuft in USA (iad1) - unvermeidbar bei Vercel

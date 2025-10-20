@@ -3,7 +3,6 @@ import { getAuthSession } from "@/lib/authz";
 import { processEmailQueue } from "@/lib/email/send-service";
 
 // Vercel Region Configuration: Run in Frankfurt, Germany
-export const runtime = 'nodejs';
 export const preferredRegion = 'fra1';
 
 

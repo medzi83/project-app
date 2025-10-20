@@ -6,13 +6,9 @@ import { getAuthSession } from "@/lib/authz";
 import { sendProjectEmail } from "@/lib/email/send-service";
 import { QueueStatus } from "@prisma/client";
 
-// Vercel Region Configuration: Run in Frankfurt, Germany
-export const runtime = 'nodejs';
-export const preferredRegion = 'fra1';
-
-
 /**
  * GET - Fetch email details for confirmation
+ * Note: preferredRegion cannot be used with "use server" - will use default region
  */
 export async function GET(request: NextRequest) {
   const session = await getAuthSession();

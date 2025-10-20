@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 // Vercel Region Configuration: Run in Frankfurt, Germany
-export const runtime = 'nodejs';
 export const preferredRegion = 'fra1';
 
 type UserRole = "ADMIN" | "AGENT" | "CUSTOMER";
