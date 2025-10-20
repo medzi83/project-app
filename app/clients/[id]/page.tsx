@@ -5,13 +5,14 @@ import { getAuthSession } from "@/lib/authz";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FroxlorClient } from "@/lib/froxlor";
-import type { FroxlorCustomer, FroxlorDomain } from "@/lib/froxlor";
+import type { FroxlorCustomer, FroxlorDomain, FroxlorFtpAccount } from "@/lib/froxlor";
 import { deriveProjectStatus, labelForProjectStatus } from "@/lib/project-status";
 import type { ProjectStatus, ProjectType } from "@prisma/client";
 import { EmailLogItem } from "@/components/EmailLogItem";
 import { deriveFilmStatus, getFilmStatusDate, FILM_STATUS_LABELS } from "@/lib/film-status";
 import { ClientStatusToggles } from "@/components/ClientStatusToggles";
 import { InstallationProjectAssignment } from "./InstallationProjectAssignment";
+import { ClientDetailHeader } from "@/components/ClientDetailHeader";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -153,6 +154,20 @@ export default async function ClientDetailPage({ params }: Props) {
         },
         orderBy: { createdAt: "desc" },
       },
+      emailLogs: {
+        where: {
+          projectId: null,
+        },
+        orderBy: { sentAt: "desc" },
+        take: 50,
+        include: {
+          trigger: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -255,10 +270,24 @@ export default async function ClientDetailPage({ params }: Props) {
                     },
                   },
                 },
-                  orderBy: { createdAt: "desc" },
+                orderBy: { createdAt: "desc" },
+              },
+              emailLogs: {
+                where: {
+                  projectId: null,
+                },
+                orderBy: { sentAt: "desc" },
+                take: 50,
+                include: {
+                  trigger: {
+                    select: {
+                      name: true,
+                    },
+                  },
                 },
               },
-            });
+            },
+          });
 
             if (!client) {
               notFound();
@@ -294,6 +323,7 @@ export default async function ClientDetailPage({ params }: Props) {
   // Fetch Froxlor customer data if server is available
   let froxlorCustomer: FroxlorCustomer | null = null;
   let froxlorDomains: FroxlorDomain[] = [];
+  let froxlorFtpAccounts: FroxlorFtpAccount[] = [];
   let froxlorPhpConfigs: Record<string, string> = {}; // Map of phpsettingid -> description
   let froxlorError: string | null = null;
 
@@ -311,6 +341,7 @@ export default async function ClientDetailPage({ params }: Props) {
 
       if (froxlorCustomer) {
         froxlorDomains = await froxlorClient.getCustomerDomains(froxlorCustomer.customerid);
+        froxlorFtpAccounts = await froxlorClient.getCustomerFtpAccounts(froxlorCustomer.customerid);
 
         // Load PHP configurations
         const phpConfigs = await froxlorClient.getPhpConfigs();
@@ -349,54 +380,31 @@ export default async function ClientDetailPage({ params }: Props) {
     SOCIAL: allEmailLogs.filter((log) => log.projectType === "SOCIAL"),
   };
 
-  // TODO: Add general emails (emails without project) when feature is implemented
-  const generalEmails: typeof allEmailLogs = [];
+  // General emails (without project association)
+  const generalEmails = client.emailLogs || [];
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <Link href="/clients" className="text-blue-600 hover:underline">
-              ← Zurück zur Kundenliste
-            </Link>
-          </div>
-          <h1 className="text-2xl font-semibold mt-2">{client.name}</h1>
-          {client.customerNo && (
-            <p className="text-sm text-gray-500">Kundennummer: {client.customerNo}</p>
-          )}
-          {client.agency && (
-            <p className="text-sm text-gray-500">
-              Agentur: {client.agency.name}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          {isAdmin && (
-            <>
-              <ClientStatusToggles
-                clientId={client.id}
-                initialWorkStopped={client.workStopped}
-                initialFinished={client.finished}
-              />
-              <Link
-                href={`/clients/${client.id}/edit`}
-                className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
-              >
-                Bearbeiten
-              </Link>
-            </>
-          )}
-        </div>
-      </header>
+      <ClientDetailHeader
+        client={{
+          id: client.id,
+          name: client.name,
+          customerNo: client.customerNo,
+          email: client.email,
+          contact: client.contact,
+          agencyId: client.agencyId,
+          agency: client.agency,
+          workStopped: client.workStopped,
+          finished: client.finished,
+        }}
+        isAdmin={isAdmin}
+      />
 
-      {/* 2-Spalten Layout */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Linke Spalte */}
-        <div className="space-y-6">
-          {/* Basic Information */}
-          <section className="rounded-lg border bg-white p-4">
-            <h2 className="text-base font-medium mb-3">Basisdaten</h2>
+      {/* Info-Cards oben */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Basic Information */}
+        <section className="rounded-lg border bg-white p-4">
+          <h2 className="text-base font-medium mb-3">Basisdaten</h2>
             <div className="grid gap-3 text-sm">
               <div>
                 <div className="text-xs text-gray-500">Kontaktperson</div>
@@ -467,10 +475,10 @@ export default async function ClientDetailPage({ params }: Props) {
             </div>
           </section>
 
-          {/* Froxlor Customer Data */}
-          {froxlorCustomer && (
-            <section className="rounded-lg border bg-white p-4">
-              <h2 className="text-base font-medium mb-3">Froxlor Kundendaten</h2>
+        {/* Froxlor Customer Data */}
+        {froxlorCustomer && (
+          <section className="rounded-lg border bg-white p-4">
+            <h2 className="text-base font-medium mb-3">Froxlor Kundendaten</h2>
               <div className="grid gap-3 text-sm">
                 <div>
                   <div className="text-xs text-gray-500">Login</div>
@@ -521,127 +529,133 @@ export default async function ClientDetailPage({ params }: Props) {
                   <div className="font-mono text-xs break-all">{froxlorCustomer.documentroot || "-"}</div>
                 </div>
               </div>
-
-              {isAdmin && client.server && (
-                <div className="mt-3 pt-3 border-t">
-                  <Link
-                    href={`/admin/basisinstallation?server=${client.server.id}&customer=${client.customerNo}`}
-                    className="text-blue-600 hover:underline text-xs"
-                  >
-                    → Neue Demo installieren
-                  </Link>
-                </div>
-              )}
             </section>
           )}
-        </div>
+      </div>
 
-        {/* Rechte Spalte */}
-        <div className="space-y-6">
-          {/* Projects */}
-          <section className="rounded-lg border bg-white p-4">
-            <h2 className="text-base font-medium mb-3">Projekte ({client.projects.length})</h2>
-            {client.projects.length === 0 ? (
-              <p className="text-sm text-gray-500">Keine Projekte vorhanden.</p>
-            ) : (
-              <>
-                {/* Show warning for UMSETZUNG projects without installation */}
-                {isAdmin && client.projects.some((p) =>
-                  p.type === "WEBSITE" &&
-                  p.status === "UMSETZUNG" &&
-                  !client.joomlaInstallations.some((inst) => inst.project?.id === p.id)
-                ) && (
-                  <div className="mb-3 rounded-lg border border-orange-200 bg-orange-50 p-3">
-                    <div className="flex items-start gap-2">
-                      <svg className="h-5 w-5 text-orange-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-orange-900">
-                          Projekte im Status "Umsetzung" ohne Installation
-                        </p>
-                        <p className="text-xs text-orange-700 mt-1">
-                          Bitte ordnen Sie den Projekten eine Installation zu oder erstellen Sie eine neue.
-                        </p>
-                        {client.server && (
-                          <Link
-                            href={`/admin/basisinstallation?server=${client.server.id}&customer=${client.customerNo}`}
-                            className="inline-block mt-2 text-xs text-orange-800 hover:text-orange-900 font-medium underline"
-                          >
-                            → Neue Installation erstellen
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  {client.projects.map((project) => {
-                  const typeLabel = project.type === "WEBSITE" ? "Webseite"
-                    : project.type === "FILM" ? "Film"
-                    : project.type === "SOCIAL" ? "Social Media"
-                    : project.type;
+      {/* Tabs für strukturierte Inhalte */}
+      <Tabs defaultValue="projects" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="projects">
+            Projekte ({client.projects.length})
+          </TabsTrigger>
+          <TabsTrigger value="server">
+            Server-Daten
+          </TabsTrigger>
+          <TabsTrigger value="communication">
+            Kommunikation
+          </TabsTrigger>
+        </TabsList>
 
-                  // Use derived status for website and film projects
-                  let statusLabel: string;
-                  let statusDate: Date | null = null;
-
-                  if (project.type === "WEBSITE" && project.website) {
-                    const derivedStatus = deriveProjectStatus({
-                      pStatus: project.website.pStatus,
-                      webDate: project.website.webDate,
-                      demoDate: project.website.demoDate,
-                      onlineDate: project.website.onlineDate,
-                      materialStatus: project.website.materialStatus,
-                    });
-                    statusLabel = labelForProjectStatus(derivedStatus, { pStatus: project.website.pStatus });
-                    statusDate = getWebsiteStatusDate(derivedStatus, project.website);
-                  } else if (project.type === "FILM" && project.film) {
-                    const derivedFilmStatus = deriveFilmStatus(project.film);
-                    statusLabel = FILM_STATUS_LABELS[derivedFilmStatus];
-                    statusDate = getFilmStatusDate(derivedFilmStatus, project.film);
-                  } else {
-                    statusLabel = project.status === "WEBTERMIN" ? "Webtermin"
-                      : project.status === "MATERIAL" ? "Material"
-                      : project.status === "UMSETZUNG" ? "Umsetzung"
-                      : project.status === "DEMO" ? "Demo"
-                      : project.status === "ONLINE" ? "Online"
-                      : project.status;
-                  }
-
-                  return (
-                    <div key={project.id} className="rounded border p-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{project.title}</div>
-                          <div className="mt-1 flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {typeLabel}: {statusLabel}
-                              {statusDate && ` (seit ${formatDateOnly(statusDate)})`}
-                            </Badge>
-                            {project.website && project.website.domain && (
-                              <span className="text-xs text-gray-500">{project.website.domain}</span>
-                            )}
-                          </div>
-                        </div>
-                        <Link
-                          href={project.type === "FILM" ? `/film-projects/${project.id}` : `/projects/${project.id}`}
-                          className="text-blue-600 hover:underline text-xs whitespace-nowrap ml-3"
-                        >
-                          Details →
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                  })}
+        {/* Tab: Projekte */}
+        <TabsContent value="projects" className="space-y-6 mt-6">
+          {/* Show warning for UMSETZUNG projects without installation */}
+          {isAdmin && client.projects.some((p) =>
+            p.type === "WEBSITE" &&
+            p.status === "UMSETZUNG" &&
+            !client.joomlaInstallations.some((inst) => inst.project?.id === p.id)
+          ) && (
+            <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+              <div className="flex items-start gap-2">
+                <svg className="h-5 w-5 text-orange-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-orange-900">
+                    Projekte im Status "Umsetzung" ohne Installation
+                  </p>
+                  <p className="text-xs text-orange-700 mt-1">
+                    Bitte ordnen Sie den Projekten eine Installation zu oder erstellen Sie eine neue.
+                  </p>
+                  {client.server && (
+                    <Link
+                      href={`/admin/basisinstallation?server=${client.server.id}&customer=${client.customerNo}`}
+                      className="inline-block mt-2 text-xs text-orange-800 hover:text-orange-900 font-medium underline"
+                    >
+                      → Neue Installation erstellen
+                    </Link>
+                  )}
                 </div>
-              </>
-            )}
-          </section>
+              </div>
+            </div>
+          )}
 
-          {/* Joomla Installations */}
-          {client.joomlaInstallations.length > 0 && (
+          {/* Projects Grid */}
+          {client.projects.length === 0 ? (
             <section className="rounded-lg border bg-white p-4">
+              <p className="text-sm text-gray-500">Keine Projekte vorhanden.</p>
+            </section>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {client.projects.map((project) => {
+                const typeLabel = project.type === "WEBSITE" ? "Webseite"
+                  : project.type === "FILM" ? "Film"
+                  : project.type === "SOCIAL" ? "Social Media"
+                  : project.type;
+
+                // Use derived status for website and film projects
+                let statusLabel: string;
+                let statusDate: Date | null = null;
+
+                if (project.type === "WEBSITE" && project.website) {
+                  const derivedStatus = deriveProjectStatus({
+                    pStatus: project.website.pStatus,
+                    webDate: project.website.webDate,
+                    demoDate: project.website.demoDate,
+                    onlineDate: project.website.onlineDate,
+                    materialStatus: project.website.materialStatus,
+                  });
+                  statusLabel = labelForProjectStatus(derivedStatus, { pStatus: project.website.pStatus });
+                  statusDate = getWebsiteStatusDate(derivedStatus, project.website);
+                } else if (project.type === "FILM" && project.film) {
+                  const derivedFilmStatus = deriveFilmStatus(project.film);
+                  statusLabel = FILM_STATUS_LABELS[derivedFilmStatus];
+                  statusDate = getFilmStatusDate(derivedFilmStatus, project.film);
+                } else {
+                  statusLabel = project.status === "WEBTERMIN" ? "Webtermin"
+                    : project.status === "MATERIAL" ? "Material"
+                    : project.status === "UMSETZUNG" ? "Umsetzung"
+                    : project.status === "DEMO" ? "Demo"
+                    : project.status === "ONLINE" ? "Online"
+                    : project.status;
+                }
+
+                return (
+                  <Link
+                    key={project.id}
+                    href={project.type === "FILM" ? `/film-projects/${project.id}` : `/projects/${project.id}`}
+                    className="block rounded-lg border bg-white p-4 transition-all hover:shadow-md hover:border-blue-300 hover:bg-blue-50"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <Badge variant="outline" className="text-xs">
+                        {typeLabel}
+                      </Badge>
+                      <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                    <div className="text-lg font-bold text-gray-900 mb-1">
+                      {statusLabel}
+                    </div>
+                    {statusDate && (
+                      <div className="text-xs text-gray-500 mb-2">
+                        seit {formatDateOnly(statusDate)}
+                      </div>
+                    )}
+                    {project.website && project.website.domain && (
+                      <div className="text-xs text-gray-600 font-mono truncate">
+                        {project.website.domain}
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+        {/* Joomla Installations */}
+        {client.joomlaInstallations.length > 0 && (
+          <section className="rounded-lg border bg-white p-4">
               <h2 className="text-base font-medium mb-3">
                 Joomla Installationen ({client.joomlaInstallations.length})
               </h2>
@@ -755,7 +769,10 @@ export default async function ClientDetailPage({ params }: Props) {
               </div>
             </section>
           )}
+        </TabsContent>
 
+        {/* Tab: Server-Daten */}
+        <TabsContent value="server" className="space-y-6 mt-6">
           {/* Domains */}
           {(canFetchFroxlor || froxlorError) && (
             <section className="rounded-lg border bg-white p-4">
@@ -808,6 +825,53 @@ export default async function ClientDetailPage({ params }: Props) {
             </section>
           )}
 
+        {/* FTP Accounts */}
+        {froxlorFtpAccounts.length > 0 && (
+          <section className="rounded-lg border bg-white p-4">
+              <h2 className="text-base font-medium mb-3">
+                FTP-Zugänge ({froxlorFtpAccounts.length})
+              </h2>
+              <div className="space-y-2">
+                {froxlorFtpAccounts.map((ftp) => (
+                  <div key={ftp.id} className="rounded border p-3 bg-gray-50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-medium text-sm">{ftp.username}</span>
+                      {ftp.login_enabled === "0" && (
+                        <Badge variant="destructive" className="text-xs">Deaktiviert</Badge>
+                      )}
+                      {ftp.description && (
+                        <span className="text-xs text-gray-500">- {ftp.description}</span>
+                      )}
+                    </div>
+                    <div className="grid gap-2 text-xs">
+                      <div className="grid grid-cols-[auto,1fr] gap-2">
+                        <span className="text-gray-500">Benutzername:</span>
+                        <span className="font-mono">{ftp.username}</span>
+                      </div>
+                      <div className="grid grid-cols-[auto,1fr] gap-2">
+                        <span className="text-gray-500">Passwort:</span>
+                        <span className="font-mono">{ftp.password}</span>
+                      </div>
+                      <div className="grid grid-cols-[auto,1fr] gap-2">
+                        <span className="text-gray-500">Home-Verzeichnis:</span>
+                        <span className="font-mono text-[11px] break-all">{ftp.homedir}</span>
+                      </div>
+                      {ftp.last_login && (
+                        <div className="grid grid-cols-[auto,1fr] gap-2">
+                          <span className="text-gray-500">Letzter Login:</span>
+                          <span>{formatDate(ftp.last_login)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </TabsContent>
+
+        {/* Tab: Kommunikation */}
+        <TabsContent value="communication" className="space-y-6 mt-6">
           {/* Email Logs */}
           <section className="rounded-lg border bg-white p-4">
             <h2 className="text-base font-medium mb-3">
@@ -862,8 +926,8 @@ export default async function ClientDetailPage({ params }: Props) {
               </Tabs>
             )}
           </section>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -29,10 +29,10 @@ const feedbackStatusLabels: Record<string, string> = {
   DISMISSED: "Abgelehnt",
 };
 
-const feedbackStatusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+const feedbackStatusVariant: Record<string, "default" | "secondary" | "outline" | "destructive" | "success"> = {
   OPEN: "default",
   IN_PROGRESS: "secondary",
-  RESOLVED: "outline",
+  RESOLVED: "success",
   DISMISSED: "destructive",
 };
 
@@ -102,24 +102,26 @@ export default async function KummerkastenPage() {
             Es wurden noch keine Feedbacks eingereicht.
           </div>
         ) : (
-          feedbacks.map((feedback) => (
-            <article
-              key={feedback.id}
-              className="rounded-2xl border bg-white p-6 shadow-sm space-y-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="text-lg font-semibold">{feedback.title}</h3>
-                  <Badge variant={feedbackStatusVariant[feedback.status]}>
-                    {feedbackStatusLabels[feedback.status]}
-                  </Badge>
-                  <Badge variant="secondary">
-                    {feedbackTypeLabels[feedback.type]}
-                  </Badge>
+          feedbacks.map((feedback) => {
+            const isResolved = feedback.status === "RESOLVED";
+            return (
+              <article
+                key={feedback.id}
+                className={`rounded-2xl border bg-white p-6 shadow-sm space-y-4 ${isResolved ? "opacity-60" : ""}`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h3 className="text-lg font-semibold">{feedback.title}</h3>
+                    <Badge variant={feedbackStatusVariant[feedback.status]}>
+                      {feedbackStatusLabels[feedback.status]}
+                    </Badge>
+                    <Badge variant="secondary">
+                      {feedbackTypeLabels[feedback.type]}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
 
-              <p className="whitespace-pre-wrap text-sm text-gray-700">{feedback.message}</p>
+                <p className="whitespace-pre-wrap text-sm text-gray-700">{feedback.message}</p>
 
               <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                 <span>
@@ -163,7 +165,8 @@ export default async function KummerkastenPage() {
                 </form>
               </div>
             </article>
-          ))
+            );
+          })
         )}
       </section>
     </main>

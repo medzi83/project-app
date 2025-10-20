@@ -65,13 +65,13 @@ const VARIABLE_GROUPS: VariableGroup[] = [
     ],
   },
   {
-    label: "Agent",
+    label: "Agent / Admin",
     items: [
-      { placeholder: "{{agent.name}}", description: "Anzeigename des Agents (Kurzname)" },
-      { placeholder: "{{agent.fullName}}", description: "Voller Name des Agents" },
-      { placeholder: "{{agent.roleTitle}}", description: "Rollenbezeichnung des Agents" },
-      { placeholder: "{{agent.email}}", description: "E-Mail des Agents" },
-      { placeholder: "{{agent.categories}}", description: "Kommagetrennte Agent Kategorien" },
+      { placeholder: "{{agent.name}}", description: "Anzeigename / Kurzname (z.B. 'Alex')" },
+      { placeholder: "{{agent.fullName}}", description: "Voller Name (z.B. 'Alexander Admin')" },
+      { placeholder: "{{agent.roleTitle}}", description: "Rollenbezeichnung (z.B. 'Administrator' oder 'Projektmanager')" },
+      { placeholder: "{{agent.email}}", description: "E-Mail-Adresse" },
+      { placeholder: "{{agent.categories}}", description: "Kommagetrennte Agent Kategorien (nur bei Agents)" },
     ],
   },
   {

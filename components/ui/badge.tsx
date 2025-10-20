@@ -17,6 +17,8 @@ const badgeVariants = cva(
           "border-red-200 bg-gradient-to-r from-red-500 to-rose-600 text-white [a&]:hover:from-red-600 [a&]:hover:to-rose-700 [a&]:hover:shadow-md focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40",
         outline:
           "border-gray-300 bg-white text-gray-700 [a&]:hover:bg-gray-50 [a&]:hover:border-gray-400 [a&]:hover:shadow-md",
+        success:
+          "border-green-200 bg-gradient-to-r from-green-500 to-emerald-600 text-white [a&]:hover:from-green-600 [a&]:hover:to-emerald-700 [a&]:hover:shadow-md",
       },
     },
     defaultVariants: {

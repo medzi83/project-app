@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { ReactNode } from "react";
 import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
-import { createAdmin, resetAdminPassword, toggleAdminActive, updateAdminName } from "./actions";
+import { createAdmin, resetAdminPassword, toggleAdminActive, updateAdminDetails } from "./actions";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -45,8 +45,14 @@ export default async function AdminManagementPage({ searchParams }: Props) {
         {adminError && <p className="text-sm text-red-600">{adminError}</p>}
         {adminOk && <p className="text-sm text-green-700">Admin wurde angelegt.</p>}
         <form action={createAdmin} className="grid gap-4 md:grid-cols-3">
-          <Field label="Name">
-            <input name="name" className="p-2 border rounded" placeholder="z. B. Alex Admin" />
+          <Field label="Kurzname">
+            <input name="name" className="p-2 border rounded" placeholder="z. B. Alex" />
+          </Field>
+          <Field label="Voller Name">
+            <input name="fullName" className="p-2 border rounded" placeholder="z. B. Alexander Admin" />
+          </Field>
+          <Field label="Rollenbezeichnung">
+            <input name="roleTitle" className="p-2 border rounded" placeholder="z. B. Administrator" />
           </Field>
           <Field label="E-Mail *">
             <input name="email" type="email" required className="p-2 border rounded" placeholder="admin@example.com" />
@@ -75,10 +81,12 @@ export default async function AdminManagementPage({ searchParams }: Props) {
         {pwdOk && <p className="text-sm text-green-700">Passwort aktualisiert.</p>}
 
         <div className="overflow-x-auto rounded border">
-          <table className="min-w-[800px] w-full text-sm">
+          <table className="min-w-[1000px] w-full text-sm">
             <thead className="bg-gray-50">
               <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
-                <th>Name</th>
+                <th>Kurzname</th>
+                <th>Voller Name</th>
+                <th>Rollenbezeichnung</th>
                 <th>E-Mail</th>
                 <th>Status</th>
                 <th>Erstellt</th>
@@ -88,14 +96,39 @@ export default async function AdminManagementPage({ searchParams }: Props) {
             <tbody className="[&>tr>td]:px-3 [&>tr>td]:py-2">
               {admins.map((admin) => (
                 <tr key={admin.id} className={`border-t ${admin.active ? "" : "opacity-60"}`}>
-                  <td className="align-top">
-                    <form action={updateAdminName} className="flex gap-2 items-center">
+                  <td className="align-top" colSpan={3}>
+                    <form action={updateAdminDetails} className="grid grid-cols-3 gap-2">
                       <input type="hidden" name="userId" value={admin.id} />
-                      <input name="name" defaultValue={admin.name ?? ""} className="p-1 border rounded" />
-                      {!admin.active && (
-                        <span className="text-xs px-2 py-0.5 border rounded">inaktiv</span>
-                      )}
-                      <button className="px-2 py-1 border rounded" title="Name speichern">Speichern</button>
+                      <div className="flex flex-col gap-1">
+                        <input
+                          name="name"
+                          defaultValue={admin.name ?? ""}
+                          className="p-1 border rounded text-xs"
+                          placeholder="Kurzname"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <input
+                          name="fullName"
+                          defaultValue={admin.fullName ?? ""}
+                          className="p-1 border rounded text-xs"
+                          placeholder="Voller Name"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <input
+                          name="roleTitle"
+                          defaultValue={admin.roleTitle ?? ""}
+                          className="p-1 border rounded text-xs"
+                          placeholder="Rolle"
+                        />
+                      </div>
+                      <div className="col-span-3 flex items-center gap-2">
+                        {!admin.active && (
+                          <span className="text-xs px-2 py-0.5 border rounded">inaktiv</span>
+                        )}
+                        <button className="px-2 py-1 border rounded text-xs" title="Details speichern">Speichern</button>
+                      </div>
                     </form>
                   </td>
                   <td className="align-top whitespace-nowrap">{admin.email}</td>
@@ -119,7 +152,7 @@ export default async function AdminManagementPage({ searchParams }: Props) {
               ))}
               {admins.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center opacity-60">Keine Admins gefunden.</td>
+                  <td colSpan={7} className="py-8 text-center opacity-60">Keine Admins gefunden.</td>
                 </tr>
               )}
             </tbody>

@@ -77,6 +77,23 @@ export type FroxlorDatabase = {
   customerid: number;
 };
 
+export type FroxlorFtpAccount = {
+  id: number;
+  customerid: number;
+  username: string;
+  password: string;
+  homedir: string;
+  login_enabled: string;
+  uid: number;
+  gid: number;
+  last_login: string | null;
+  up_count: number;
+  down_count: number;
+  up_bytes: number;
+  down_bytes: number;
+  description: string;
+};
+
 type FroxlorListingPayload<T> = { list?: T[] } | T[] | Record<string, T>;
 
 const normalizeFroxlorList = <T>(payload: FroxlorListingPayload<T> | null | undefined): T[] => {
@@ -451,6 +468,26 @@ export class FroxlorClient {
       return [];
     } catch (error) {
       console.error('Error getting PHP configs:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get FTP accounts for a customer
+   */
+  async getCustomerFtpAccounts(customerId: number): Promise<FroxlorFtpAccount[]> {
+    try {
+      const result = await this.request<FroxlorListingPayload<FroxlorFtpAccount>>('Ftps.listing', {
+        customerid: customerId,
+      });
+
+      if (result.status === 200 && result.data) {
+        return normalizeFroxlorList(result.data);
+      }
+
+      return [];
+    } catch (error) {
+      console.error('Error fetching FTP accounts:', error);
       return [];
     }
   }

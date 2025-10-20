@@ -54,6 +54,7 @@ model Client {
   projects           Project[]
   users              User[]
   joomlaInstallations JoomlaInstallation[]
+  emailLogs          EmailLog[]
 
   @@index([name])
   @@index([agencyId])
@@ -310,6 +311,8 @@ model EmailLog {
   trigger     EmailTrigger? @relation(fields: [triggerId], references: [id], onDelete: SetNull)
   projectId   String?
   project     Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  clientId    String?
+  client      Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
   toEmail     String
   ccEmails    String?
   subject     String
@@ -323,6 +326,7 @@ model EmailLog {
   @@index([sentAt])
   @@index([projectId])
   @@index([triggerId])
+  @@index([clientId])
 }
 
 model Notice {
