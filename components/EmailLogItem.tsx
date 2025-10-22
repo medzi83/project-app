@@ -17,7 +17,7 @@ type EmailLogItemProps = {
     success: boolean;
     error: string | null;
     projectId: string | null;
-    projectTitle?: string;
+    projectTitle?: string | null;
     trigger: {
       name: string;
     } | null;

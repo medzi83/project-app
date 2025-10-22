@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
-import { deriveProjectStatus, labelForProjectStatus, labelForWebsitePriority, labelForProductionStatus, labelForMaterialStatus, labelForSeoStatus, labelForTextitStatus, MATERIAL_STATUS_VALUES } from "@/lib/project-status";
+import { deriveProjectStatus, labelForProjectStatus, labelForWebsitePriority, labelForProductionStatus, labelForMaterialStatus, labelForSeoStatus, labelForTextitStatus, MATERIAL_STATUS_VALUES, getProjectDisplayName } from "@/lib/project-status";
 import { notFound, redirect } from "next/navigation";
 import InlineCell from "@/components/InlineCell";
 import type { WebsitePriority, ProductionStatus, MaterialStatus, SEOStatus, TextitStatus, CMS as PrismaCMS } from "@prisma/client";
@@ -216,18 +216,24 @@ export default async function ProjectDetail({ params }: Props) {
       </div>
 
       {/* Project Header Card */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 p-6 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-200 p-6 shadow-sm">
+        <div className="flex items-start justify-between gap-6">
+          {/* Large Website Icon */}
+          <div className="flex-shrink-0">
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2">
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(displayStatus)}`}>
                 {statusLabel}
               </span>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white border border-gray-300 text-gray-700">
-                {project.type === "WEBSITE" ? "🌐 Webseite" : project.type === "FILM" ? "🎬 Film" : "📱 Social Media"}
-              </span>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{project.title}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{getProjectDisplayName(project)}</h1>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -236,10 +242,35 @@ export default async function ProjectDetail({ params }: Props) {
                 {project.client?.name || "Unbekannter Kunde"}
               </Link>
               {project.client?.customerNo && (
-                <span className="text-gray-400">• Kunden-Nr: {project.client.customerNo}</span>
+                <>
+                  <span className="text-gray-400">•</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-300">
+                    Kd-Nr: {project.client.customerNo}
+                  </span>
+                </>
               )}
             </div>
           </div>
+
+          {/* Domain Link Button */}
+          {website?.domain && (
+            <div className="flex-shrink-0">
+              <a
+                href={website.domain.startsWith("http") ? website.domain : `https://${website.domain}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-colors font-medium text-sm shadow-sm"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                </svg>
+                {website.domain}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
+          )}
         </div>
 
         {project.important && (

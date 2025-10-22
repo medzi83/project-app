@@ -5,7 +5,7 @@ import Link from "next/link";
 
 type Project = {
   id: string;
-  title: string;
+  title: string | null;
   status: string;
   client: {
     id: string;

@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { clientId, email, contact, agencyId } = body;
+  const { clientId, email, salutation, firstname, lastname, contact, agencyId } = body;
 
   if (!clientId) {
     return NextResponse.json({ error: "Missing clientId" }, { status: 400 });
@@ -31,10 +31,29 @@ export async function POST(request: NextRequest) {
 
   try {
     // Update client
-    const updateData: { email?: string | null; contact?: string | null; agencyId?: string | null } = {};
+    const updateData: {
+      email?: string | null;
+      salutation?: string | null;
+      firstname?: string | null;
+      lastname?: string | null;
+      contact?: string | null;
+      agencyId?: string | null;
+    } = {};
 
     if (email !== undefined) {
       updateData.email = email || null;
+    }
+
+    if (salutation !== undefined) {
+      updateData.salutation = salutation || null;
+    }
+
+    if (firstname !== undefined) {
+      updateData.firstname = firstname || null;
+    }
+
+    if (lastname !== undefined) {
+      updateData.lastname = lastname || null;
     }
 
     if (contact !== undefined) {
@@ -56,6 +75,9 @@ export async function POST(request: NextRequest) {
         id: updatedClient.id,
         name: updatedClient.name,
         email: updatedClient.email,
+        salutation: updatedClient.salutation,
+        firstname: updatedClient.firstname,
+        lastname: updatedClient.lastname,
         contact: updatedClient.contact,
       },
     });

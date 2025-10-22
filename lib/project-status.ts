@@ -227,6 +227,27 @@ export function labelForMaterialStatus(value?: MaterialStatusValue): string {
   return map[normalized] ?? normalized.replace(/_/g, " ");
 }
 
+/**
+ * Generiert einen Anzeigenamen für ein Projekt.
+ * Wenn kein Titel vorhanden ist, wird basierend auf Typ ein sinnvoller Name generiert.
+ */
+export function getProjectDisplayName(project: {
+  title?: string | null;
+  type: string;
+}): string {
+  if (project.title) {
+    return project.title;
+  }
+
+  // Kein Titel vorhanden - erstelle sinnvollen Fallback
+  const typeLabel = project.type === "WEBSITE" ? "Webseite"
+    : project.type === "FILM" ? "Film"
+    : project.type === "SOCIAL" ? "Social Media"
+    : project.type;
+
+  return typeLabel;
+}
+
 const MATERIAL_STATUS_LABELS: Record<MaterialStatus, string> = {
   ANGEFORDERT: "angefordert",
   TEILWEISE: "teilweise",

@@ -6,7 +6,7 @@ import type { ProjectStatus, ProductionStatus, MaterialStatus } from "@prisma/cl
 
 type Project = {
   id: string;
-  title: string;
+  title: string | null;
   type: string;
   status: ProjectStatus;
   website?: {

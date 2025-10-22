@@ -70,8 +70,8 @@ export default async function EditProjectPage({ params }: Props) {
 
         {/* Kopf */}
         <div className="grid md:grid-cols-3 gap-4 p-4 border rounded-lg">
-          <Field label="Titel">
-            <input name="title" defaultValue={project.title} className="w-full p-2 border rounded" required />
+          <Field label="Titel (optional)">
+            <input name="title" defaultValue={project.title || ""} placeholder="z.B. Relaunch, Warteseite, etc." className="w-full p-2 border rounded" />
           </Field>
 
           <Field label="Status">

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { Badge } from "@/components/ui/badge";
 import { PreviewVersionItem } from "@/components/PreviewVersionItem";
+import { getProjectDisplayName } from "@/lib/project-status";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -239,15 +240,21 @@ export default async function FilmProjectDetailPage({ params }: Props) {
       </div>
 
       {/* Project Header Card */}
-      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-200 p-6 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200 p-6 shadow-sm">
+        <div className="flex items-start justify-between gap-6">
+          {/* Large Film Icon */}
+          <div className="flex-shrink-0">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2">
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(derivedStatus)}`}>
                 {DERIVED_STATUS_LABELS[derivedStatus]}
-              </span>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white border border-gray-300 text-gray-700">
-                🎬 Filmprojekt
               </span>
               {project.client?.workStopped && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800 border border-orange-300">
@@ -260,7 +267,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                 </span>
               )}
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{project.title}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{getProjectDisplayName(project)}</h1>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -269,7 +276,12 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                 {project.client?.name || "Unbekannter Kunde"}
               </Link>
               {project.client?.customerNo && (
-                <span className="text-gray-400">• Kunden-Nr: {project.client.customerNo}</span>
+                <>
+                  <span className="text-gray-400">•</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-300">
+                    Kd-Nr: {project.client.customerNo}
+                  </span>
+                </>
               )}
             </div>
           </div>

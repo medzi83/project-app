@@ -11,7 +11,7 @@ type Client = {
   customerNo: string | null;
   projects: {
     id: string;
-    title: string;
+    title: string | null;
     status: string;
     updatedAt: Date;
   }[];

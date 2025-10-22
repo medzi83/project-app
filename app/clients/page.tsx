@@ -74,7 +74,7 @@ export default async function ClientsPage({ searchParams }: Props) {
       include: {
         _count: { select: { projects: true } },
         server: { select: { id: true, name: true, hostname: true } },
-        agency: { select: { id: true, name: true } },
+        agency: { select: { id: true, name: true, logoIconPath: true } },
         projects: {
           select: {
             type: true,
@@ -191,6 +191,15 @@ export default async function ClientsPage({ searchParams }: Props) {
 
                 const activeServices = SERVICE_DEFS.filter((def) => serviceState[def.key]);
 
+                // Map services to dashboard colors
+                const serviceColors: Record<ServiceKey, string> = {
+                  website: "bg-gradient-to-r from-purple-500 to-pink-600 text-white",
+                  film: "bg-gradient-to-r from-green-500 to-emerald-600 text-white",
+                  texte: "bg-gradient-to-r from-blue-500 to-indigo-600 text-white",
+                  seo: "bg-gradient-to-r from-cyan-500 to-blue-600 text-white",
+                  shop: "bg-gradient-to-r from-orange-500 to-red-600 text-white",
+                };
+
                 return (
                   <tr key={client.id} className="border-t">
                     {isAdmin && (
@@ -214,13 +223,22 @@ export default async function ClientsPage({ searchParams }: Props) {
                           <Badge variant="destructive" className="text-xs">Arbeitsstopp</Badge>
                         )}
                         {client.finished && (
-                          <Badge className="bg-gray-600 hover:bg-gray-700 text-xs">Beendet</Badge>
+                          <Badge className="bg-black hover:bg-gray-900 text-white text-xs">Beendet</Badge>
                         )}
                       </span>
                     </td>
                     <td className="text-xs text-gray-600">
                       {client.agency ? (
-                        <span>{client.agency.name}</span>
+                        client.agency.logoIconPath ? (
+                          <img
+                            src={client.agency.logoIconPath}
+                            alt={client.agency.name}
+                            title={client.agency.name}
+                            className="h-6 w-6 object-contain"
+                          />
+                        ) : (
+                          <span>{client.agency.name}</span>
+                        )
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
@@ -279,7 +297,12 @@ export default async function ClientsPage({ searchParams }: Props) {
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {activeServices.map((service) => (
-                            <Badge key={service.key} variant="secondary">{service.label}</Badge>
+                            <span
+                              key={service.key}
+                              className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded shadow-sm ${serviceColors[service.key]}`}
+                            >
+                              {service.label}
+                            </span>
                           ))}
                         </div>
                       )}

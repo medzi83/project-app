@@ -12,6 +12,9 @@ type ClientDetailHeaderProps = {
     name: string;
     customerNo: string | null;
     email: string | null;
+    salutation: string | null;
+    firstname: string | null;
+    lastname: string | null;
     contact: string | null;
     agencyId: string | null;
     agency: {
@@ -30,7 +33,8 @@ export function ClientDetailHeader({ client, isAdmin }: ClientDetailHeaderProps)
 
   const handleMailButtonClick = () => {
     // Check if client has required data
-    const needsClientData = !client.email || !client.agencyId;
+    const hasContactName = client.firstname || client.lastname || client.contact;
+    const needsClientData = !client.email || !client.agencyId || !hasContactName;
 
     if (needsClientData) {
       // Show client data dialog first
@@ -97,19 +101,11 @@ export function ClientDetailHeader({ client, isAdmin }: ClientDetailHeaderProps)
         </div>
         <div className="flex items-center gap-3">
           {isAdmin && (
-            <>
-              <ClientStatusToggles
-                clientId={client.id}
-                initialWorkStopped={client.workStopped}
-                initialFinished={client.finished}
-              />
-              <Link
-                href={`/clients/${client.id}/edit`}
-                className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
-              >
-                Bearbeiten
-              </Link>
-            </>
+            <ClientStatusToggles
+              clientId={client.id}
+              initialWorkStopped={client.workStopped}
+              initialFinished={client.finished}
+            />
           )}
         </div>
       </header>
@@ -120,10 +116,13 @@ export function ClientDetailHeader({ client, isAdmin }: ClientDetailHeaderProps)
         clientId={client.id}
         clientName={client.name}
         currentEmail={client.email}
+        currentSalutation={client.salutation}
+        currentFirstname={client.firstname}
+        currentLastname={client.lastname}
         currentContact={client.contact}
         currentAgencyId={client.agencyId}
         missingEmail={!client.email}
-        missingContact={!client.contact}
+        missingContact={!(client.firstname || client.lastname || client.contact)}
         missingAgency={!client.agencyId}
         onComplete={handleClientDataComplete}
         onCancel={() => setShowClientDataDialog(false)}
@@ -135,6 +134,9 @@ export function ClientDetailHeader({ client, isAdmin }: ClientDetailHeaderProps)
         clientId={client.id}
         clientName={client.name}
         clientEmail={client.email}
+        clientSalutation={client.salutation}
+        clientFirstname={client.firstname}
+        clientLastname={client.lastname}
         clientContact={client.contact}
         onClose={() => setShowEmailDialog(false)}
         onSuccess={handleEmailSuccess}

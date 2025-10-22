@@ -111,7 +111,7 @@ export async function createClient(formData: FormData) {
 
 /* ---------- Projekt anlegen (Website) ---------- */
 const WebsiteProjectSchema = z.object({
-  title: z.string().optional().transform((v) => (v ?? "").trim()),
+  title: z.string().optional().transform((v) => v?.trim() || null),
   clientId: z.string().min(1, "Kunde fehlt"),
   agentId: z.string().optional().transform((v) => (v ? v : null)),
 
@@ -178,7 +178,7 @@ export async function createWebsiteProject(formData: FormData) {
 
   const project = await prisma.project.create({
     data: {
-      title: data.title || "",
+      title: data.title,
       type: "WEBSITE",
       status: nextStatus,
       clientId: data.clientId,
@@ -216,7 +216,7 @@ export async function createWebsiteProject(formData: FormData) {
 
 /* ---------- Projekt anlegen (Film) ---------- */
 const FilmProjectSchema = z.object({
-  title: z.string().optional().transform((v) => (v ?? "").trim()),
+  title: z.string().optional().transform((v) => v?.trim() || null),
   clientId: z.string().min(1, "Kunde fehlt"),
   agentId: z.string().optional().transform((v) => (v ? v : null)),
   scope: FilmScope.default("FILM"),
@@ -279,7 +279,7 @@ export async function createFilmProject(formData: FormData) {
 
   const project = await prisma.project.create({
     data: {
-      title: data.title || "",
+      title: data.title,
       type: "FILM",
       status: projectStatus,
       clientId: data.clientId,
@@ -318,7 +318,7 @@ export async function createFilmProject(formData: FormData) {
 /* ---------- Unified Projekt anlegen ---------- */
 const UnifiedProjectSchema = z.object({
   projectType: z.enum(["WEBSITE", "FILM", "BOTH"]),
-  title: z.string().optional().transform((v) => (v ?? "").trim()),
+  title: z.string().optional().transform((v) => v?.trim() || null),
   clientId: z.string().min(1, "Kunde fehlt"),
   agentId: z.string().optional().transform((v) => (v ? v : null)),
 
@@ -413,7 +413,7 @@ export async function createProject(formData: FormData) {
 
     const project = await prisma.project.create({
       data: {
-        title: data.title || "",
+        title: data.title,
         type: "WEBSITE",
         status: nextStatus,
         clientId: data.clientId,
@@ -465,7 +465,7 @@ export async function createProject(formData: FormData) {
 
     const project = await prisma.project.create({
       data: {
-        title: data.title || "",
+        title: data.title,
         type: "FILM",
         status: projectStatus,
         clientId: data.clientId,
@@ -533,7 +533,7 @@ export async function createProject(formData: FormData) {
 
     const websiteProject = await prisma.project.create({
       data: {
-        title: data.title ? `${data.title} (Website)` : "Website",
+        title: data.title ? `${data.title} (Website)` : null,
         type: "WEBSITE",
         status: websiteStatus,
         clientId: data.clientId,
@@ -570,7 +570,7 @@ export async function createProject(formData: FormData) {
 
     const filmProject = await prisma.project.create({
       data: {
-        title: data.title ? `${data.title} (Film)` : "Film",
+        title: data.title ? `${data.title} (Film)` : null,
         type: "FILM",
         status: filmStatus,
         clientId: data.clientId,

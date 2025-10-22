@@ -23,6 +23,9 @@ type ClientDataDialogProps = {
   clientId: string;
   clientName: string;
   currentEmail: string | null;
+  currentSalutation?: string | null;
+  currentFirstname?: string | null;
+  currentLastname?: string | null;
   currentContact: string | null;
   currentAgencyId: string | null;
   missingEmail: boolean;
@@ -37,6 +40,9 @@ export function ClientDataDialog({
   clientId,
   clientName,
   currentEmail,
+  currentSalutation,
+  currentFirstname,
+  currentLastname,
   currentContact,
   currentAgencyId,
   missingEmail,
@@ -46,6 +52,9 @@ export function ClientDataDialog({
   onCancel,
 }: ClientDataDialogProps) {
   const [email, setEmail] = useState(currentEmail || "");
+  const [salutation, setSalutation] = useState(currentSalutation || "");
+  const [firstname, setFirstname] = useState(currentFirstname || "");
+  const [lastname, setLastname] = useState(currentLastname || "");
   const [contact, setContact] = useState(currentContact || "");
   const [agencyId, setAgencyId] = useState(currentAgencyId || "");
   const [agencies, setAgencies] = useState<Agency[]>([]);
@@ -91,13 +100,16 @@ export function ClientDataDialog({
     setError(null);
 
     try {
-      // Always submit all three fields together
+      // Submit all fields together
       const res = await fetch("/api/clients/update-contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clientId,
           email: email.trim(),
+          salutation: salutation.trim() || null,
+          firstname: firstname.trim() || null,
+          lastname: lastname.trim() || null,
           contact: contact.trim() || null,
           agencyId: agencyId,
         }),
@@ -159,23 +171,50 @@ export function ClientDataDialog({
             )}
           </div>
 
-          {/* Contact Field - Always show */}
+          {/* Contact Fields - Salutation, Firstname, Lastname */}
           <div className="space-y-2">
-            <Label htmlFor="contact">Kontaktperson</Label>
-            <Input
-              id="contact"
-              type="text"
-              value={contact}
-              onChange={(e) => setContact(e.target.value)}
-              placeholder="z.B. Max Mustermann"
-              className={!contact ? "border-yellow-300" : ""}
-            />
-            {!contact && (
-              <p className="text-xs text-yellow-600">
-                💡 Optional, aber empfohlen für personalisierte E-Mails
-              </p>
-            )}
+            <Label htmlFor="salutation">Anrede</Label>
+            <select
+              id="salutation"
+              value={salutation}
+              onChange={(e) => setSalutation(e.target.value)}
+              className="w-full rounded border p-2"
+            >
+              <option value="">-- Bitte wählen --</option>
+              <option value="Herr">Herr</option>
+              <option value="Frau">Frau</option>
+            </select>
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="firstname">Vorname</Label>
+              <Input
+                id="firstname"
+                type="text"
+                value={firstname}
+                onChange={(e) => setFirstname(e.target.value)}
+                placeholder="Max"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastname">Nachname</Label>
+              <Input
+                id="lastname"
+                type="text"
+                value={lastname}
+                onChange={(e) => setLastname(e.target.value)}
+                placeholder="Mustermann"
+              />
+            </div>
+          </div>
+
+          {!firstname && !lastname && (
+            <p className="text-xs text-yellow-600">
+              💡 Vor- und Nachname sind empfohlen für personalisierte E-Mails
+            </p>
+          )}
 
           {/* Agency Field - Always show */}
           <div className="space-y-2">

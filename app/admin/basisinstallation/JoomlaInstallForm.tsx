@@ -11,7 +11,7 @@ type Props = {
   clientId: string;
   clientProjects: {
     id: string;
-    title: string;
+    title: string | null;
     status: string;
     updatedAt: Date;
   }[];

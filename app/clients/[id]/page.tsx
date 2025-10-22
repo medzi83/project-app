@@ -6,13 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FroxlorClient } from "@/lib/froxlor";
 import type { FroxlorCustomer, FroxlorDomain, FroxlorFtpAccount } from "@/lib/froxlor";
-import { deriveProjectStatus, labelForProjectStatus } from "@/lib/project-status";
+import { deriveProjectStatus, labelForProjectStatus, getProjectDisplayName } from "@/lib/project-status";
 import type { ProjectStatus, ProjectType } from "@prisma/client";
 import { EmailLogItem } from "@/components/EmailLogItem";
 import { deriveFilmStatus, getFilmStatusDate, FILM_STATUS_LABELS } from "@/lib/film-status";
 import { ClientStatusToggles } from "@/components/ClientStatusToggles";
 import { InstallationProjectAssignment } from "./InstallationProjectAssignment";
 import { ClientDetailHeader } from "@/components/ClientDetailHeader";
+import { FroxlorDataEditor } from "./FroxlorDataEditor";
+import { ClientDataEditor } from "./ClientDataEditor";
+import { ProjectDomainAssignment } from "./ProjectDomainAssignment";
+import { DomainProjectAssignment } from "./DomainProjectAssignment";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -99,77 +103,88 @@ export default async function ClientDetailPage({ params }: Props) {
 
   const { id } = await params;
 
-  let client = await prisma.client.findUnique({
-    where: { id },
-    include: {
-      server: true,
-      agency: true,
-      joomlaInstallations: {
-        include: {
-          server: {
-            select: {
-              name: true,
-              ip: true,
+  const [clientResult, servers, agencies] = await Promise.all([
+    prisma.client.findUnique({
+      where: { id },
+      include: {
+        server: true,
+        agency: true,
+        joomlaInstallations: {
+          include: {
+            server: {
+              select: {
+                name: true,
+                ip: true,
+              },
             },
-          },
-          project: {
-            select: {
-              id: true,
-              title: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      },
-      projects: {
-        include: {
-          website: true,
-          film: {
-            include: {
-              previewVersions: {
-                select: {
-                  sentDate: true,
-                  version: true,
-                },
-                orderBy: {
-                  sentDate: "desc",
-                },
-                take: 1,
+            project: {
+              select: {
+                id: true,
+                title: true,
               },
             },
           },
-          emailLogs: {
-            orderBy: { sentAt: "desc" },
-            take: 50,
-            include: {
-              trigger: {
-                select: {
-                  name: true,
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        projects: {
+          include: {
+            website: true,
+            film: {
+              include: {
+                previewVersions: {
+                  select: {
+                    sentDate: true,
+                    version: true,
+                  },
+                  orderBy: {
+                    sentDate: "desc",
+                  },
+                  take: 1,
+                },
+              },
+            },
+            emailLogs: {
+              orderBy: { sentAt: "desc" },
+              take: 50,
+              include: {
+                trigger: {
+                  select: {
+                    name: true,
+                  },
                 },
               },
             },
           },
+          orderBy: { createdAt: "desc" },
         },
-        orderBy: { createdAt: "desc" },
-      },
-      emailLogs: {
-        where: {
-          projectId: null,
-        },
-        orderBy: { sentAt: "desc" },
-        take: 50,
-        include: {
-          trigger: {
-            select: {
-              name: true,
+        emailLogs: {
+          where: {
+            projectId: null,
+          },
+          orderBy: { sentAt: "desc" },
+          take: 50,
+          include: {
+            trigger: {
+              select: {
+                name: true,
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    prisma.server.findMany({
+      orderBy: { name: "asc" },
+    }),
+    prisma.agency.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
+
+  let client = clientResult;
 
   if (!client) {
     notFound();
@@ -361,6 +376,106 @@ export default async function ClientDetailPage({ params }: Props) {
     }
   }
 
+  // Automatic sync: Transfer Froxlor contact data to client if client contact fields are empty
+  if (froxlorCustomer && !client.firstname && !client.lastname) {
+    try {
+      const hasFirstname = froxlorCustomer.firstname && froxlorCustomer.firstname.trim() !== "";
+      const hasLastname = froxlorCustomer.name && froxlorCustomer.name.trim() !== "";
+
+      if (hasFirstname || hasLastname) {
+        await prisma.client.update({
+          where: { id: client.id },
+          data: {
+            firstname: hasFirstname ? froxlorCustomer.firstname : null,
+            lastname: hasLastname ? froxlorCustomer.name : null,
+          },
+        });
+
+        // Reload client to reflect the changes
+        const updatedClient = await prisma.client.findUnique({
+          where: { id: client.id },
+          include: {
+            server: true,
+            agency: true,
+            joomlaInstallations: {
+              include: {
+                server: {
+                  select: {
+                    name: true,
+                    ip: true,
+                  },
+                },
+                project: {
+                  select: {
+                    id: true,
+                    title: true,
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: "desc",
+              },
+            },
+            projects: {
+              include: {
+                website: true,
+                film: {
+                  include: {
+                    previewVersions: {
+                      select: {
+                        sentDate: true,
+                        version: true,
+                      },
+                      orderBy: {
+                        sentDate: "desc",
+                      },
+                      take: 1,
+                    },
+                  },
+                },
+                emailLogs: {
+                  orderBy: { sentAt: "desc" },
+                  take: 50,
+                  include: {
+                    trigger: {
+                      select: {
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+              orderBy: { createdAt: "desc" },
+            },
+            emailLogs: {
+              where: {
+                projectId: null,
+              },
+              orderBy: { sentAt: "desc" },
+              take: 50,
+              include: {
+                trigger: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (updatedClient) {
+          client = updatedClient;
+        }
+
+        console.log(`Auto-synced Froxlor contact data for client ${client.name}: ${froxlorCustomer.firstname} ${froxlorCustomer.name}`);
+      }
+    } catch (error) {
+      console.error("Error auto-syncing Froxlor contact data:", error);
+      // Don't show error to user - this is a background sync
+    }
+  }
+
   const isAdmin = session.user.role === "ADMIN";
 
   // Collect all email logs from all projects
@@ -391,6 +506,9 @@ export default async function ClientDetailPage({ params }: Props) {
           name: client.name,
           customerNo: client.customerNo,
           email: client.email,
+          salutation: client.salutation,
+          firstname: client.firstname,
+          lastname: client.lastname,
           contact: client.contact,
           agencyId: client.agencyId,
           agency: client.agency,
@@ -404,133 +522,40 @@ export default async function ClientDetailPage({ params }: Props) {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Basic Information */}
         <section className="rounded-lg border bg-white p-4">
-          <h2 className="text-base font-medium mb-3">Basisdaten</h2>
-            <div className="grid gap-3 text-sm">
-              <div>
-                <div className="text-xs text-gray-500">Kontaktperson</div>
-                <div>{client.contact || "-"}</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500">E-Mail</div>
-                <div>
-                  {client.email ? (
-                    <a href={`mailto:${client.email}`} className="text-blue-600 hover:underline">
-                      {client.email}
-                    </a>
-                  ) : "-"}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500">Telefon</div>
-                <div>
-                  {client.phone ? (
-                    <a href={`tel:${client.phone.replace(/[^+0-9]/g, "")}`} className="text-blue-600 hover:underline">
-                      {client.phone}
-                    </a>
-                  ) : "-"}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500">Server</div>
-                <div>
-                  {client.server ? (
-                    <Badge variant="outline" className="font-mono text-xs">
-                      {client.server.hostname || client.server.name}
-                    </Badge>
-                  ) : "-"}
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <div className="text-xs text-gray-500">Angelegt</div>
-                  <div className="text-xs">{formatDate(client.createdAt)}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Arbeitsstopp</div>
-                  <div>
-                    {client.workStopped ? (
-                      <Badge variant="destructive" className="text-xs">Ja</Badge>
-                    ) : (
-                      <span className="text-gray-600">Nein</span>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Beendet</div>
-                  <div>
-                    {client.finished ? (
-                      <Badge className="bg-gray-600 hover:bg-gray-700 text-xs">Ja</Badge>
-                    ) : (
-                      <span className="text-gray-600">Nein</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {client.notes && (
-                <div>
-                  <div className="text-xs text-gray-500">Notizen</div>
-                  <div className="text-sm whitespace-pre-wrap">{client.notes}</div>
-                </div>
-              )}
-            </div>
-          </section>
+          <ClientDataEditor
+            client={{
+              id: client.id,
+              name: client.name,
+              salutation: client.salutation,
+              firstname: client.firstname,
+              lastname: client.lastname,
+              email: client.email,
+              phone: client.phone,
+              notes: client.notes,
+              customerNo: client.customerNo,
+              serverId: client.serverId,
+              agencyId: client.agencyId,
+              workStopped: client.workStopped,
+              finished: client.finished,
+              createdAt: client.createdAt,
+              server: client.server,
+            }}
+            servers={servers}
+            agencies={agencies}
+            isAdmin={isAdmin}
+          />
+        </section>
 
         {/* Froxlor Customer Data */}
-        {froxlorCustomer && (
+        {froxlorCustomer && client.server && (
           <section className="rounded-lg border bg-white p-4">
-            <h2 className="text-base font-medium mb-3">Froxlor Kundendaten</h2>
-              <div className="grid gap-3 text-sm">
-                <div>
-                  <div className="text-xs text-gray-500">Login</div>
-                  <div className="font-mono text-xs">{froxlorCustomer.loginname}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Name</div>
-                  <div>{froxlorCustomer.firstname} {froxlorCustomer.name}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Firma</div>
-                  <div>{froxlorCustomer.company || "-"}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Status</div>
-                  <div>
-                    {froxlorCustomer.deactivated === 1 ? (
-                      <Badge variant="destructive" className="text-xs">Deaktiviert</Badge>
-                    ) : (
-                      <Badge className="bg-green-100 text-green-800 hover:bg-green-200 text-xs">Aktiv</Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <div className="text-xs text-gray-500">Speicher</div>
-                    <div>
-                      {froxlorCustomer.diskspace
-                        ? `${Math.round(parseInt(froxlorCustomer.diskspace) / 1024 / 1024)} GB`
-                        : "-"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">MySQL DB</div>
-                    <div>{froxlorCustomer.mysqls || 0}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">FTP</div>
-                    <div>{froxlorCustomer.ftps || 0}</div>
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">E-Mail</div>
-                  <div className="text-xs">{froxlorCustomer.email}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Document Root</div>
-                  <div className="font-mono text-xs break-all">{froxlorCustomer.documentroot || "-"}</div>
-                </div>
-              </div>
-            </section>
-          )}
+            <FroxlorDataEditor
+              customer={froxlorCustomer}
+              serverId={client.server.id}
+              isAdmin={isAdmin}
+            />
+          </section>
+        )}
       </div>
 
       {/* Tabs für strukturierte Inhalte */}
@@ -620,34 +645,63 @@ export default async function ClientDetailPage({ params }: Props) {
                     : project.status;
                 }
 
+                const isOnlineWebsite = project.type === "WEBSITE" && project.status === "ONLINE";
+
                 return (
-                  <Link
-                    key={project.id}
-                    href={project.type === "FILM" ? `/film-projects/${project.id}` : `/projects/${project.id}`}
-                    className="block rounded-lg border bg-white p-4 transition-all hover:shadow-md hover:border-blue-300 hover:bg-blue-50"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <Badge variant="outline" className="text-xs">
-                        {typeLabel}
-                      </Badge>
-                      <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                    <div className="text-lg font-bold text-gray-900 mb-1">
-                      {statusLabel}
-                    </div>
-                    {statusDate && (
-                      <div className="text-xs text-gray-500 mb-2">
-                        seit {formatDateOnly(statusDate)}
+                  <div key={project.id} className="rounded-lg border bg-white p-4">
+                    <Link
+                      href={project.type === "FILM" ? `/film-projects/${project.id}` : `/projects/${project.id}`}
+                      className="block transition-all hover:opacity-80"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <Badge variant="outline" className="text-xs">
+                          {typeLabel}
+                        </Badge>
+                        <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                      <div className="text-lg font-bold text-gray-900 mb-1">
+                        {getProjectDisplayName(project)}
+                      </div>
+                      <div className="text-sm text-gray-600 mb-1">
+                        Status: {statusLabel}
+                      </div>
+                      {statusDate && (
+                        <div className="text-xs text-gray-500 mb-2">
+                          seit {formatDateOnly(statusDate)}
+                        </div>
+                      )}
+                      {project.website && project.website.domain && (
+                        <div className="text-xs text-gray-600 font-mono truncate">
+                          {project.website.domain}
+                        </div>
+                      )}
+                    </Link>
+
+                    {/* Domain Assignment for ONLINE websites */}
+                    {isAdmin && isOnlineWebsite && froxlorDomains.length > 0 && (
+                      <div className="mt-3 pt-3 border-t">
+                        <ProjectDomainAssignment
+                          projectId={project.id}
+                          currentDomain={project.website?.domain || null}
+                          availableDomains={froxlorDomains}
+                          standardSubdomain={froxlorCustomer?.standardsubdomain ?
+                            froxlorDomains.find(d => d.id === froxlorCustomer.standardsubdomain)?.domain || null
+                            : null
+                          }
+                          allProjects={client.projects
+                            .filter(p => p.type === "WEBSITE" && p.website)
+                            .map(p => ({
+                              id: p.id,
+                              title: p.title,
+                              domain: p.website?.domain || null,
+                            }))
+                          }
+                        />
                       </div>
                     )}
-                    {project.website && project.website.domain && (
-                      <div className="text-xs text-gray-600 font-mono truncate">
-                        {project.website.domain}
-                      </div>
-                    )}
-                  </Link>
+                  </div>
                 );
               })}
             </div>
@@ -798,6 +852,11 @@ export default async function ClientDetailPage({ params }: Props) {
                       froxlorCustomer?.standardsubdomain != null
                         ? Number.parseInt(domain.id, 10) === Number.parseInt(froxlorCustomer.standardsubdomain, 10)
                         : false;
+                    // Find project assigned to this domain
+                    const assignedProject = client.projects.find(
+                      (p) => p.type === "WEBSITE" && p.website?.domain === domain.domain
+                    );
+
                     return (
                       <div key={domain.id} className="rounded border p-3">
                         <div className="flex items-center gap-2 mb-1">
@@ -817,6 +876,40 @@ export default async function ClientDetailPage({ params }: Props) {
                           <span>LE: {domain.letsencrypt === "1" ? "Ja" : "Nein"}</span>
                           <span>PHP: {froxlorPhpConfigs[domain.phpsettingid] || domain.phpsettingid}</span>
                         </div>
+
+                        {/* Show assigned project or allow assignment */}
+                        {!isStandard && (
+                          <div className="mt-2 pt-2 border-t">
+                            {assignedProject ? (
+                              <div className="flex items-center gap-2 text-xs">
+                                <svg className="h-3.5 w-3.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span className="text-gray-500">Zugeordnet zu:</span>
+                                <Link
+                                  href={`/projects/${assignedProject.id}`}
+                                  className="text-blue-600 hover:underline font-medium"
+                                >
+                                  {getProjectDisplayName(assignedProject)}
+                                </Link>
+                              </div>
+                            ) : (
+                              isAdmin && (
+                                <DomainProjectAssignment
+                                  domain={domain.domain}
+                                  onlineProjects={client.projects
+                                    .filter(p => p.type === "WEBSITE" && p.status === "ONLINE" && p.website)
+                                    .map(p => ({
+                                      id: p.id,
+                                      title: p.title,
+                                      domain: p.website?.domain || null,
+                                    }))
+                                  }
+                                />
+                              )
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}

@@ -38,7 +38,10 @@ model User {
 model Client {
   id                 String              @id @default(cuid())
   name               String
-  contact            String?
+  salutation         String?             // Anrede: "Herr", "Frau", "Divers"
+  firstname          String?             // Vorname der Kontaktperson
+  lastname           String?             // Nachname der Kontaktperson
+  contact            String?             // Deprecated: wird durch firstname/lastname ersetzt
   email              String?
   phone              String?
   notes              String?
@@ -84,7 +87,7 @@ model Agency {
 
 model Project {
   id        String               @id @default(cuid())
-  title     String
+  title     String?              // Optional: für ergänzende Infos wie "Relaunch", "Warteseite", etc.
   type      ProjectType          @default(WEBSITE)
   status    ProjectStatus        @default(WEBTERMIN)
   important String?
@@ -127,6 +130,21 @@ model ProjectWebsite {
   materialStatus  MaterialStatus   @default(ANGEFORDERT)
   isWTAssignment  Boolean          @default(false)
   project         Project          @relation(fields: [projectId], references: [id])
+  domainHistory   ProjectDomainHistory[]
+}
+
+model ProjectDomainHistory {
+  id          String    @id @default(cuid())
+  projectId   String
+  domain      String
+  assignedAt  DateTime  @default(now())
+  removedAt   DateTime?
+  reason      String?   // e.g., "Projekt beendet", "Domain gewechselt", "Relaunch"
+  createdAt   DateTime  @default(now())
+  project     ProjectWebsite @relation(fields: [projectId], references: [projectId])
+
+  @@index([projectId])
+  @@index([domain])
 }
 
 model ProjectFilm {

@@ -26,6 +26,9 @@ type ClientEmailDialogProps = {
   clientId: string;
   clientName: string;
   clientEmail: string | null;
+  clientSalutation?: string | null;
+  clientFirstname?: string | null;
+  clientLastname?: string | null;
   clientContact: string | null;
   onClose: () => void;
   onSuccess: () => void;
@@ -36,10 +39,17 @@ export function ClientEmailDialog({
   clientId,
   clientName,
   clientEmail,
+  clientSalutation,
+  clientFirstname,
+  clientLastname,
   clientContact,
   onClose,
   onSuccess,
 }: ClientEmailDialogProps) {
+  // Build contact name from new fields or fall back to old contact field
+  const contactName = clientFirstname || clientLastname
+    ? `${clientSalutation ? clientSalutation + ' ' : ''}${clientFirstname || ''} ${clientLastname || ''}`.trim()
+    : clientContact || '';
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [toEmail, setToEmail] = useState(clientEmail || "");
@@ -111,7 +121,7 @@ export function ClientEmailDialog({
           const replacePlaceholders = (text: string) => {
             return text
               .replace(/\{\{client\.name\}\}/g, clientName)
-              .replace(/\{\{client\.contact\}\}/g, clientContact || "");
+              .replace(/\{\{client\.contact\}\}/g, contactName);
           };
           setSubject(replacePlaceholders(template.subject));
           setBody(replacePlaceholders(template.body));
@@ -122,7 +132,7 @@ export function ClientEmailDialog({
         const replacePlaceholders = (text: string) => {
           return text
             .replace(/\{\{client\.name\}\}/g, clientName)
-            .replace(/\{\{client\.contact\}\}/g, clientContact || "");
+            .replace(/\{\{client\.contact\}\}/g, contactName);
         };
         setSubject(replacePlaceholders(template.subject));
         setBody(replacePlaceholders(template.body));
@@ -132,7 +142,7 @@ export function ClientEmailDialog({
     };
 
     loadRenderedTemplate();
-  }, [selectedTemplateId, templates, clientName, clientContact, clientId]);
+  }, [selectedTemplateId, templates, clientName, contactName, clientId]);
 
   const handleSend = async () => {
     if (!toEmail || !subject || !body) {
@@ -200,9 +210,9 @@ export function ClientEmailDialog({
           <div className="rounded border bg-gray-50 p-3">
             <div className="text-xs text-gray-500 mb-1">Kunde</div>
             <div className="font-medium">{clientName}</div>
-            {clientContact && (
+            {contactName && (
               <div className="text-sm text-gray-600 mt-1">
-                Ansprechpartner: {clientContact}
+                Ansprechpartner: {contactName}
               </div>
             )}
           </div>
