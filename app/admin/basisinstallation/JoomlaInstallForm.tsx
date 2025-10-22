@@ -13,6 +13,7 @@ type Props = {
     id: string;
     title: string;
     status: string;
+    updatedAt: Date;
   }[];
 };
 
@@ -37,6 +38,27 @@ function generatePassword(): string {
 
   // Shuffle the password
   return password.split('').sort(() => Math.random() - 0.5).join('');
+}
+
+// Format date to relative time (e.g., "vor 3 Tagen", "vor 2 Monaten")
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - new Date(date).getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "heute";
+  if (diffDays === 1) return "gestern";
+  if (diffDays < 7) return `vor ${diffDays} Tagen`;
+  if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7);
+    return `vor ${weeks} Woche${weeks > 1 ? 'n' : ''}`;
+  }
+  if (diffDays < 365) {
+    const months = Math.floor(diffDays / 30);
+    return `vor ${months} Monat${months > 1 ? 'en' : ''}`;
+  }
+  const years = Math.floor(diffDays / 365);
+  return `vor ${years} Jahr${years > 1 ? 'en' : ''}`;
 }
 
 export default function JoomlaInstallForm({
@@ -213,12 +235,12 @@ export default function JoomlaInstallForm({
               <option value="">Kein Projekt zuordnen</option>
               {clientProjects.map((project) => (
                 <option key={project.id} value={project.id}>
-                  {project.title} ({project.status})
+                  {project.title} ({project.status}) - {formatRelativeTime(project.updatedAt)} letzter Kontakt
                 </option>
               ))}
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              Wählen Sie ein Projekt aus, um die Installation automatisch zuzuordnen
+              Wählen Sie ein Projekt aus, um die Installation automatisch zuzuordnen. Die Zeitangabe zeigt, wann das Projekt zuletzt aktualisiert wurde.
             </p>
           </div>
         )}

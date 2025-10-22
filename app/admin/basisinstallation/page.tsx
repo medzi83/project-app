@@ -3,10 +3,17 @@ import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
 import BasisinstallationClient from "./client";
 
-export default async function BasisinstallationPage() {
+type Props = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function BasisinstallationPage({ searchParams }: Props) {
   const session = await getAuthSession();
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/");
+
+  const params = await searchParams;
+  const preselectedClientId = typeof params.clientId === "string" ? params.clientId : undefined;
 
   const clients = await prisma.client.findMany({
     orderBy: { name: "asc" },
@@ -22,6 +29,7 @@ export default async function BasisinstallationPage() {
           id: true,
           title: true,
           status: true,
+          updatedAt: true,
         },
         orderBy: {
           createdAt: "desc",
@@ -42,5 +50,5 @@ export default async function BasisinstallationPage() {
     },
   });
 
-  return <BasisinstallationClient clients={clients} servers={servers} />;
+  return <BasisinstallationClient clients={clients} servers={servers} preselectedClientId={preselectedClientId} />;
 }

@@ -198,7 +198,15 @@ export default async function ClientsPage({ searchParams }: Props) {
                         <input type="checkbox" name="ids" value={client.id} />
                       </td>
                     )}
-                    <td className="font-mono text-xs text-gray-600">{client.customerNo ?? "-"}</td>
+                    <td className="font-mono text-xs">
+                      {client.customerNo ? (
+                        <Link href={`/clients/${client.id}`} className="text-blue-600 hover:underline">
+                          {client.customerNo}
+                        </Link>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
                     <td className="font-medium">
                       <span className="inline-flex items-center gap-2">
                         {client.name}

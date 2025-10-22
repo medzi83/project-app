@@ -13,6 +13,7 @@ type Client = {
     id: string;
     title: string;
     status: string;
+    updatedAt: Date;
   }[];
 };
 
@@ -28,13 +29,14 @@ type Server = {
 type Props = {
   clients: Client[];
   servers: Server[];
+  preselectedClientId?: string;
 };
 
 type Step = 1 | 2 | 3;
 
-export default function BasisinstallationClient({ clients, servers }: Props) {
+export default function BasisinstallationClient({ clients, servers, preselectedClientId }: Props) {
   const [currentStep, setCurrentStep] = useState<Step>(1);
-  const [selectedClient, setSelectedClient] = useState("");
+  const [selectedClient, setSelectedClient] = useState(preselectedClientId || "");
   const [selectedServer, setSelectedServer] = useState("");
   const [isNewCustomer, setIsNewCustomer] = useState(false); // Track wenn User neuen Kunden anlegen will
   const [connectionStatus, setConnectionStatus] = useState<{
@@ -47,7 +49,14 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
     standardDomain: string;
   } | null>(null);
   const [loadingCustomer, setLoadingCustomer] = useState(false);
-  const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [clientSearchTerm, setClientSearchTerm] = useState(() => {
+    // Initialize with preselected client name if available
+    if (preselectedClientId) {
+      const preselectedClient = clients.find(c => c.id === preselectedClientId);
+      return preselectedClient ? preselectedClient.name : "";
+    }
+    return "";
+  });
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [checkingServers, setCheckingServers] = useState(false);
   const [showAllServers, setShowAllServers] = useState(false);
@@ -160,24 +169,31 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
     }
   }, [selectedServer]);
 
+  // Function to load customer details
+  const loadCustomerDetailsForServer = (customerNo: string) => {
+    if (selectedServer && customerNo) {
+      setLoadingCustomer(true);
+      getCustomerDetails(selectedServer, customerNo).then((result) => {
+        if (result.success && result.customer) {
+          setCustomerDetails({
+            customerNo: result.customer.customerNo,
+            documentRoot: result.customer.documentRoot,
+            standardDomain: result.standardDomain || "",
+          });
+        } else {
+          setCustomerDetails(null);
+        }
+        setLoadingCustomer(false);
+      });
+    }
+  };
+
   // Load customer details when server is selected
   useEffect(() => {
     if (selectedClient && selectedServer) {
       const clientData = clients.find((c) => c.id === selectedClient);
       if (clientData?.customerNo) {
-        setLoadingCustomer(true);
-        getCustomerDetails(selectedServer, clientData.customerNo).then((result) => {
-          if (result.success && result.customer) {
-            setCustomerDetails({
-              customerNo: result.customer.customerNo,
-              documentRoot: result.customer.documentRoot,
-              standardDomain: result.standardDomain || "",
-            });
-          } else {
-            setCustomerDetails(null);
-          }
-          setLoadingCustomer(false);
-        });
+        loadCustomerDetailsForServer(clientData.customerNo);
       } else {
         setCustomerDetails(null);
       }
@@ -616,6 +632,10 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
                 serverId={selectedServer}
                 clientName={client?.name ?? ""}
                 clientCustomerNo={client?.customerNo ?? ""}
+                onCustomerCreated={(customerNo) => {
+                  // Lade Kundendaten nach erfolgreicher Neuanlage
+                  loadCustomerDetailsForServer(customerNo);
+                }}
               />
               <div className="mt-6 flex justify-between border-t pt-4">
                 <button
@@ -627,7 +647,7 @@ export default function BasisinstallationClient({ clients, servers }: Props) {
                   </svg>
                   Zurück
                 </button>
-                {(customerDetails || selectedClient === "") && (
+                {(customerDetails || selectedClient === "" || isNewCustomer) && (
                   <button
                     onClick={() => setCurrentStep(3)}
                     className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"

@@ -21,9 +21,10 @@ type Props = {
   serverId: string;
   clientName: string;
   clientCustomerNo: string;
+  onCustomerCreated?: (customerNo: string) => void;
 };
 
-export default function CustomerForm({ serverId, clientName, clientCustomerNo }: Props) {
+export default function CustomerForm({ serverId, clientName, clientCustomerNo, onCustomerCreated }: Props) {
   const [customerNumber, setCustomerNumber] = useState(clientCustomerNo || "");
   const [checking, setChecking] = useState(false);
   const [existingCustomer, setExistingCustomer] = useState<FroxlorCustomer | null>(null);
@@ -225,25 +226,20 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo }:
           setResult(null);
         }, 3000);
       } else {
-        // Bei neuem Kunden: Formular zurücksetzen
+        // Bei neuem Kunden: Kundendaten laden und als existingCustomer setzen
+        // damit das Formular erhalten bleibt (wie bei Update)
+        if (response.customer) {
+          setExistingCustomer(response.customer);
+          // Domains laden wenn Standard-Subdomain existiert
+          if (response.customer.customerid) {
+            loadCustomerDomains(response.customer.customerid);
+          }
+          // Callback aufrufen um Parent-Komponente zu informieren
+          if (onCustomerCreated && response.customer.customernumber) {
+            onCustomerCreated(response.customer.customernumber);
+          }
+        }
         setTimeout(() => {
-          setCustomerNumber("");
-          setExistingCustomer(null);
-          setAllDomains([]);
-          setFormData({
-            firstname: "",
-            name: "",
-            company: "",
-            email: "server@eventomaxx.de",
-            loginname: "",
-            password: "dkNM95z31Z31",
-            diskspace_gb: "2",
-            mysqls: "1",
-            ftps: "1",
-            documentroot: "",
-            leregistered: false,
-            deactivated: false,
-          });
           setResult(null);
         }, 3000);
       }
