@@ -140,3 +140,13 @@ export async function updateNoticeRecipients(noticeId: string, recipientIds: str
 
   await revalidateNotices();
 }
+
+export async function deleteNotice(noticeId: string) {
+  await requireRole(["ADMIN"]);
+
+  await prisma.notice.delete({
+    where: { id: noticeId },
+  });
+
+  await revalidateNotices();
+}

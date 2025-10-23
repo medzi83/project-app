@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTime } from "@/lib/date-utils";
 
 const feedbackTypeLabels: Record<string, string> = {
@@ -42,6 +43,7 @@ export default async function KummerkastenPage() {
 
   const feedbacks = await prisma.feedback.findMany({
     orderBy: [
+      { type: "asc" },
       { status: "asc" },
       { createdAt: "desc" }
     ],
@@ -63,6 +65,17 @@ export default async function KummerkastenPage() {
     resolved: feedbacks.filter(f => f.status === "RESOLVED").length,
     dismissed: feedbacks.filter(f => f.status === "DISMISSED").length,
   };
+
+  // Group feedbacks by type
+  const feedbacksByType = feedbacks.reduce((acc, feedback) => {
+    if (!acc[feedback.type]) {
+      acc[feedback.type] = [];
+    }
+    acc[feedback.type].push(feedback);
+    return acc;
+  }, {} as Record<string, typeof feedbacks>);
+
+  const typeOrder = ["BUG", "IMPROVEMENT", "SUGGESTION", "OTHER"] as const;
 
   return (
     <main className="space-y-8">
@@ -94,27 +107,51 @@ export default async function KummerkastenPage() {
         </div>
       </section>
 
-      <section className="space-y-4">
+      <section>
         {feedbacks.length === 0 ? (
           <div className="rounded-2xl border border-dashed bg-white p-6 text-center text-sm text-muted-foreground">
             Es wurden noch keine Feedbacks eingereicht.
           </div>
         ) : (
-          feedbacks.map((feedback) => {
-            const isResolved = feedback.status === "RESOLVED";
-            return (
-              <article
-                key={feedback.id}
-                className={`rounded-2xl border bg-white p-6 shadow-sm space-y-4 ${isResolved ? "opacity-60" : ""}`}
-              >
+          <Tabs defaultValue="BUG" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              {typeOrder.map((type) => {
+                const openCount = feedbacksByType[type]?.filter(f => f.status === "OPEN").length ?? 0;
+                return (
+                  <TabsTrigger key={type} value={type} className="relative">
+                    {feedbackTypeLabels[type]}
+                    {openCount > 0 && (
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {openCount}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+
+            {typeOrder.map((type) => {
+              const typeFeedbacks = feedbacksByType[type] ?? [];
+
+              return (
+                <TabsContent key={type} value={type} className="space-y-4">
+                  {typeFeedbacks.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed bg-white p-6 text-center text-sm text-muted-foreground">
+                      Keine {feedbackTypeLabels[type]}-Meldungen vorhanden.
+                    </div>
+                  ) : (
+                    typeFeedbacks.map((feedback) => {
+                    const isDimmed = feedback.status === "RESOLVED" || feedback.status === "DISMISSED";
+                    return (
+                      <article
+                        key={feedback.id}
+                        className={`rounded-2xl border bg-white p-6 shadow-sm space-y-4 ${isDimmed ? "opacity-60" : ""}`}
+                      >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-3">
                     <h3 className="text-lg font-semibold">{feedback.title}</h3>
                     <Badge variant={feedbackStatusVariant[feedback.status]}>
                       {feedbackStatusLabels[feedback.status]}
-                    </Badge>
-                    <Badge variant="secondary">
-                      {feedbackTypeLabels[feedback.type]}
                     </Badge>
                   </div>
                 </div>
@@ -163,8 +200,13 @@ export default async function KummerkastenPage() {
                 </form>
               </div>
             </article>
-            );
-          })
+                    );
+                  })
+                  )}
+                </TabsContent>
+              );
+            })}
+          </Tabs>
         )}
       </section>
     </main>

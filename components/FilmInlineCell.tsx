@@ -45,6 +45,7 @@ export default function FilmInlineCell({
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null>(null);
@@ -99,14 +100,25 @@ export default function FilmInlineCell({
     );
   }
 
-  const enterEdit = () => setEditing(true);
-  const cancel = () => setEditing(false);
+  const enterEdit = () => {
+    setEditing(true);
+    setError(null);
+  };
+  const cancel = () => {
+    setEditing(false);
+    setError(null);
+  };
 
   function submitForm(fd: FormData) {
     startTransition(async () => {
-      await updateFilmInlineField(fd);
-      setEditing(false);
-      router.refresh();
+      setError(null);
+      const result = await updateFilmInlineField(fd);
+      if (result.success) {
+        setEditing(false);
+        router.refresh();
+      } else {
+        setError(result.error || "Ein Fehler ist aufgetreten");
+      }
     });
   }
 
@@ -326,6 +338,11 @@ export default function FilmInlineCell({
         </div>
       )}
       {isPending && <span className="ml-2 text-xs opacity-60">...speichere</span>}
+      {error && (
+        <div className="mt-2 rounded bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-800">
+          {error}
+        </div>
+      )}
     </form>
   );
 }

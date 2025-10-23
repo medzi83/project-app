@@ -31,8 +31,30 @@ model User {
   noticeAssignments        NoticeRecipient[]
   noticeAcknowledgements   NoticeAcknowledgement[]
   feedbacks                Feedback[]     @relation("FeedbackAuthor")
+  preferences              UserPreferences?
 
   @@index([clientId])
+}
+
+model UserPreferences {
+  id                          String   @id @default(cuid())
+  userId                      String   @unique
+  user                        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Project list preferences
+  projectsSort                String?  // e.g., "standard", "customerNo", "clientName"
+  projectsSortDir             String?  // "asc" or "desc"
+
+  // Film project list preferences
+  filmProjectsSort            String?
+  filmProjectsSortDir         String?
+  filmProjectsAgentFilter     Json?    // Array of agent IDs
+  filmProjectsStatusFilter    Json?    // Array of status values
+  filmProjectsPStatusFilter   Json?    // Array of p-status values
+  filmProjectsScopeFilter     Json?    // Array of scope values
+
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
 }
 
 model Client {
@@ -506,18 +528,20 @@ enum NoticeVisibility {
 }
 
 model Feedback {
-  id          String         @id @default(cuid())
-  title       String
-  message     String
-  type        FeedbackType   @default(SUGGESTION)
-  status      FeedbackStatus @default(OPEN)
-  authorId    String
-  author      User           @relation("FeedbackAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id                 String         @id @default(cuid())
+  title              String
+  message            String
+  type               FeedbackType   @default(SUGGESTION)
+  status             FeedbackStatus @default(OPEN)
+  authorId           String
+  author             User           @relation("FeedbackAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  viewedByAuthor     Boolean        @default(false) // Has the author seen this feedback after it was closed?
 
   @@index([status, createdAt])
   @@index([authorId])
+  @@index([authorId, viewedByAuthor]) // For efficient unread count queries
 }
 
 enum FeedbackType {

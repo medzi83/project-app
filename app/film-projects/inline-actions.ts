@@ -70,15 +70,15 @@ function normalizeLink(raw?: string | null) {
   return trimmed;
 }
 
-export async function updateFilmInlineField(formData: FormData) {
+export async function updateFilmInlineField(formData: FormData): Promise<{ success: boolean; error?: string }> {
   const session = await getAuthSession();
   if (!session?.user || !["ADMIN", "AGENT"].includes(session.user.role || "")) {
-    throw new Error("FORBIDDEN");
+    return { success: false, error: "Keine Berechtigung" };
   }
 
   const raw = Object.fromEntries(formData.entries());
   const parsed = FormSchema.safeParse(raw);
-  if (!parsed.success) throw new Error("Bad request");
+  if (!parsed.success) return { success: false, error: "Ungültige Anfrage" };
   const { id, key, value, finalLink: finalLinkRaw, onlineLink: onlineLinkRaw } = parsed.data;
 
   const filmKey = FilmKey.parse(key);
@@ -139,7 +139,7 @@ export async function updateFilmInlineField(formData: FormData) {
       const nextValue = parsedValue instanceof Date ? parsedValue : null;
       const incomingLink = normalizedFinalLinkInput !== undefined ? normalizedFinalLinkInput : existingFilm?.finalLink;
       if (nextValue && !incomingLink) {
-        throw new Error("Bitte zuerst einen Finalversion-Link hinterlegen.");
+        return { success: false, error: "Bitte auch einen Finalversion-Link hinterlegen." };
       }
       updateData.finalToClient = nextValue;
       createData.finalToClient = nextValue;
@@ -192,7 +192,7 @@ export async function updateFilmInlineField(formData: FormData) {
                 ? updateData.finalLink
                 : existingFilm?.finalLink ?? existingFilm?.onlineLink ?? null;
         if (!linkCandidate) {
-          throw new Error("Bitte den Finalversion-Link hinterlegen, bevor ein Online-Datum gesetzt wird.");
+          return { success: false, error: "Bitte den Finalversion-Link hinterlegen, bevor ein Online-Datum gesetzt wird." };
         }
         updateData.onlineLink = linkCandidate;
         createData.onlineLink = linkCandidate;
@@ -241,6 +241,8 @@ export async function updateFilmInlineField(formData: FormData) {
   revalidatePath("/film-projects");
   revalidatePath(`/film-projects/${id}`);
   revalidatePath(`/film-projects/${id}/edit`);
+
+  return { success: true };
 }
 
 const PreviewVersionSchema = z.object({

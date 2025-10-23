@@ -46,6 +46,7 @@ export type FilmStatusInput = {
   status?: FilmProjectStatus | string | null;
   onlineDate?: Date | string | null;
   finalToClient?: Date | string | null;
+  firstCutToClient?: Date | string | null;
   shootDate?: Date | string | null;
   scriptApproved?: Date | string | null;
   scriptToClient?: Date | string | null;
@@ -69,11 +70,11 @@ export function deriveFilmStatus(film: FilmStatusInput): FilmStatus {
   // Finalversion - Finalversion an Kunden
   if (film.finalToClient) return "FINALVERSION";
 
-  // Vorabversion - Check latest preview version with valid sentDate
+  // Vorabversion - Check latest preview version with valid sentDate OR firstCutToClient
   const hasPreviewVersion = film.previewVersions
     && film.previewVersions.length > 0
     && film.previewVersions[0].sentDate;
-  if (hasPreviewVersion) return "VORABVERSION";
+  if (hasPreviewVersion || film.firstCutToClient) return "VORABVERSION";
 
   // Schnitt - Drehtermin-Datum in Vergangenheit
   if (isInPast(film.shootDate)) return "SCHNITT";
@@ -102,6 +103,7 @@ export function getFilmStatusDate(
     scriptToClient?: Date | string | null;
     scriptApproved?: Date | string | null;
     shootDate?: Date | string | null;
+    firstCutToClient?: Date | string | null;
     finalToClient?: Date | string | null;
     onlineDate?: Date | string | null;
     lastContact?: Date | string | null;
@@ -120,11 +122,11 @@ export function getFilmStatusDate(
     case "SCHNITT":
       return toDate(film.shootDate);
     case "VORABVERSION":
-      // Get latest preview version date
+      // Get latest preview version date, or fall back to firstCutToClient
       if (film.previewVersions && film.previewVersions.length > 0) {
         return toDate(film.previewVersions[0].sentDate);
       }
-      return null;
+      return toDate(film.firstCutToClient);
     case "FINALVERSION":
       return toDate(film.finalToClient);
     case "ONLINE":

@@ -9,6 +9,7 @@ import FilmInlineCell from "@/components/FilmInlineCell";
 import FilmPreviewCell from "@/components/FilmPreviewCell";
 import DangerActionButton from "@/components/DangerActionButton";
 import CheckboxFilterGroup from "@/components/CheckboxFilterGroup";
+import { SaveFilterButton } from "@/components/SaveFilterButton";
 import { deleteFilmProject, deleteAllFilmProjects } from "./actions";
 import { deriveFilmStatus, getFilmStatusDate, FILM_STATUS_LABELS, type FilmStatus } from "@/lib/film-status";
 
@@ -20,6 +21,7 @@ type Search = {
   cutter?: string[];
   status?: string[];
   pstatus?: string[];
+  scope?: string[];
   page?: string;
   ps?: string;
 };
@@ -310,6 +312,7 @@ async function loadFilmProjects(
   cutters?: string[],
   filmStatuses?: string[],
   pStatuses?: string[],
+  scopes?: string[],
   orderBy?: Prisma.ProjectOrderByWithRelationInput[]
 ) {
   const whereConditions: Prisma.ProjectWhereInput[] = [
@@ -358,6 +361,16 @@ async function loadFilmProjects(
       film: {
         is: {
           status: { in: pStatuses as FilmProjectStatus[] }
+        }
+      }
+    });
+  }
+
+  if (scopes && scopes.length > 0) {
+    whereConditions.push({
+      film: {
+        is: {
+          scope: { in: scopes as FilmScope[] }
         }
       }
     });
@@ -464,14 +477,41 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
   }
 
   const spRaw = await searchParams;
+
+  // Load user preferences for default filters
+  const userPreferences = await prisma.userPreferences.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  // Parse saved filters from JSON
+  const savedAgentFilter = userPreferences?.filmProjectsAgentFilter
+    ? (Array.isArray(userPreferences.filmProjectsAgentFilter) ? userPreferences.filmProjectsAgentFilter as string[] : [])
+    : undefined;
+  const savedStatusFilter = userPreferences?.filmProjectsStatusFilter
+    ? (Array.isArray(userPreferences.filmProjectsStatusFilter) ? userPreferences.filmProjectsStatusFilter as string[] : [])
+    : undefined;
+  const savedPStatusFilter = userPreferences?.filmProjectsPStatusFilter
+    ? (Array.isArray(userPreferences.filmProjectsPStatusFilter) ? userPreferences.filmProjectsPStatusFilter as string[] : [])
+    : undefined;
+  const savedScopeFilter = userPreferences?.filmProjectsScopeFilter
+    ? (Array.isArray(userPreferences.filmProjectsScopeFilter) ? userPreferences.filmProjectsScopeFilter as string[] : [])
+    : undefined;
+
+  // Use saved filters only if no URL parameters are present
+  const agentParam = arr(spRaw.agent);
+  const statusParam = arr(spRaw.status);
+  const pstatusParam = arr(spRaw.pstatus);
+  const scopeParam = arr(spRaw.scope);
+
   let sp: Search = {
     sort: str(spRaw.sort) ?? "standard",
     dir: (str(spRaw.dir) as "asc" | "desc") ?? "desc",
     q: str(spRaw.q) ?? "",
-    agent: arr(spRaw.agent),
+    agent: agentParam.length > 0 ? agentParam : savedAgentFilter,
     cutter: arr(spRaw.cutter),
-    status: arr(spRaw.status),
-    pstatus: arr(spRaw.pstatus),
+    status: statusParam.length > 0 ? statusParam : savedStatusFilter,
+    pstatus: pstatusParam.length > 0 ? pstatusParam : savedPStatusFilter,
+    scope: scopeParam.length > 0 ? scopeParam : savedScopeFilter,
     page: str(spRaw.page) ?? "1",
     ps: str(spRaw.ps) ?? "50",
   };
@@ -491,7 +531,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
 
   // Load all matching film projects (with status filter applied)
   const [loadedProjects, allAgents] = await Promise.all([
-    loadFilmProjects(sp.q, sp.agent, sp.cutter, sp.status, sp.pstatus, orderBy),
+    loadFilmProjects(sp.q, sp.agent, sp.cutter, sp.status, sp.pstatus, sp.scope, orderBy),
     prisma.user.findMany({
       where: { role: "AGENT", active: true },
       orderBy: { name: "asc" },
@@ -613,13 +653,32 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
       </div>
 
       <div className="rounded-2xl border border-green-200 bg-white shadow-sm">
-        <div className="px-6 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200 rounded-t-2xl">
+        <div className="px-6 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200 rounded-t-2xl flex items-center gap-3">
           <h2 className="text-sm font-semibold text-green-900">Filter & Suche</h2>
+          <div className="flex gap-2">
+            <form method="get" className="contents">
+              <input type="hidden" name="sort" value="standard" />
+              <input type="hidden" name="dir" value={sp.sort === "standard" && sp.dir === "desc" ? "asc" : "desc"} />
+              {sp.q && <input type="hidden" name="q" value={sp.q} />}
+              {sp.agent?.map(v => <input key={v} type="hidden" name="agent" value={v} />)}
+              {sp.status?.map(v => <input key={v} type="hidden" name="status" value={v} />)}
+              {sp.pstatus?.map(v => <input key={v} type="hidden" name="pstatus" value={v} />)}
+              {sp.scope?.map(v => <input key={v} type="hidden" name="scope" value={v} />)}
+              {sp.ps && <input type="hidden" name="ps" value={sp.ps} />}
+              {sp.page && <input type="hidden" name="page" value={sp.page} />}
+              <button type="submit" className="px-3 py-1.5 text-xs font-medium rounded-lg border border-green-200 bg-white text-green-700 hover:bg-green-50 transition-colors">Standardsortierung</button>
+            </form>
+            <SaveFilterButton
+              currentAgent={sp.agent}
+              currentStatus={sp.status}
+              currentPStatus={sp.pstatus}
+              currentScope={sp.scope}
+            />
+          </div>
         </div>
         <div className="p-6">
           <form method="get" className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="sort" value={sp.sort} />
-            <input type="hidden" name="dir" value={sp.dir} />
 
             <div className="flex flex-col gap-1 w-48">
               <label className="text-xs uppercase tracking-wide text-gray-500">Kunde suchen</label>
@@ -658,6 +717,14 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
               width="w-44"
             />
 
+            <CheckboxFilterGroup
+              name="scope"
+              label="Umfang"
+              options={SCOPE_OPTIONS}
+              selected={sp.scope ?? []}
+              width="w-44"
+            />
+
             <div className="flex flex-col gap-1 w-36 shrink-0">
               <label className="text-xs uppercase tracking-wide text-gray-500">Reihenfolge</label>
               <select name="dir" defaultValue={sp.dir} className="px-2 py-1 text-xs border rounded">
@@ -667,7 +734,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button type="submit" name="standardSort" value="1" className="px-4 py-2 text-xs font-medium rounded-lg border border-green-200 bg-white text-green-700 hover:bg-green-50 transition-colors">Standardsortierung</button>
               <button type="submit" className="px-4 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-colors shadow-sm">Anwenden</button>
               <Link href="/film-projects" className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">Zurücksetzen</Link>
             </div>
@@ -688,7 +754,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 <Th href={mkSort("scope")} active={sp.sort==="scope"} dir={sp.dir}>Umfang</Th>
                 <Th href={mkSort("priority")} active={sp.sort==="priority"} dir={sp.dir}>Prio / Nur Film</Th>
                 <Th href={mkSort("filmer")} active={sp.sort==="filmer"} dir={sp.dir}>Verantwortl. Filmer</Th>
-                <Th href={mkSort("contractStart")} active={sp.sort==="contractStart"} dir={sp.dir}>Vertragsbeginn</Th>
                 <Th href={mkSort("scouting")} active={sp.sort==="scouting"} dir={sp.dir}>Scouting</Th>
                 <Th href={mkSort("scriptToClient")} active={sp.sort==="scriptToClient"} dir={sp.dir}>Skript an Kunden</Th>
                 <Th href={mkSort("scriptApproved")} active={sp.sort==="scriptApproved"} dir={sp.dir}>Skriptfreigabe</Th>
@@ -720,6 +785,19 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 const isNotActive = film?.status && film.status !== "AKTIV" && film.status !== "BEENDET";
                 const isBeendet = film?.status === "BEENDET";
 
+                // Status badge colors based on P-Status
+                const pStatus = film?.status;
+                let statusBadgeClasses = "inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs";
+                if (pStatus === "MMW") {
+                  statusBadgeClasses += " bg-red-200 text-red-900";
+                } else if (pStatus === "VERZICHT" || pStatus === "WARTEN") {
+                  statusBadgeClasses += " bg-orange-200 text-orange-900";
+                } else if (pStatus === "BEENDET") {
+                  statusBadgeClasses += " bg-gray-400 text-gray-900";
+                } else {
+                  statusBadgeClasses += " bg-gray-100 text-gray-900";
+                }
+
                 const rowClasses = ["border-t", "border-gray-200", "transition-colors", "hover:bg-gray-50"];
                 if (row.isStale) rowClasses.push("bg-red-50", "hover:bg-red-100/50");
                 if (isBeendet) rowClasses.push("opacity-60");
@@ -727,7 +805,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 return (
                   <tr key={project.id} className={rowClasses.join(" ")}>
                     <td className="font-semibold">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-gray-900 text-xs">
+                      <span className={statusBadgeClasses}>
                         {row.primaryLinkHref && (
                           <a
                             href={row.primaryLinkHref}
@@ -797,16 +875,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         canEdit={canEdit}
                         displayClassName={filmerBadgeClass}
                         displayStyle={filmerBadgeStyle}
-                      />
-                    </td>
-                    <td>
-                      <FilmInlineCell
-                        id={project.id}
-                        name="contractStart"
-                        type="date"
-                        display={row.contractStart}
-                        value={film?.contractStart?.toISOString() ?? null}
-                        canEdit={canEdit}
                       />
                     </td>
                     <td>
@@ -987,6 +1055,7 @@ function makeSortHref({ current, key }: { current: Search; key: string }) {
   if (current.cutter && current.cutter.length) for (const v of current.cutter) p.append("cutter", v);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
   if (current.pstatus && current.pstatus.length) for (const v of current.pstatus) p.append("pstatus", v);
+  if (current.scope && current.scope.length) for (const v of current.scope) p.append("scope", v);
   if (current.ps) p.set("ps", current.ps);
   if (current.page) p.set("page", current.page);
   return `/film-projects?${p.toString()}`;
@@ -1001,6 +1070,7 @@ function makePageHref({ current, page }: { current: Search; page: number }) {
   if (current.cutter && current.cutter.length) for (const v of current.cutter) p.append("cutter", v);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
   if (current.pstatus && current.pstatus.length) for (const v of current.pstatus) p.append("pstatus", v);
+  if (current.scope && current.scope.length) for (const v of current.scope) p.append("scope", v);
   if (current.ps) p.set("ps", current.ps);
   p.set("page", String(page));
   return `/film-projects?${p.toString()}`;
@@ -1015,6 +1085,7 @@ function makePageSizeHref({ current, size }: { current: Search; size: number }) 
   if (current.cutter && current.cutter.length) for (const v of current.cutter) p.append("cutter", v);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
   if (current.pstatus && current.pstatus.length) for (const v of current.pstatus) p.append("pstatus", v);
+  if (current.scope && current.scope.length) for (const v of current.scope) p.append("scope", v);
   p.set("ps", String(size));
   // Reset to page 1 when changing page size
   return `/film-projects?${p.toString()}`;

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authz";
-import { createNotice, updateNoticeActiveState } from "@/app/notices/actions";
+import { createNotice, updateNoticeActiveState, deleteNotice } from "@/app/notices/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -235,16 +235,29 @@ export default async function AdminNoticesPage() {
                     </div>
                   </details>
 
-                  <form
-                    action={async () => {
-                      "use server";
-                      await updateNoticeActiveState(notice.id, !notice.isActive);
-                    }}
-                  >
-                    <Button type="submit" variant="outline">
-                      {notice.isActive ? "Inaktiv setzen" : "Aktivieren"}
-                    </Button>
-                  </form>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <form
+                      action={async () => {
+                        "use server";
+                        await updateNoticeActiveState(notice.id, !notice.isActive);
+                      }}
+                    >
+                      <Button type="submit" variant="outline">
+                        {notice.isActive ? "Inaktiv setzen" : "Aktivieren"}
+                      </Button>
+                    </form>
+
+                    <form
+                      action={async () => {
+                        "use server";
+                        await deleteNotice(notice.id);
+                      }}
+                    >
+                      <Button type="submit" variant="destructive">
+                        Löschen
+                      </Button>
+                    </form>
+                  </div>
                 </article>
               );
             })

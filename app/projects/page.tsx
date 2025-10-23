@@ -8,6 +8,7 @@ import InlineCell from "@/components/InlineCell";
 import DangerActionButton from "@/components/DangerActionButton";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import CheckboxFilterGroup from "@/components/CheckboxFilterGroup";
+import { SaveSortButton } from "@/components/SaveSortButton";
 import { deleteAllProjects, deleteProject } from "./actions";
 import {
   buildWebsiteStatusWhere,
@@ -191,9 +192,15 @@ export default async function ProjectsPage({ searchParams }: Props) {
   if (!session) redirect("/login");
 
   const spRaw = await searchParams;
+
+  // Load user preferences for default sorting
+  const userPreferences = await prisma.userPreferences.findUnique({
+    where: { userId: session.user.id },
+  });
+
   let sp: Search = {
-    sort: str(spRaw.sort) ?? "standard",
-    dir: (str(spRaw.dir) as "asc" | "desc") ?? "desc",
+    sort: str(spRaw.sort) ?? userPreferences?.projectsSort ?? "standard",
+    dir: (str(spRaw.dir) as "asc" | "desc") ?? (userPreferences?.projectsSortDir as "asc" | "desc") ?? "desc",
     q: str(spRaw.q) ?? "",
     status: arr(spRaw.status),
     priority: arr(spRaw.priority),
@@ -529,9 +536,10 @@ export default async function ProjectsPage({ searchParams }: Props) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button type="submit" name="standardSort" value="1" className="px-4 py-2 text-xs font-medium rounded-lg border border-purple-200 bg-white text-purple-700 hover:bg-purple-50 transition-colors">Standardsortierung</button>
         <button className="px-4 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-colors shadow-sm" type="submit">Anwenden</button>
         <Link href="/projects" className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">Zurücksetzen</Link>
+        <button type="submit" name="standardSort" value="1" className="px-4 py-2 text-xs font-medium rounded-lg border border-purple-200 bg-white text-purple-700 hover:bg-purple-50 transition-colors">Standardsortierung</button>
+        <SaveSortButton type="projects" currentSort={sp.sort!} currentDir={sp.dir!} />
       </div>
     </form>
   </div>

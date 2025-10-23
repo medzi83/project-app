@@ -440,6 +440,110 @@ export async function getCustomerDetails(serverId: string, customerNo: string) {
   };
 }
 
+export async function uploadJoomlaHtaccess(formData: FormData) {
+  const session = await getAuthSession();
+  if (!session || session.user.role !== "ADMIN") {
+    return { success: false, message: "Nicht autorisiert" };
+  }
+
+  const clientId = formData.get("clientId") as string;
+  const serverId = formData.get("serverId") as string;
+  const targetPath = formData.get("targetPath") as string; // e.g., /var/customers/webs/customer123/
+
+  if (!targetPath) {
+    return { success: false, message: "Zielpfad fehlt" };
+  }
+
+  const server = await prisma.server.findUnique({
+    where: { id: serverId },
+  });
+
+  if (!server) {
+    return { success: false, message: "Server nicht gefunden" };
+  }
+
+  if (!server.sshHost || !server.sshUsername || !server.sshPassword) {
+    return { success: false, message: "SSH-Zugangsdaten unvollständig" };
+  }
+
+  try {
+    const { Client } = await import('ssh2');
+    const { readFileSync } = await import('fs');
+    const { resolve } = await import('path');
+
+    // Read the .htaccess template
+    const htaccessPath = resolve(process.cwd(), 'storage', 'joomla', 'joomla.htaccess');
+    const htaccessContent = readFileSync(htaccessPath, 'utf8');
+
+    // Connect via SSH
+    const conn = new Client();
+
+    return new Promise<{ success: boolean; message: string }>((resolvePromise) => {
+      conn.on('ready', () => {
+        // Upload the .htaccess file
+        conn.sftp((err, sftp) => {
+          if (err) {
+            conn.end();
+            return resolvePromise({ success: false, message: `SFTP-Fehler: ${err.message}` });
+          }
+
+          const remotePath = `${targetPath}/.htaccess`;
+
+          // Write the file
+          const writeStream = sftp.createWriteStream(remotePath, {
+            mode: 0o644, // rw-r--r--
+          });
+
+          writeStream.on('close', () => {
+            // Set correct ownership (assuming the customer user from Froxlor)
+            conn.exec(`chown www-data:www-data "${remotePath}" && chmod 644 "${remotePath}"`, (err, stream) => {
+              if (err) {
+                conn.end();
+                return resolvePromise({
+                  success: true,
+                  message: 'Datei hochgeladen, Berechtigungen konnten nicht gesetzt werden'
+                });
+              }
+
+              stream.on('close', () => {
+                conn.end();
+                resolvePromise({
+                  success: true,
+                  message: '.htaccess erfolgreich hochgeladen und Berechtigungen gesetzt'
+                });
+              });
+            });
+          });
+
+          writeStream.on('error', (err) => {
+            conn.end();
+            resolvePromise({ success: false, message: `Upload-Fehler: ${err.message}` });
+          });
+
+          writeStream.write(htaccessContent);
+          writeStream.end();
+        });
+      });
+
+      conn.on('error', (err) => {
+        resolvePromise({ success: false, message: `SSH-Verbindungsfehler: ${err.message}` });
+      });
+
+      conn.connect({
+        host: server.sshHost,
+        port: server.sshPort || 22,
+        username: server.sshUsername,
+        password: server.sshPassword,
+      });
+    });
+  } catch (error) {
+    return {
+      success: false,
+      message: `Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
+    };
+  }
+}
+
 export async function installJoomla(formData: FormData) {
   const session = await getAuthSession();
   if (!session || session.user.role !== "ADMIN") {

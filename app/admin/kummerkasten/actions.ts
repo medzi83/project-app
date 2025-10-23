@@ -14,9 +14,15 @@ export async function updateFeedbackStatus(formData: FormData) {
     throw new Error("Missing required fields");
   }
 
+  const newStatus = status as "OPEN" | "IN_PROGRESS" | "RESOLVED" | "DISMISSED";
+
   await prisma.feedback.update({
     where: { id },
-    data: { status: status as "OPEN" | "IN_PROGRESS" | "RESOLVED" | "DISMISSED" },
+    data: {
+      status: newStatus,
+      // Mark as unviewed when status changes to RESOLVED or DISMISSED so the author gets notified
+      viewedByAuthor: (newStatus === "RESOLVED" || newStatus === "DISMISSED") ? false : undefined,
+    },
   });
 
   revalidatePath("/admin/kummerkasten");

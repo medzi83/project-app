@@ -22,6 +22,7 @@ import {
 import DevModeToggle from "@/components/DevModeToggle";
 import FeedbackDialog from "@/components/FeedbackDialog";
 import { GlobalClientSearch } from "@/components/GlobalClientSearch";
+import { FeedbackNotificationBadge } from "@/components/FeedbackNotificationBadge";
 
 export type Role = "ADMIN" | "AGENT";
 
@@ -344,7 +345,7 @@ function UserPill({ user }: { user: User }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 rounded-full border bg-white px-3 py-1 hover:bg-gray-50 transition-colors">
+        <button className="flex items-center gap-2 rounded-full border bg-white px-3 py-1 hover:bg-gray-50 transition-colors relative">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-[11px] font-semibold uppercase">
             {user.name?.slice(0, 2) || "U"}
           </div>
@@ -353,6 +354,9 @@ function UserPill({ user }: { user: User }) {
             <div className="text-[10px] uppercase text-gray-500">{user.role}</div>
           </div>
           <ChevronDown className="h-3 w-3 text-gray-500" />
+          <div className="absolute -top-1 -right-1">
+            <FeedbackNotificationBadge />
+          </div>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -367,6 +371,13 @@ function UserPill({ user }: { user: User }) {
           <Link href="/notices" className="flex items-center cursor-pointer">
             <Megaphone className="mr-2 h-4 w-4" />
             <span>Hinweis-Historie</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/kummerkasten" className="flex items-center cursor-pointer">
+            <MessageSquareHeart className="mr-2 h-4 w-4" />
+            <span>Kummerkasten-Feedback</span>
+            <FeedbackNotificationBadge />
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
