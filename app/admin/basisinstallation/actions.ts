@@ -515,7 +515,7 @@ export async function uploadJoomlaHtaccess(formData: FormData) {
             });
           });
 
-          writeStream.on('error', (err) => {
+          writeStream.on('error', (err: Error) => {
             conn.end();
             resolvePromise({ success: false, message: `Upload-Fehler: ${err.message}` });
           });
@@ -525,15 +525,15 @@ export async function uploadJoomlaHtaccess(formData: FormData) {
         });
       });
 
-      conn.on('error', (err) => {
+      conn.on('error', (err: Error) => {
         resolvePromise({ success: false, message: `SSH-Verbindungsfehler: ${err.message}` });
       });
 
       conn.connect({
-        host: server.sshHost,
+        host: server.sshHost ?? undefined,
         port: server.sshPort || 22,
-        username: server.sshUsername,
-        password: server.sshPassword,
+        username: server.sshUsername ?? undefined,
+        password: server.sshPassword ?? undefined,
       });
     });
   } catch (error) {

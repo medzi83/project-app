@@ -333,7 +333,7 @@ echo "=== POST-PROCESSING COMPLETE ==="
                 });
             });
           })
-          .on("error", (err) => {
+          .on("error", (err: Error) => {
             clearTimeout(timeout);
             sshClient.end();
             reject(err);
@@ -398,7 +398,7 @@ echo "=== POST-PROCESSING COMPLETE ==="
               });
             });
 
-            writeStream.on('error', (err) => {
+            writeStream.on('error', (err: Error) => {
               conn.end();
               rejectUpload(new Error(`Upload error: ${err.message}`));
             });
@@ -408,7 +408,7 @@ echo "=== POST-PROCESSING COMPLETE ==="
           });
         });
 
-        conn.on('error', (err) => {
+        conn.on('error', (err: Error) => {
           rejectUpload(new Error(`SSH connection error: ${err.message}`));
         });
 
