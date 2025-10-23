@@ -3,22 +3,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Prisma, ProjectStatus, ProjectType, AgentCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { buildWebsiteStatusWhere, DONE_PRODUCTION_STATUSES, deriveProjectStatus } from "@/lib/project-status";
+import { buildWebsiteStatusWhere, DONE_PRODUCTION_STATUSES, deriveProjectStatus, STATUS_LABELS } from "@/lib/project-status";
 import { getEffectiveUser, getAuthSession } from "@/lib/authz";
 import { NoticeBoard, type NoticeBoardEntry } from "@/components/NoticeBoard";
 import { InstallationWarningsSlideout } from "./InstallationWarningsSlideout";
+import WorkStoppedProjectsAccordion from "./WorkStoppedProjectsAccordion";
 
 export const metadata = { title: "Dashboard" };
 
 
 const STATUSES: ProjectStatus[] = ["WEBTERMIN", "MATERIAL", "UMSETZUNG", "DEMO", "ONLINE"];
-const STATUS_LABELS: Record<ProjectStatus, string> = {
-  WEBTERMIN: "Webtermin",
-  MATERIAL: "Material",
-  UMSETZUNG: "Umsetzung",
-  DEMO: "Demo",
-  ONLINE: "Online",
-};
 
 const PROJECT_TYPES: Array<{ key: ProjectType; label: string; href: string }> = [
   { key: "WEBSITE", label: "Webseitenprojekte", href: "/projects" },
@@ -215,11 +209,23 @@ export default async function DashboardPage({
     ? baseActiveProjectWhere
     : undefined;
 
-  // Add agent filter if in agent view
+  // Add agent filter if in agent view AND agent has categories
+  // Agents without categories should see all projects in statistics (like admins)
   // Agent can be assigned via:
   // 1. Project.agentId (for website/social projects)
   // 2. ProjectFilm.filmerId or ProjectFilm.cutterId (for film projects)
-  const agentFilterWhere: Prisma.ProjectWhereInput | undefined = agentId
+  const agentFilterWhere: Prisma.ProjectWhereInput | undefined = agentId && userCategories.length > 0
+    ? {
+        OR: [
+          { agentId }, // Direct assignment
+          { film: { is: { filmerId: agentId } } }, // Film assignment as filmer
+          { film: { is: { cutterId: agentId } } }, // Film assignment as cutter
+        ],
+      }
+    : undefined;
+
+  // For agenda: ALWAYS filter by agent assignment, regardless of categories
+  const agentAgendaFilterWhere: Prisma.ProjectWhereInput | undefined = agentId
     ? {
         OR: [
           { agentId }, // Direct assignment
@@ -800,7 +806,10 @@ export default async function DashboardPage({
 
   const upcomingAgendaConditions: Prisma.ProjectWhereInput[] = [];
 
-  if (userCategories.includes("WEBSEITE" as AgentCategory)) {
+  // If agent has no categories, show all project types
+  const showAllTypes = userCategories.length === 0;
+
+  if (showAllTypes || userCategories.includes("WEBSEITE" as AgentCategory)) {
     upcomingAgendaConditions.push(
       {
         type: "WEBSITE",
@@ -842,7 +851,7 @@ export default async function DashboardPage({
     );
   }
 
-  if (userCategories.includes("FILM" as AgentCategory)) {
+  if (showAllTypes || userCategories.includes("FILM" as AgentCategory)) {
     upcomingAgendaConditions.push(
       {
         type: "FILM",
@@ -869,11 +878,11 @@ export default async function DashboardPage({
     );
   }
 
-  const upcomingAgentProjects = isAgentView && agentId && upcomingAgendaConditions.length > 0
+  const upcomingAgentProjects = isAgentView && agentId
     ? await prisma.project.findMany({
         where: (() => {
           const filters: Prisma.ProjectWhereInput[] = [{ OR: upcomingAgendaConditions }];
-          if (agentFilterWhere) filters.push(agentFilterWhere);
+          if (agentAgendaFilterWhere) filters.push(agentAgendaFilterWhere);
           return filters.length > 1 ? { AND: filters } : filters[0];
         })(),
         select: {
@@ -1164,51 +1173,7 @@ export default async function DashboardPage({
         )}
 
         {isAgentView && workStoppedProjects.length > 0 && (
-          <section className="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-red-50/40 p-5 sm:p-6 shadow-lg">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 text-2xl">⚠️</div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold bg-gradient-to-r from-orange-700 to-red-600 bg-clip-text text-transparent mb-2">
-                  Projekte mit Arbeitsstopp ({workStoppedProjects.length})
-                </h2>
-                <p className="text-sm text-orange-900 font-medium mb-4">
-                  Diese Projekte befinden sich im Status „Arbeitsstopp". Bitte keine weiteren Arbeiten durchführen.
-                </p>
-                <div className="space-y-2">
-                  {workStoppedProjects.map((project) => {
-                    const typeLabel = project.type === "WEBSITE"
-                      ? "Webseite"
-                      : project.type === "FILM"
-                      ? "Film"
-                      : project.type === "SOCIAL"
-                      ? "Social Media"
-                      : project.type;
-                    const statusLabel = STATUS_LABELS[project.status as ProjectStatus] ?? project.status;
-                    const customerLabel = [project.client?.customerNo, project.client?.name].filter(Boolean).join(" - ") || "Kunde unbekannt";
-                    const projectUrl = project.type === "FILM" ? `/film-projects/${project.id}` : `/projects/${project.id}`;
-
-                    return (
-                      <Link
-                        key={project.id}
-                        href={projectUrl}
-                        className="block rounded-lg border border-orange-200 bg-white p-3 hover:border-orange-400 transition-colors"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-sm truncate">{customerLabel}</div>
-                            <div className="text-xs text-gray-600 mt-0.5 truncate">
-                              {(project.title ?? "Projekt ohne Titel")} · {typeLabel} · Status: {statusLabel}
-                            </div>
-                          </div>
-                          <span className="text-xs text-orange-700 whitespace-nowrap">Details →</span>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </section>
+          <WorkStoppedProjectsAccordion projects={workStoppedProjects} />
         )}
       </div>
 

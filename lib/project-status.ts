@@ -33,6 +33,14 @@ const INCOMPLETE_MATERIAL_STATUSES: MaterialStatus[] = MATERIAL_STATUS_VALUES.fi
 const VOLLST_A_K: ProductionStatus = "VOLLST_A_K";
 export const DONE_PRODUCTION_STATUSES: ProductionStatus[] = ["BEENDET"];
 
+export const STATUS_LABELS: Record<ProjectStatus, string> = {
+  WEBTERMIN: "Webtermin",
+  MATERIAL: "Material",
+  UMSETZUNG: "Umsetzung",
+  DEMO: "Demo",
+  ONLINE: "Online",
+};
+
 const toDate = (value: DateLike) => {
   if (!value) return null;
   if (value instanceof Date) {

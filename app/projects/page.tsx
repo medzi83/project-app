@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import InlineCell from "@/components/InlineCell";
 import DangerActionButton from "@/components/DangerActionButton";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
+import CheckboxFilterGroup from "@/components/CheckboxFilterGroup";
 import { deleteAllProjects, deleteProject } from "./actions";
 import {
   buildWebsiteStatusWhere,
@@ -191,8 +192,8 @@ export default async function ProjectsPage({ searchParams }: Props) {
 
   const spRaw = await searchParams;
   let sp: Search = {
-    sort: str(spRaw.sort) ?? "customerNo",
-    dir: (str(spRaw.dir) as "asc" | "desc") ?? "asc",
+    sort: str(spRaw.sort) ?? "standard",
+    dir: (str(spRaw.dir) as "asc" | "desc") ?? "desc",
     q: str(spRaw.q) ?? "",
     status: arr(spRaw.status),
     priority: arr(spRaw.priority),
@@ -442,18 +443,31 @@ export default async function ProjectsPage({ searchParams }: Props) {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-semibold">Webseitenprojekte</h1>
-        {role === "ADMIN" && session.user.role === "ADMIN" && (
-          <DangerActionButton action={deleteAllProjects} confirmText="Wirklich ALLE Projekte dauerhaft löschen?">ALLE Projekte löschen</DangerActionButton>
-        )}
+      {/* Modern Header */}
+      <div className="rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 p-6 shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-white">Webseitenprojekte</h1>
+            <p className="text-purple-100 text-sm mt-1">{total} {total === 1 ? 'Projekt' : 'Projekte'} gesamt</p>
+          </div>
+          {role === "ADMIN" && session.user.role === "ADMIN" && (
+            <DangerActionButton action={deleteAllProjects} confirmText="Wirklich ALLE Projekte dauerhaft löschen?">ALLE Projekte löschen</DangerActionButton>
+          )}
+        </div>
       </div>
 
       {/* Filter */}
-<div className="rounded-lg border">
-  <div className="px-4 py-2 text-sm font-medium bg-gray-50 border-b">Filter</div>
-    <div className="p-4">
-    <form method="get" className="flex flex-wrap items-end gap-2 p-4 border rounded-lg">
+<div className="rounded-2xl border border-purple-200 bg-white shadow-sm">
+  <div className="px-6 py-3 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200 rounded-t-2xl">
+    <h2 className="text-sm font-semibold text-purple-900">Filter & Suche</h2>
+  </div>
+    <div className="p-6">
+    <form method="get" className="flex flex-wrap items-end gap-3">
       <input type="hidden" name="sort" value={sp.sort} />
       {scopeActive && <input type="hidden" name="scope" value="active" />}
       {sp.client && <input type="hidden" name="client" value={sp.client} />}
@@ -464,95 +478,47 @@ export default async function ProjectsPage({ searchParams }: Props) {
         <input name="q" defaultValue={sp.q} placeholder="Kundennr. oder Name" className="px-2 py-1 text-xs border rounded" />
       </div>
 
-      <details className="relative w-44 shrink-0">
-        <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-white cursor-pointer select-none shadow-sm [&::-webkit-details-marker]:hidden">
-          <span>Status</span>
-          <span className="opacity-70">
-            {sp.status && sp.status.length ? `${sp.status.length} ausgewählt` : "Alle"}
-          </span>
-        </summary>
-        <div className="absolute left-0 z-10 mt-1 w-60 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
-          <div className="grid grid-cols-2 gap-1 text-xs">
-            {STATUSES.map((s) => (
-              <label key={s} className="inline-flex items-center gap-2">
-                <input type="checkbox" name="status" value={s} defaultChecked={sp.status?.includes(s)} />
-                <span>{labelForProjectStatus(s as ProjectStatus)}</span>
-              </label>
-            ))}
-            <label className="inline-flex items-center gap-2">
-              <input type="checkbox" name="status" value="BEENDET" defaultChecked={sp.status?.includes("BEENDET")} />
-              <span>Beendet</span>
-            </label>
-          </div>
-        </div>
-      </details>
+      <CheckboxFilterGroup
+        name="status"
+        label="Status"
+        options={[
+          ...STATUSES.map((s) => ({ value: s, label: labelForProjectStatus(s as ProjectStatus) })),
+          { value: "BEENDET", label: "Beendet" },
+        ]}
+        selected={sp.status ?? []}
+        width="w-44"
+      />
 
-      <details className="relative w-40 shrink-0">
-        <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-white cursor-pointer select-none shadow-sm [&::-webkit-details-marker]:hidden">
-          <span>Prio</span>
-          <span className="opacity-70">
-            {sp.priority && sp.priority.length ? `${sp.priority.length} ausgewählt` : "Alle"}
-          </span>
-        </summary>
-        <div className="absolute left-0 z-10 mt-1 w-52 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
-          <div className="grid grid-cols-2 gap-1 text-xs">
-            {PRIORITIES.map((p) => (
-              <label key={p} className="inline-flex items-center gap-2">
-                <input type="checkbox" name="priority" value={p} defaultChecked={sp.priority?.includes(p)} />
-                <span>{labelForWebsitePriority(p)}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </details>
+      <CheckboxFilterGroup
+        name="priority"
+        label="Prio"
+        options={PRIORITIES.map((p) => ({ value: p, label: labelForWebsitePriority(p) }))}
+        selected={sp.priority ?? []}
+        width="w-40"
+      />
 
-      <details className="relative w-40 shrink-0">
-        <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-white cursor-pointer select-none shadow-sm [&::-webkit-details-marker]:hidden">
-          <span>CMS</span>
-          <span className="opacity-70">
-            {sp.cms && sp.cms.length ? `${sp.cms.length} ausgewählt` : "Alle"}
-          </span>
-        </summary>
-        <div className="absolute left-0 z-10 mt-1 w-52 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
-          <div className="grid grid-cols-2 gap-1 text-xs">
-            {CMS.map((c) => (
-              <label key={c} className="inline-flex items-center gap-2">
-                <input type="checkbox" name="cms" value={c} defaultChecked={sp.cms?.includes(c)} />
-                <span>{c === "SHOPWARE" ? "Shop" : c}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </details>
+      <CheckboxFilterGroup
+        name="cms"
+        label="CMS"
+        options={CMS.map((c) => ({ value: c, label: c === "SHOPWARE" ? "Shop" : c }))}
+        selected={sp.cms ?? []}
+        width="w-40"
+      />
 
-      <details className="relative w-52 shrink-0">
-        <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-white cursor-pointer select-none shadow-sm [&::-webkit-details-marker]:hidden">
-          <span>Agent</span>
-          <span className="opacity-70">
-            {!sp.agent || sp.agent.length === 0 || sp.agent.includes("alle")
-              ? "Alle"
-              : (sp.agent.length === 1 && sp.agent.includes("none") ? "Ohne Agent" : `${sp.agent.length} ausgewählt`)}
-          </span>
-        </summary>
-        <div className="absolute left-0 z-10 mt-1 w-64 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
-          <div className="grid grid-cols-2 gap-1 text-xs">
-            <label className="inline-flex items-center gap-2">
-              <input type="checkbox" name="agent" value="alle" defaultChecked={(sp.agent ?? []).length === 0 || sp.agent?.includes("alle")} />
-              <span>Alle</span>
-            </label>
-            <label className="inline-flex items-center gap-2">
-              <input type="checkbox" name="agent" value="none" defaultChecked={sp.agent?.includes("none")} />
-              <span>Ohne Agent</span>
-            </label>
-            {agentsActive.filter(a => a.categories.includes("WEBSEITE")).map((a) => (
-              <label key={a.id} className="inline-flex items-center gap-2">
-                <input type="checkbox" name="agent" value={a.id} defaultChecked={sp.agent?.includes(a.id)} />
-                <span>{a.name ?? a.email}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </details>
+      <CheckboxFilterGroup
+        name="agent"
+        label="Agent"
+        options={[
+          { value: "alle", label: "Alle" },
+          { value: "none", label: "Ohne Agent" },
+          ...agentsActive.filter(a => a.categories.includes("WEBSEITE")).map((a) => ({
+            value: a.id,
+            label: a.name ?? a.email ?? "",
+          })),
+        ]}
+        selected={sp.agent ?? []}
+        width="w-52"
+      />
 
       <div className="flex flex-col gap-1 w-36 shrink-0">
         <label className="text-[11px] uppercase tracking-wide text-gray-500">Reihenfolge</label>
@@ -563,18 +529,18 @@ export default async function ProjectsPage({ searchParams }: Props) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button type="submit" name="standardSort" value="1" className="px-3 py-1 text-xs rounded border bg-white">Standardsortierung</button>
-        <button className="px-3 py-1 text-xs rounded bg-black text-white" type="submit">Anwenden</button>
-        <Link href="/projects" className="px-3 py-1 text-xs rounded border">Zurücksetzen</Link>
+        <button type="submit" name="standardSort" value="1" className="px-4 py-2 text-xs font-medium rounded-lg border border-purple-200 bg-white text-purple-700 hover:bg-purple-50 transition-colors">Standardsortierung</button>
+        <button className="px-4 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-colors shadow-sm" type="submit">Anwenden</button>
+        <Link href="/projects" className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">Zurücksetzen</Link>
       </div>
     </form>
   </div>
 </div>
 
       {renderPagination("mt-4")}
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="overflow-x-auto rounded-2xl border border-purple-200 shadow-sm bg-white">
         <table className="min-w-[1200px] w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200">
             <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
               <Th href={mkSort("status")} active={sp.sort==="status"} dir={sp.dir}>Status</Th>
               <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir} width={120}>Kundennr.</Th>
@@ -638,12 +604,14 @@ export default async function ProjectsPage({ searchParams }: Props) {
               const seoReady = p.website?.seo === "NEIN" || p.website?.seo === "JA_NEIN" || p.website?.seo === "JA_JA";
               const statusGreen = isUmsetzung && textitReady && seoReady;
 
-              const rowClasses = ["border-t"];
-              if (isStale) rowClasses.push("bg-red-50");
+              const rowClasses = ["border-t", "border-purple-100", "transition-colors", "hover:bg-purple-50/50"];
+              if (isStale) rowClasses.push("bg-red-50", "hover:bg-red-100/50");
               if (ended) rowClasses.push("opacity-60");
               return (
                 <tr key={p.id} className={rowClasses.join(" ")}>
-                  <td className={statusGreen ? "bg-green-100 font-semibold" : ""}>{statusLabel}</td>
+                  <td className={statusGreen ? "bg-green-100 font-semibold rounded-lg" : ""}>
+                    <span className={statusGreen ? "inline-flex items-center px-2 py-1 rounded-md bg-green-200 text-green-900 text-xs font-semibold" : ""}>{statusLabel}</span>
+                  </td>
                   <td className="whitespace-nowrap">
                     <div className="flex flex-col gap-1">
                       {p.client?.customerNo ? (

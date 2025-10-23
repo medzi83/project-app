@@ -355,39 +355,90 @@ export async function importFilmProjects(formData: FormData): Promise<ImportResu
         cutterId = agent.id;
       }
 
-      // Create project - set type to FILM
-      const project = await prisma.project.create({
-        data: {
-          title: projectTitleFromSuffix,
-          type: "FILM",
-          status: "WEBTERMIN", // Placeholder - will be overridden by film status logic
+      // Try to find existing film project based on clientId + filmerId + scouting + contractStart
+      // This allows updating existing projects instead of creating duplicates
+      const existingProject = await prisma.project.findFirst({
+        where: {
           clientId: client.id,
+          type: "FILM",
+          film: {
+            filmerId: filmerId ?? null,
+            scouting: scouting ?? null,
+            contractStart: contractStart ?? null,
+          },
         },
         select: { id: true },
       });
 
-      // Create film details (1:1)
-      await prisma.projectFilm.create({
-        data: {
-          projectId: project.id,
-          scope,
-          priority,
-          status: pStatus,
-          filmerId: filmerId ?? null,
-          cutterId: cutterId ?? null,
-          contractStart: contractStart ?? null,
-          scouting: scouting ?? null,
-          scriptToClient: scriptToClient ?? null,
-          scriptApproved: scriptApproved ?? null,
-          shootDate: shootDate ?? null,
-          firstCutToClient: firstCutToClient ?? null,
-          finalToClient: finalToClient ?? null,
-          onlineDate: onlineDate ?? null,
-          lastContact: lastContact ?? null,
-          reminderAt: reminderAt ?? null,
-          note: note || null,
-        },
-      });
+      let project: { id: string };
+      if (existingProject) {
+        // Update existing project
+        project = await prisma.project.update({
+          where: { id: existingProject.id },
+          data: {
+            title: projectTitleFromSuffix,
+            status: "WEBTERMIN", // Placeholder - will be overridden by film status logic
+          },
+          select: { id: true },
+        });
+
+        // Update film details
+        await prisma.projectFilm.update({
+          where: { projectId: project.id },
+          data: {
+            scope,
+            priority,
+            status: pStatus,
+            filmerId: filmerId ?? null,
+            cutterId: cutterId ?? null,
+            contractStart: contractStart ?? null,
+            scouting: scouting ?? null,
+            scriptToClient: scriptToClient ?? null,
+            scriptApproved: scriptApproved ?? null,
+            shootDate: shootDate ?? null,
+            firstCutToClient: firstCutToClient ?? null,
+            finalToClient: finalToClient ?? null,
+            onlineDate: onlineDate ?? null,
+            lastContact: lastContact ?? null,
+            reminderAt: reminderAt ?? null,
+            note: note || null,
+          },
+        });
+      } else {
+        // Create new project
+        project = await prisma.project.create({
+          data: {
+            title: projectTitleFromSuffix,
+            type: "FILM",
+            status: "WEBTERMIN", // Placeholder - will be overridden by film status logic
+            clientId: client.id,
+          },
+          select: { id: true },
+        });
+
+        // Create film details (1:1)
+        await prisma.projectFilm.create({
+          data: {
+            projectId: project.id,
+            scope,
+            priority,
+            status: pStatus,
+            filmerId: filmerId ?? null,
+            cutterId: cutterId ?? null,
+            contractStart: contractStart ?? null,
+            scouting: scouting ?? null,
+            scriptToClient: scriptToClient ?? null,
+            scriptApproved: scriptApproved ?? null,
+            shootDate: shootDate ?? null,
+            firstCutToClient: firstCutToClient ?? null,
+            finalToClient: finalToClient ?? null,
+            onlineDate: onlineDate ?? null,
+            lastContact: lastContact ?? null,
+            reminderAt: reminderAt ?? null,
+            note: note || null,
+          },
+        });
+      }
 
       imported++;
     } catch (error: unknown) {

@@ -8,6 +8,7 @@ import { getAuthSession } from "@/lib/authz";
 import FilmInlineCell from "@/components/FilmInlineCell";
 import FilmPreviewCell from "@/components/FilmPreviewCell";
 import DangerActionButton from "@/components/DangerActionButton";
+import CheckboxFilterGroup from "@/components/CheckboxFilterGroup";
 import { deleteFilmProject, deleteAllFilmProjects } from "./actions";
 import { deriveFilmStatus, getFilmStatusDate, FILM_STATUS_LABELS, type FilmStatus } from "@/lib/film-status";
 
@@ -459,8 +460,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
 
   const spRaw = await searchParams;
   let sp: Search = {
-    sort: str(spRaw.sort) ?? "customerNo",
-    dir: (str(spRaw.dir) as "asc" | "desc") ?? "asc",
+    sort: str(spRaw.sort) ?? "standard",
+    dir: (str(spRaw.dir) as "asc" | "desc") ?? "desc",
     q: str(spRaw.q) ?? "",
     agent: arr(spRaw.agent),
     cutter: arr(spRaw.cutter),
@@ -484,7 +485,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
   const orderBy = mapOrderBy(sp.sort!, sp.dir!);
 
   // Load all matching film projects (with status filter applied)
-  const [allFilmProjects, allAgents] = await Promise.all([
+  const [loadedProjects, allAgents] = await Promise.all([
     loadFilmProjects(sp.q, sp.agent, sp.cutter, sp.status, sp.pstatus, orderBy),
     prisma.user.findMany({
       where: { role: "AGENT", active: true },
@@ -492,6 +493,53 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
       select: { id: true, name: true, email: true, categories: true }
     }),
   ]);
+
+  // Apply in-memory sorting for "standard" sort to account for preview versions
+  let allFilmProjects = loadedProjects;
+  if (sp.sort === "standard") {
+    const direction = sp.dir === "desc" ? -1 : 1;
+
+    allFilmProjects = [...loadedProjects].sort((a, b) => {
+      // Define priority levels (higher = comes first when desc)
+      const getPriorityAndDate = (project: typeof a): [number, Date | null] => {
+        const film = project.film;
+        if (!film) return [0, null];
+
+        const latestPreview = film.previewVersions?.[0];
+        const previewDate = latestPreview?.sentDate ?? film.firstCutToClient;
+
+        // Priority levels: 7=Online, 6=Final, 5=Vorabversion, 4=Dreh, 3=Skript-Freigabe, 2=Skript, 1=Scouting, 0=Vertrag
+        if (film.onlineDate) return [7, new Date(film.onlineDate)];
+        if (film.finalToClient) return [6, new Date(film.finalToClient)];
+        if (previewDate) return [5, new Date(previewDate)];
+        if (film.shootDate) return [4, new Date(film.shootDate)];
+        if (film.scriptApproved) return [3, new Date(film.scriptApproved)];
+        if (film.scriptToClient) return [2, new Date(film.scriptToClient)];
+        if (film.scouting) return [1, new Date(film.scouting)];
+        if (film.contractStart) return [0, new Date(film.contractStart)];
+
+        return [-1, null]; // No dates at all
+      };
+
+      const [priorityA, dateA] = getPriorityAndDate(a);
+      const [priorityB, dateB] = getPriorityAndDate(b);
+
+      // First, sort by priority level
+      if (priorityA !== priorityB) {
+        return (priorityB - priorityA) * direction;
+      }
+
+      // Same priority level, sort by date
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+
+      const timeA = dateA.getTime();
+      const timeB = dateB.getTime();
+
+      return (timeB - timeA) * direction;
+    });
+  }
 
   // Pagination
   const pageSize = sp.ps === "100" ? 100 : 50;
@@ -537,20 +585,32 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
   };
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-semibold">Filmprojekte</h1>
-        <span className="text-sm text-gray-500">{total} Projekt{total === 1 ? "" : "e"}</span>
-        {session.user.role === "ADMIN" && (
-          <DangerActionButton action={deleteAllFilmProjects} confirmText="Wirklich ALLE Filmprojekte dauerhaft löschen?">
-            ALLE Projekte löschen
-          </DangerActionButton>
-        )}
-      </header>
+    <div className="p-6 space-y-6">
+      {/* Modern Header */}
+      <div className="rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 p-6 shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-white">Filmprojekte</h1>
+            <p className="text-green-100 text-sm mt-1">{total} {total === 1 ? 'Projekt' : 'Projekte'} gesamt</p>
+          </div>
+          {session.user.role === "ADMIN" && (
+            <DangerActionButton action={deleteAllFilmProjects} confirmText="Wirklich ALLE Filmprojekte dauerhaft löschen?">
+              ALLE Projekte löschen
+            </DangerActionButton>
+          )}
+        </div>
+      </div>
 
-      <div className="rounded-lg border">
-        <div className="px-4 py-2 text-sm font-medium bg-gray-50 border-b">Filter & Suche</div>
-        <div className="p-4">
+      <div className="rounded-2xl border border-green-200 bg-white shadow-sm">
+        <div className="px-6 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200 rounded-t-2xl">
+          <h2 className="text-sm font-semibold text-green-900">Filter & Suche</h2>
+        </div>
+        <div className="p-6">
           <form method="get" className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="sort" value={sp.sort} />
             <input type="hidden" name="dir" value={sp.dir} />
@@ -565,89 +625,43 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
               />
             </div>
 
-            <details className="relative w-48">
-              <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-white cursor-pointer select-none shadow-sm [&::-webkit-details-marker]:hidden">
-                <span>Agent (Filmer)</span>
-                <span className="opacity-70">
-                  {sp.agent && sp.agent.length ? `${sp.agent.length} ausgewählt` : "Alle"}
-                </span>
-              </summary>
-              <div className="absolute left-0 z-10 mt-1 w-64 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
-                <div className="grid grid-cols-2 gap-1 text-xs">
-                  <label className="inline-flex items-center gap-2">
-                    <input type="checkbox" name="agent" value="none" defaultChecked={sp.agent?.includes("none")} />
-                    <span>Ohne Agent</span>
-                  </label>
-                  {agents.map((a) => (
-                    <label key={a.id} className="inline-flex items-center gap-2">
-                      <input type="checkbox" name="agent" value={a.id} defaultChecked={sp.agent?.includes(a.id)} />
-                      <span>{a.name ?? a.email}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </details>
+            <CheckboxFilterGroup
+              name="agent"
+              label="Agent (Filmer)"
+              options={[
+                { value: "none", label: "Ohne Agent" },
+                ...agents.map((a) => ({ value: a.id, label: a.name ?? a.email ?? "" })),
+              ]}
+              selected={sp.agent ?? []}
+              width="w-48"
+            />
 
-            <details className="relative w-48">
-              <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-white cursor-pointer select-none shadow-sm [&::-webkit-details-marker]:hidden">
-                <span>Cutter</span>
-                <span className="opacity-70">
-                  {sp.cutter && sp.cutter.length ? `${sp.cutter.length} ausgewählt` : "Alle"}
-                </span>
-              </summary>
-              <div className="absolute left-0 z-10 mt-1 w-64 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
-                <div className="grid grid-cols-2 gap-1 text-xs">
-                  <label className="inline-flex items-center gap-2">
-                    <input type="checkbox" name="cutter" value="none" defaultChecked={sp.cutter?.includes("none")} />
-                    <span>Ohne Cutter</span>
-                  </label>
-                  {agents.map((a) => (
-                    <label key={a.id} className="inline-flex items-center gap-2">
-                      <input type="checkbox" name="cutter" value={a.id} defaultChecked={sp.cutter?.includes(a.id)} />
-                      <span>{a.name ?? a.email}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </details>
+            <CheckboxFilterGroup
+              name="cutter"
+              label="Cutter"
+              options={[
+                { value: "none", label: "Ohne Cutter" },
+                ...agents.map((a) => ({ value: a.id, label: a.name ?? a.email ?? "" })),
+              ]}
+              selected={sp.cutter ?? []}
+              width="w-48"
+            />
 
-            <details className="relative w-44">
-              <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-white cursor-pointer select-none shadow-sm [&::-webkit-details-marker]:hidden">
-                <span>Status</span>
-                <span className="opacity-70">
-                  {sp.status && sp.status.length ? `${sp.status.length} ausgewählt` : "Alle"}
-                </span>
-              </summary>
-              <div className="absolute left-0 z-10 mt-1 w-52 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
-                <div className="grid grid-cols-2 gap-1 text-xs">
-                  {FILM_STATUSES.map((s) => (
-                    <label key={s} className="inline-flex items-center gap-2">
-                      <input type="checkbox" name="status" value={s} defaultChecked={sp.status?.includes(s)} />
-                      <span>{FILM_STATUS_LABELS[s]}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </details>
+            <CheckboxFilterGroup
+              name="status"
+              label="Status"
+              options={FILM_STATUSES.map((s) => ({ value: s, label: FILM_STATUS_LABELS[s] }))}
+              selected={sp.status ?? []}
+              width="w-44"
+            />
 
-            <details className="relative w-44">
-              <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-white cursor-pointer select-none shadow-sm [&::-webkit-details-marker]:hidden">
-                <span>P-Status</span>
-                <span className="opacity-70">
-                  {sp.pstatus && sp.pstatus.length ? `${sp.pstatus.length} ausgewählt` : "Alle"}
-                </span>
-              </summary>
-              <div className="absolute left-0 z-10 mt-1 w-52 rounded border bg-white shadow-lg max-h-56 overflow-auto p-2">
-                <div className="grid grid-cols-2 gap-1 text-xs">
-                  {P_STATUS_OPTIONS.map((option) => (
-                    <label key={option.value} className="inline-flex items-center gap-2">
-                      <input type="checkbox" name="pstatus" value={option.value} defaultChecked={sp.pstatus?.includes(option.value)} />
-                      <span>{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </details>
+            <CheckboxFilterGroup
+              name="pstatus"
+              label="P-Status"
+              options={P_STATUS_OPTIONS}
+              selected={sp.pstatus ?? []}
+              width="w-44"
+            />
 
             <div className="flex flex-col gap-1 w-36 shrink-0">
               <label className="text-xs uppercase tracking-wide text-gray-500">Reihenfolge</label>
@@ -658,9 +672,9 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button type="submit" name="standardSort" value="1" className="px-3 py-1 text-xs rounded border bg-white">Standardsortierung</button>
-              <button type="submit" className="px-3 py-1 text-xs rounded bg-black text-white">Anwenden</button>
-              <Link href="/film-projects" className="px-3 py-1 text-xs rounded border">Zurücksetzen</Link>
+              <button type="submit" name="standardSort" value="1" className="px-4 py-2 text-xs font-medium rounded-lg border border-green-200 bg-white text-green-700 hover:bg-green-50 transition-colors">Standardsortierung</button>
+              <button type="submit" className="px-4 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-colors shadow-sm">Anwenden</button>
+              <Link href="/film-projects" className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">Zurücksetzen</Link>
             </div>
           </form>
         </div>
@@ -668,10 +682,10 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
 
       {renderPagination("mt-4")}
 
-      <section className="rounded-lg border bg-white">
+      <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-[1400px] w-full text-sm">
-            <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+            <thead className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wide text-gray-700">
               <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
                 <Th>Status</Th>
                 <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir}>Kd.-Nr.</Th>
@@ -710,14 +724,16 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 const cutterBadgeStyle = hasCutter ? agentBadgeStyle(film?.cutter?.color) : undefined;
 
                 const isNotActive = film?.status && film.status !== "AKTIV" && film.status !== "BEENDET";
+                const isBeendet = film?.status === "BEENDET";
 
-                const rowClasses = ["border-t"];
-                if (row.isStale) rowClasses.push("bg-red-50");
+                const rowClasses = ["border-t", "border-gray-200", "transition-colors", "hover:bg-gray-50"];
+                if (row.isStale) rowClasses.push("bg-red-50", "hover:bg-red-100/50");
+                if (isBeendet) rowClasses.push("opacity-60");
 
                 return (
                   <tr key={project.id} className={rowClasses.join(" ")}>
-                    <td className="font-semibold text-gray-900">
-                      <span className="inline-flex items-center gap-1">
+                    <td className="font-semibold">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-gray-900 text-xs">
                         {row.primaryLinkHref && (
                           <a
                             href={row.primaryLinkHref}

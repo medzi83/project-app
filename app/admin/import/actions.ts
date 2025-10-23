@@ -338,55 +338,90 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
         }
         agentId = agent.id;
       }
-      const project = await prisma.project.create({
-        data: {
-          // Only set title when suffix present in import (e.g., 12345-1 or 12345-2), otherwise keep empty
-          title: projectTitleFromSuffix,
-          status,
+      // Try to find existing website project based on clientId + agentId + webDate + title + cms
+      // This allows updating existing projects instead of creating duplicates
+      const existingProject = await prisma.project.findFirst({
+        where: {
           clientId: client.id,
+          type: "WEBSITE",
           agentId: agentId ?? null,
+          title: projectTitleFromSuffix,
+          website: {
+            webDate: webDate ?? null,
+            cms: cms,
+          },
         },
         select: { id: true },
       });
-      // Upsert website details (1:1)
-      await prisma.projectWebsite.upsert({
-        where: { projectId: project.id },
-        create: {
-          projectId: project.id,
-          priority: prio,
-          pStatus,
-          cms,
-          cmsOther: cmsOther,
-          webDate: webDate ?? null,
-          demoDate: demoDate ?? null,
-          onlineDate: onlineDate ?? null,
-          lastMaterialAt: lastMaterialAt ?? null,
-          effortBuildMin: Number.isFinite(effortBuildMin) ? effortBuildMin : null,
-          effortDemoMin: Number.isFinite(effortDemoMin) ? effortDemoMin : null,
-          seo: seo ?? "NEIN",
-          textit: textit ?? "NEIN",
-          accessible: accessible ?? null,
-          note: note || null,
-          materialStatus: materialStatus ?? undefined,
-        },
-        update: {
-          priority: prio,
-          pStatus,
-          cms,
-          cmsOther: cmsOther,
-          webDate: webDate ?? null,
-          demoDate: demoDate ?? null,
-          onlineDate: onlineDate ?? null,
-          lastMaterialAt: lastMaterialAt ?? null,
-          effortBuildMin: Number.isFinite(effortBuildMin) ? effortBuildMin : null,
-          effortDemoMin: Number.isFinite(effortDemoMin) ? effortDemoMin : null,
-          seo: seo ?? "NEIN",
-          textit: textit ?? "NEIN",
-          accessible: accessible ?? null,
-          note: note || null,
-          materialStatus: materialStatus ?? undefined,
-        },
-      });
+
+      let project: { id: string };
+      if (existingProject) {
+        // Update existing project
+        project = await prisma.project.update({
+          where: { id: existingProject.id },
+          data: {
+            status,
+            agentId: agentId ?? null,
+          },
+          select: { id: true },
+        });
+
+        // Update website details
+        await prisma.projectWebsite.update({
+          where: { projectId: project.id },
+          data: {
+            priority: prio,
+            pStatus,
+            cms,
+            cmsOther: cmsOther,
+            webDate: webDate ?? null,
+            demoDate: demoDate ?? null,
+            onlineDate: onlineDate ?? null,
+            lastMaterialAt: lastMaterialAt ?? null,
+            effortBuildMin: Number.isFinite(effortBuildMin) ? effortBuildMin : null,
+            effortDemoMin: Number.isFinite(effortDemoMin) ? effortDemoMin : null,
+            seo: seo ?? "NEIN",
+            textit: textit ?? "NEIN",
+            accessible: accessible ?? null,
+            note: note || null,
+            materialStatus: materialStatus ?? undefined,
+          },
+        });
+      } else {
+        // Create new project
+        project = await prisma.project.create({
+          data: {
+            // Only set title when suffix present in import (e.g., 12345-1 or 12345-2), otherwise keep empty
+            title: projectTitleFromSuffix,
+            status,
+            clientId: client.id,
+            agentId: agentId ?? null,
+          },
+          select: { id: true },
+        });
+
+        // Create website details (1:1)
+        await prisma.projectWebsite.create({
+          data: {
+            projectId: project.id,
+            priority: prio,
+            pStatus,
+            cms,
+            cmsOther: cmsOther,
+            webDate: webDate ?? null,
+            demoDate: demoDate ?? null,
+            onlineDate: onlineDate ?? null,
+            lastMaterialAt: lastMaterialAt ?? null,
+            effortBuildMin: Number.isFinite(effortBuildMin) ? effortBuildMin : null,
+            effortDemoMin: Number.isFinite(effortDemoMin) ? effortDemoMin : null,
+            seo: seo ?? "NEIN",
+            textit: textit ?? "NEIN",
+            accessible: accessible ?? null,
+            note: note || null,
+            materialStatus: materialStatus ?? undefined,
+          },
+        });
+      }
       imported++;
     } catch (error: unknown) {
       skipped++;
