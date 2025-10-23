@@ -561,6 +561,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
 
   const rows = buildRows(filmProjects);
   const canEdit = ["ADMIN", "AGENT"].includes(session.user.role || "");
+  const canDelete = session.user.role === "ADMIN";
   const mkSort = (key: string) => makeSortHref({ current: sp, key });
   const mkPageHref = (p: number) => makePageHref({ current: sp, page: p });
   const mkPageSizeHref = (s: number) => makePageSizeHref({ current: sp, size: s });
@@ -693,7 +694,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 <Th href={mkSort("scope")} active={sp.sort==="scope"} dir={sp.dir}>Umfang</Th>
                 <Th href={mkSort("priority")} active={sp.sort==="priority"} dir={sp.dir}>Prio / Nur Film</Th>
                 <Th href={mkSort("filmer")} active={sp.sort==="filmer"} dir={sp.dir}>Verantwortl. Filmer</Th>
-                <Th href={mkSort("cutter")} active={sp.sort==="cutter"} dir={sp.dir}>Cutter</Th>
                 <Th href={mkSort("contractStart")} active={sp.sort==="contractStart"} dir={sp.dir}>Vertragsbeginn</Th>
                 <Th href={mkSort("scouting")} active={sp.sort==="scouting"} dir={sp.dir}>Scouting</Th>
                 <Th href={mkSort("scriptToClient")} active={sp.sort==="scriptToClient"} dir={sp.dir}>Skript an Kunden</Th>
@@ -707,7 +707,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 <Th href={mkSort("reminderAt")} active={sp.sort==="reminderAt"} dir={sp.dir}>Wiedervorlage am</Th>
                 <Th>Hinweis</Th>
                 <Th>Details</Th>
-                <Th>Löschen</Th>
+                {canDelete && <Th>Löschen</Th>}
               </tr>
             </thead>
             <tbody className="[&>tr>td]:px-3 [&>tr>td]:py-2 align-top">
@@ -803,19 +803,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         canEdit={canEdit}
                         displayClassName={filmerBadgeClass}
                         displayStyle={filmerBadgeStyle}
-                      />
-                    </td>
-                    <td>
-                      <FilmInlineCell
-                        id={project.id}
-                        name="cutterId"
-                        type="select"
-                        display={row.cutter}
-                        value={film?.cutterId ?? ""}
-                        options={agentOptions}
-                        canEdit={canEdit}
-                        displayClassName={cutterBadgeClass}
-                        displayStyle={cutterBadgeStyle}
                       />
                     </td>
                     <td>
@@ -961,8 +948,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         Details
                       </Link>
                     </td>
-                    <td>
-                      {canEdit && (
+                    {canDelete && (
+                      <td>
                         <DangerActionButton
                           action={deleteFilmProject}
                           id={project.id}
@@ -971,8 +958,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         >
                           <TrashIcon className="h-4 w-4" />
                         </DangerActionButton>
-                      )}
-                    </td>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

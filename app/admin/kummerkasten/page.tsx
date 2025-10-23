@@ -11,9 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const formatDateTime = (value: Date) =>
-  new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(value);
+import { formatDateTime } from "@/lib/date-utils";
 
 const feedbackTypeLabels: Record<string, string> = {
   BUG: "Bug/Fehler",
