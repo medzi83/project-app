@@ -415,6 +415,7 @@ enum FilmScope {
   DROHNE
   NACHDREH
   FILM_UND_DROHNE
+  FOTO
 }
 enum FilmPriority {
   NONE

@@ -64,6 +64,7 @@ const SCOPE_LABELS = {
   DROHNE: "Drohne",
   NACHDREH: "Nachdreh",
   FILM_UND_DROHNE: "Film + Drohne",
+  FOTO: "Foto",
 } as const;
 
 const PRIORITY_LABELS = {

@@ -66,6 +66,7 @@ const mapScope = (val: string | undefined): FilmScope => {
   if (["DROHNE"].includes(v)) return "DROHNE";
   if (["NACHDREH"].includes(v)) return "NACHDREH";
   if (["FILM_UND_DROHNE", "FILM UND DROHNE", "F + D", "F+D"].includes(v)) return "FILM_UND_DROHNE";
+  if (["FOTO", "PHOTO"].includes(v)) return "FOTO";
   return "FILM";
 };
 

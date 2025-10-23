@@ -24,6 +24,7 @@ const SCOPE_OPTIONS = [
   { value: "DROHNE", label: "Drohne" },
   { value: "NACHDREH", label: "Nachdreh" },
   { value: "FILM_UND_DROHNE", label: "Film + Drohne" },
+  { value: "FOTO", label: "Foto" },
 ];
 
 const PRIORITY_OPTIONS = [

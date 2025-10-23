@@ -69,8 +69,10 @@ export function deriveFilmStatus(film: FilmStatusInput): FilmStatus {
   // Finalversion - Finalversion an Kunden
   if (film.finalToClient) return "FINALVERSION";
 
-  // Vorabversion - Check latest preview version
-  const hasPreviewVersion = film.previewVersions && film.previewVersions.length > 0;
+  // Vorabversion - Check latest preview version with valid sentDate
+  const hasPreviewVersion = film.previewVersions
+    && film.previewVersions.length > 0
+    && film.previewVersions[0].sentDate;
   if (hasPreviewVersion) return "VORABVERSION";
 
   // Schnitt - Drehtermin-Datum in Vergangenheit

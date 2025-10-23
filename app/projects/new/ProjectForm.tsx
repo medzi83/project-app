@@ -64,6 +64,7 @@ const FILM_SCOPE_LABELS: Record<FilmScope, string> = {
   DROHNE: "Drohne",
   NACHDREH: "Nachdreh",
   FILM_UND_DROHNE: "Film & Drohne",
+  FOTO: "Foto",
 };
 const FILM_PRIORITY_LABELS: Record<FilmPriority, string> = {
   NONE: "-",
