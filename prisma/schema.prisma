@@ -416,6 +416,8 @@ enum FilmScope {
   NACHDREH
   FILM_UND_DROHNE
   FOTO
+  GRAD_360
+  K_A
 }
 enum FilmPriority {
   NONE

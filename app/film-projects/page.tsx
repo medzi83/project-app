@@ -41,6 +41,8 @@ const SCOPE_LABELS: Record<FilmScope, string> = {
   NACHDREH: "Nachdreh",
   FILM_UND_DROHNE: "F + D",
   FOTO: "Foto",
+  GRAD_360: "360°",
+  K_A: "k.A.",
 };
 
 const PRIORITY_LABELS: Record<FilmPriority, string> = {
@@ -177,10 +179,12 @@ const relevantDateForStatus = (
   }
 };
 
-const SCOPE_OPTIONS = (Object.keys(SCOPE_LABELS) as FilmScope[]).map((value) => ({
-  value,
-  label: SCOPE_LABELS[value],
-}));
+const SCOPE_OPTIONS = (Object.keys(SCOPE_LABELS) as FilmScope[])
+  .filter((value) => value !== "K_A")
+  .map((value) => ({
+    value,
+    label: SCOPE_LABELS[value],
+  }));
 
 const PRIORITY_OPTIONS = (Object.keys(PRIORITY_LABELS) as FilmPriority[]).map((value) => ({
   value,
@@ -635,17 +639,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 ...agents.map((a) => ({ value: a.id, label: a.name ?? a.email ?? "" })),
               ]}
               selected={sp.agent ?? []}
-              width="w-48"
-            />
-
-            <CheckboxFilterGroup
-              name="cutter"
-              label="Cutter"
-              options={[
-                { value: "none", label: "Ohne Cutter" },
-                ...agents.map((a) => ({ value: a.id, label: a.name ?? a.email ?? "" })),
-              ]}
-              selected={sp.cutter ?? []}
               width="w-48"
             />
 

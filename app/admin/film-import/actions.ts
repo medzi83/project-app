@@ -62,12 +62,14 @@ const normUC = (v: string | undefined | null) =>
 
 const mapScope = (val: string | undefined): FilmScope => {
   const v = normUC(val);
+  if (!v || v === "" || v === "K.A." || v === "K.A" || v === "K A") return "K_A";
   if (["FILM"].includes(v)) return "FILM";
   if (["DROHNE"].includes(v)) return "DROHNE";
   if (["NACHDREH"].includes(v)) return "NACHDREH";
   if (["FILM_UND_DROHNE", "FILM UND DROHNE", "F + D", "F+D"].includes(v)) return "FILM_UND_DROHNE";
   if (["FOTO", "PHOTO"].includes(v)) return "FOTO";
-  return "FILM";
+  if (["360", "360°", "360 GRAD", "GRAD_360"].includes(v)) return "GRAD_360";
+  return "K_A";
 };
 
 const mapPriority = (val: string | undefined): FilmPriority => {
@@ -228,8 +230,15 @@ export async function importFilmProjects(formData: FormData): Promise<ImportResu
     const reminderAt = toDate(row[idx.reminderAt]);
 
     const note = norm(row[idx.note]);
-    const filmerName = norm(row[idx.filmer]);
-    const cutterName = norm(row[idx.cutter]);
+    const filmerNameRaw = norm(row[idx.filmer]);
+    const cutterNameRaw = norm(row[idx.cutter]);
+
+    // Check if filmer/cutter is "k.A." (keine Angabe)
+    const isFilmerKA = !filmerNameRaw || filmerNameRaw.toLowerCase() === "k.a." || filmerNameRaw.toLowerCase() === "k.a" || filmerNameRaw.toLowerCase() === "k a";
+    const isCutterKA = !cutterNameRaw || cutterNameRaw.toLowerCase() === "k.a." || cutterNameRaw.toLowerCase() === "k.a" || cutterNameRaw.toLowerCase() === "k a";
+
+    const filmerName = isFilmerKA ? undefined : filmerNameRaw;
+    const cutterName = isCutterKA ? undefined : cutterNameRaw;
 
     try {
       // Ensure client

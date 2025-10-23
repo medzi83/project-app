@@ -25,6 +25,7 @@ const SCOPE_OPTIONS = [
   { value: "NACHDREH", label: "Nachdreh" },
   { value: "FILM_UND_DROHNE", label: "Film + Drohne" },
   { value: "FOTO", label: "Foto" },
+  { value: "GRAD_360", label: "360°" },
 ];
 
 const PRIORITY_OPTIONS = [

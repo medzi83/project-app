@@ -65,6 +65,8 @@ const FILM_SCOPE_LABELS: Record<FilmScope, string> = {
   NACHDREH: "Nachdreh",
   FILM_UND_DROHNE: "Film & Drohne",
   FOTO: "Foto",
+  GRAD_360: "360°",
+  K_A: "k.A.",
 };
 const FILM_PRIORITY_LABELS: Record<FilmPriority, string> = {
   NONE: "-",
@@ -80,10 +82,12 @@ const FILM_STATUS_LABELS: Record<FilmProjectStatus, string> = {
   MMW: "MMW",
 };
 
-const FILM_SCOPE_OPTIONS: Option[] = (Object.keys(FILM_SCOPE_LABELS) as FilmScope[]).map((value) => ({
-  value,
-  label: FILM_SCOPE_LABELS[value],
-}));
+const FILM_SCOPE_OPTIONS: Option[] = (Object.keys(FILM_SCOPE_LABELS) as FilmScope[])
+  .filter((value) => value !== "K_A")
+  .map((value) => ({
+    value,
+    label: FILM_SCOPE_LABELS[value],
+  }));
 const FILM_PRIORITY_OPTIONS: Option[] = (Object.keys(FILM_PRIORITY_LABELS) as FilmPriority[]).map((value) => ({
   value,
   label: FILM_PRIORITY_LABELS[value],

@@ -65,6 +65,8 @@ const SCOPE_LABELS = {
   NACHDREH: "Nachdreh",
   FILM_UND_DROHNE: "Film + Drohne",
   FOTO: "Foto",
+  GRAD_360: "360°",
+  K_A: "k.A.",
 } as const;
 
 const PRIORITY_LABELS = {
