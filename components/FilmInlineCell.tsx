@@ -74,11 +74,13 @@ export default function FilmInlineCell({
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-blue-600 underline decoration-dotted decoration-1 text-xs"
+          className="inline-flex items-center justify-center w-5 h-5 rounded hover:opacity-80 transition-opacity"
           onClick={(e) => e.stopPropagation()}
-          title="Zum Link"
+          title="Zum Film"
         >
-          {fallbackSecondary}
+          <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
         </a>
       );
     }
@@ -134,9 +136,9 @@ export default function FilmInlineCell({
     );
 
     const baseButtonClass =
-      "inline-flex w-full items-start justify-start gap-2 rounded px-1 py-0.5 text-left cursor-text bg-transparent";
+      "inline-flex w-full items-start justify-start gap-2 rounded px-2 py-1 text-left cursor-pointer bg-transparent min-h-[2rem]";
     const interactiveClass =
-      "transition hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black";
+      "transition-all duration-150 hover:bg-blue-50 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500";
     const buttonClassName = `${baseButtonClass} ${interactiveClass}`;
 
     return (

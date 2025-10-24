@@ -326,14 +326,17 @@ export default async function ClientDetailPage({ params }: Props) {
     notFound();
   }
 
-  const canFetchFroxlor =
-    !!(
-      client.server &&
-      client.customerNo &&
-      client.server.froxlorUrl &&
-      client.server.froxlorApiKey &&
-      client.server.froxlorApiSecret
-    );
+  // Check if Froxlor configuration exists (for UI display)
+  const hasFroxlorConfig = !!(
+    client.server &&
+    client.customerNo &&
+    client.server.froxlorUrl &&
+    client.server.froxlorApiKey &&
+    client.server.froxlorApiSecret
+  );
+
+  // Only fetch from Froxlor API if explicitly enabled
+  const canFetchFroxlor = process.env.ENABLE_FROXLOR_FETCH === "true" && hasFroxlorConfig;
 
   // Fetch Froxlor customer data if server is available
   let froxlorCustomer: FroxlorCustomer | null = null;
@@ -341,6 +344,11 @@ export default async function ClientDetailPage({ params }: Props) {
   let froxlorFtpAccounts: FroxlorFtpAccount[] = [];
   let froxlorPhpConfigs: Record<string, string> = {}; // Map of phpsettingid -> description
   let froxlorError: string | null = null;
+
+  // Set error message if Froxlor is configured but API fetch is disabled
+  if (hasFroxlorConfig && !canFetchFroxlor) {
+    froxlorError = "Froxlor-API-Zugriff ist deaktiviert (ENABLE_FROXLOR_FETCH=false). Keine Live-Daten verfügbar.";
+  }
 
   if (canFetchFroxlor && client.server?.froxlorUrl && client.server?.froxlorApiKey && client.server?.froxlorApiSecret) {
     try {
@@ -368,7 +376,8 @@ export default async function ClientDetailPage({ params }: Props) {
         froxlorError = `Kunde ${client.customerNo} wurde auf dem Froxlor-Server nicht gefunden.`;
       }
     } catch (error) {
-      console.error("Error fetching Froxlor data:", error);
+      // Silently catch Froxlor errors to prevent page crashes
+      // The error will be displayed in the UI via froxlorError
       froxlorError =
         error instanceof Error
           ? error.message
@@ -828,7 +837,7 @@ export default async function ClientDetailPage({ params }: Props) {
         {/* Tab: Server-Daten */}
         <TabsContent value="server" className="space-y-6 mt-6">
           {/* Domains */}
-          {(canFetchFroxlor || froxlorError) && (
+          {(hasFroxlorConfig || froxlorError) && (
             <section className="rounded-lg border bg-white p-4">
               <h2 className="text-base font-medium mb-3">
                 Domains

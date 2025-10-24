@@ -10,6 +10,7 @@ import FilmPreviewCell from "@/components/FilmPreviewCell";
 import DangerActionButton from "@/components/DangerActionButton";
 import CheckboxFilterGroup from "@/components/CheckboxFilterGroup";
 import { SaveFilterButton } from "@/components/SaveFilterButton";
+import { FilmProjectRow } from "./FilmProjectRow";
 import { deleteFilmProject, deleteAllFilmProjects } from "./actions";
 import { deriveFilmStatus, getFilmStatusDate, FILM_STATUS_LABELS, type FilmStatus } from "@/lib/film-status";
 
@@ -281,9 +282,9 @@ const buildRows = (projects: Awaited<ReturnType<typeof loadFilmProjects>>): Film
     const isActiveFilm = !film?.status || film.status === "AKTIV";
     const isStale = isActiveFilm && isOlderThan4Weeks(effectiveDate);
 
-    const finalLinkInfo = mkLinkInfo(film?.finalLink, film?.finalLink ? "🎬" : undefined);
+    const finalLinkInfo = mkLinkInfo(film?.finalLink);
     const onlineLinkSource = film?.onlineLink || (film?.onlineDate ? film?.finalLink : null);
-    const onlineLinkInfo = mkLinkInfo(onlineLinkSource, onlineLinkSource ? "🎬" : undefined);
+    const onlineLinkInfo = mkLinkInfo(onlineLinkSource);
 
     return {
       id: project.id,
@@ -860,6 +861,12 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 <Th href={mkSort("filmStatus")} active={sp.sort==="filmStatus"} dir={sp.dir}>Status</Th>
                 <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir}>Kd.-Nr.</Th>
                 <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir}>Name / Firma</Th>
+                <th className="w-12 text-center" title="Details">
+                  <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </th>
                 <Th href={mkSort("scope")} active={sp.sort==="scope"} dir={sp.dir}>Umfang</Th>
                 <Th href={mkSort("priority")} active={sp.sort==="priority"} dir={sp.dir}>Prio / Nur Film</Th>
                 <Th href={mkSort("filmer")} active={sp.sort==="filmer"} dir={sp.dir}>Verantwortl. Filmer</Th>
@@ -874,7 +881,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 <Th href={mkSort("status")} active={sp.sort==="status"} dir={sp.dir}>P-Status</Th>
                 <Th href={mkSort("reminderAt")} active={sp.sort==="reminderAt"} dir={sp.dir}>Wiedervorlage am</Th>
                 <Th>Hinweis</Th>
-                <Th>Details</Th>
                 {canDelete && <Th>Löschen</Th>}
               </tr>
             </thead>
@@ -894,6 +900,19 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 const isNotActive = film?.status && film.status !== "AKTIV" && film.status !== "BEENDET";
                 const isBeendet = film?.status === "BEENDET";
 
+                // Derive film status to check if project is ONLINE
+                const derivedFilmStatus = deriveFilmStatusLocal({
+                  status: film?.status,
+                  onlineDate: film?.onlineDate,
+                  finalToClient: film?.finalToClient,
+                  firstCutToClient: film?.firstCutToClient,
+                  shootDate: film?.shootDate,
+                  scriptApproved: film?.scriptApproved,
+                  scriptToClient: film?.scriptToClient,
+                  scouting: film?.scouting,
+                });
+                const isOnline = derivedFilmStatus === "ONLINE";
+
                 // Status badge colors based on P-Status
                 const pStatus = film?.status;
                 let statusBadgeClasses = "inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs";
@@ -908,11 +927,12 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 }
 
                 const rowClasses = ["border-t", "border-gray-200", "transition-colors", "hover:bg-gray-50"];
-                if (row.isStale) rowClasses.push("bg-red-50", "hover:bg-red-100/50");
+                // Don't show stale background for ONLINE projects
+                if (row.isStale && !isOnline) rowClasses.push("bg-red-50", "hover:bg-red-100/50");
                 if (isBeendet) rowClasses.push("opacity-60");
 
                 return (
-                  <tr key={project.id} className={rowClasses.join(" ")}>
+                  <FilmProjectRow key={project.id} rowClasses={rowClasses.join(" ")} projectId={project.id}>
                     <td className="font-semibold">
                       <span className={statusBadgeClasses}>
                         {row.primaryLinkHref && (
@@ -920,10 +940,12 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                             href={row.primaryLinkHref}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-50 text-xs hover:bg-blue-100"
+                            className="inline-flex items-center justify-center w-5 h-5 rounded hover:opacity-80 transition-opacity"
                             title="Zum Film"
                           >
-                            {row.primaryLinkLabel || "🎬"}
+                            <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                            </svg>
                           </a>
                         )}
                         {row.filmStatus}
@@ -950,7 +972,15 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         )}
                       </div>
                     </td>
-                    <td className="font-medium text-gray-900">{row.clientName}</td>
+                    <td className="font-medium text-gray-900 client-name-cell cursor-pointer select-none">{row.clientName}</td>
+                    <td className="text-center w-12">
+                      <Link href={`/film-projects/${project.id}`} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Details anzeigen">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </Link>
+                    </td>
                     <td>
                       <FilmInlineCell
                         id={project.id}
@@ -1061,6 +1091,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         type="date"
                         display={row.onlineDate}
                         value={film?.onlineDate?.toISOString() ?? null}
+                        secondaryDisplay={row.primaryLinkLabel}
+                        secondaryHref={row.primaryLinkHref}
                         extraField={{
                           name: "onlineLink",
                           type: "url",
@@ -1114,11 +1146,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         displayClassName="max-w-[240px] text-xs text-gray-600"
                       />
                     </td>
-                    <td>
-                      <Link href={`/film-projects/${project.id}`} className="text-blue-600 underline">
-                        Details
-                      </Link>
-                    </td>
                     {canDelete && (
                       <td>
                         <DangerActionButton
@@ -1131,7 +1158,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         </DangerActionButton>
                       </td>
                     )}
-                  </tr>
+                  </FilmProjectRow>
                 );
               })}
               {rows.length === 0 && (

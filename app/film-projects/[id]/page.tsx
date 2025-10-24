@@ -4,7 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { Badge } from "@/components/ui/badge";
 import { PreviewVersionItem } from "@/components/PreviewVersionItem";
+import { AddPreviewVersionButton } from "@/components/AddPreviewVersionButton";
 import { getProjectDisplayName } from "@/lib/project-status";
+import FilmInlineCell from "@/components/FilmInlineCell";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -14,6 +16,15 @@ const formatDate = (value?: Date | string | null) => {
   if (!value) return "-";
   try {
     return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(value));
+  } catch {
+    return "-";
+  }
+};
+
+const formatDateTime = (value?: Date | string | null) => {
+  if (!value) return "-";
+  try {
+    return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
   } catch {
     return "-";
   }
@@ -159,6 +170,14 @@ export default async function FilmProjectDetailPage({ params }: Props) {
       })
     : [];
 
+  // Load agents for inline editing (only agents with FILM category)
+  const allAgents = await prisma.user.findMany({
+    where: { role: "AGENT", active: true },
+    select: { id: true, name: true, email: true, categories: true },
+    orderBy: { name: "asc" },
+  });
+  const agents = allAgents.filter(a => a.categories.includes("FILM"));
+
   // Helper to derive website status
   const deriveWebsiteStatusForLink = (website: any) => {
     if (!website) return "WEBTERMIN";
@@ -208,6 +227,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
 
   const film = project.film;
   const isAdmin = session.user.role === "ADMIN";
+  const canEdit = session.user.role === "ADMIN" || session.user.role === "AGENT";
   const canDeletePreview = session.user.role === "ADMIN" || session.user.role === "AGENT";
   const finalLinkData = formatLink(film.finalLink, "Zum Video");
   const onlineLinkData = formatLink(film.onlineLink ?? (film.onlineDate ? film.finalLink : undefined), "Zum Video");
@@ -392,31 +412,102 @@ export default async function FilmProjectDetailPage({ params }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Umfang</dt>
-                <dd className="mt-1 text-sm text-gray-900">{film.scope ? SCOPE_LABELS[film.scope] : "-"}</dd>
+                <FilmInlineCell
+                  id={project.id}
+                  name="scope"
+                  type="select"
+                  display={film.scope ? SCOPE_LABELS[film.scope] : "-"}
+                  value={film.scope ?? undefined}
+                  options={[
+                    { value: "FILM", label: "Film" },
+                    { value: "FOTO", label: "Foto" },
+                    { value: "FILM_FOTO", label: "Film & Foto" },
+                  ]}
+                  canEdit={canEdit}
+                  displayClassName="mt-1 text-sm text-gray-900"
+                />
               </div>
               <div>
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Priorität</dt>
-                <dd className="mt-1 text-sm text-gray-900">{film.priority ? PRIORITY_LABELS[film.priority] : "-"}</dd>
+                <FilmInlineCell
+                  id={project.id}
+                  name="priority"
+                  type="select"
+                  display={film.priority ? PRIORITY_LABELS[film.priority] : "-"}
+                  value={film.priority ?? undefined}
+                  options={[
+                    { value: "NONE", label: "Keine" },
+                    { value: "PRIO_1", label: "Prio 1" },
+                    { value: "PRIO_2", label: "Prio 2" },
+                    { value: "PRIO_3", label: "Prio 3" },
+                  ]}
+                  canEdit={canEdit}
+                  displayClassName="mt-1 text-sm text-gray-900"
+                />
               </div>
             </div>
 
             <div>
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Produktionsstatus</dt>
-              <dd className="mt-1">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${film.status === "AKTIV" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
-                  {film.status ? STATUS_LABELS[film.status] : "-"}
-                </span>
-              </dd>
+              <FilmInlineCell
+                id={project.id}
+                name="status"
+                type="select"
+                display={film.status ? STATUS_LABELS[film.status] : "-"}
+                value={film.status ?? undefined}
+                options={[
+                  { value: "AKTIV", label: "Aktiv" },
+                  { value: "MMW", label: "Muss mal wieder" },
+                  { value: "WARTEN", label: "Warten auf Kunde" },
+                  { value: "VERZICHT", label: "Verzicht" },
+                  { value: "BEENDET", label: "Beendet" },
+                ]}
+                canEdit={canEdit}
+                displayClassName="mt-1"
+              />
             </div>
 
             <div>
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Filmer</dt>
-              <dd className="mt-1 text-sm text-gray-900">{film.filmer?.name ?? "-"}</dd>
+              <FilmInlineCell
+                id={project.id}
+                name="filmerId"
+                type="select"
+                display={film.filmer?.name ?? "-"}
+                value={film.filmerId ?? undefined}
+                options={[
+                  { value: "", label: "Kein Filmer" },
+                  ...agents.map(a => ({ value: a.id, label: a.name ?? a.email ?? "" }))
+                ]}
+                canEdit={canEdit}
+                displayClassName="mt-1 text-sm text-gray-900"
+              />
             </div>
 
             <div>
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Wiedervorlage am</dt>
-              <dd className="mt-1 text-sm font-medium text-gray-900">{formatDate(film.reminderAt)}</dd>
+              <FilmInlineCell
+                id={project.id}
+                name="reminderAt"
+                type="date"
+                display={formatDate(film.reminderAt)}
+                value={film.reminderAt?.toISOString() ?? undefined}
+                canEdit={canEdit}
+                displayClassName="mt-1 text-sm font-medium text-gray-900"
+              />
+            </div>
+
+            <div>
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Hinweise</dt>
+              <FilmInlineCell
+                id={project.id}
+                name="note"
+                type="textarea"
+                display={film.note || "-"}
+                value={film.note ?? undefined}
+                canEdit={canEdit}
+                displayClassName="mt-1 text-sm text-gray-900 whitespace-pre-wrap"
+              />
             </div>
           </div>
         </div>
@@ -436,7 +527,15 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-gray-500"></div>
               <div className="flex-1">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Vertragsbeginn</dt>
-                <dd className="mt-1 text-sm font-medium text-gray-900">{formatDate(film.contractStart)}</dd>
+                <FilmInlineCell
+                  id={project.id}
+                  name="contractStart"
+                  type="date"
+                  display={formatDate(film.contractStart)}
+                  value={film.contractStart?.toISOString() ?? undefined}
+                  canEdit={canEdit}
+                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                />
               </div>
             </div>
 
@@ -444,7 +543,15 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-blue-500"></div>
               <div className="flex-1">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Scouting</dt>
-                <dd className="mt-1 text-sm font-medium text-gray-900">{formatDate(film.scouting)}</dd>
+                <FilmInlineCell
+                  id={project.id}
+                  name="scouting"
+                  type="datetime"
+                  display={formatDateTime(film.scouting)}
+                  value={film.scouting?.toISOString() ?? undefined}
+                  canEdit={canEdit}
+                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                />
               </div>
             </div>
 
@@ -452,7 +559,15 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-indigo-500"></div>
               <div className="flex-1">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Skript an Kunden</dt>
-                <dd className="mt-1 text-sm font-medium text-gray-900">{formatDate(film.scriptToClient)}</dd>
+                <FilmInlineCell
+                  id={project.id}
+                  name="scriptToClient"
+                  type="date"
+                  display={formatDate(film.scriptToClient)}
+                  value={film.scriptToClient?.toISOString() ?? undefined}
+                  canEdit={canEdit}
+                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                />
               </div>
             </div>
 
@@ -460,7 +575,15 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-purple-500"></div>
               <div className="flex-1">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Skriptfreigabe</dt>
-                <dd className="mt-1 text-sm font-medium text-gray-900">{formatDate(film.scriptApproved)}</dd>
+                <FilmInlineCell
+                  id={project.id}
+                  name="scriptApproved"
+                  type="date"
+                  display={formatDate(film.scriptApproved)}
+                  value={film.scriptApproved?.toISOString() ?? undefined}
+                  canEdit={canEdit}
+                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                />
               </div>
             </div>
 
@@ -468,7 +591,15 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-orange-500"></div>
               <div className="flex-1">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Dreh-/Fototermin</dt>
-                <dd className="mt-1 text-sm font-medium text-gray-900">{formatDate(film.shootDate)}</dd>
+                <FilmInlineCell
+                  id={project.id}
+                  name="shootDate"
+                  type="datetime"
+                  display={formatDateTime(film.shootDate)}
+                  value={film.shootDate?.toISOString() ?? undefined}
+                  canEdit={canEdit}
+                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                />
               </div>
             </div>
 
@@ -476,7 +607,22 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-teal-500"></div>
               <div className="flex-1">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Finalversion an Kunden</dt>
-                <dd className="mt-1 text-sm font-medium text-gray-900">{formatDate(film.finalToClient)}</dd>
+                <FilmInlineCell
+                  id={project.id}
+                  name="finalToClient"
+                  type="date"
+                  display={formatDate(film.finalToClient)}
+                  value={film.finalToClient?.toISOString() ?? undefined}
+                  canEdit={canEdit}
+                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                  extraField={{
+                    name: "finalLink",
+                    label: "Link zur Finalversion",
+                    placeholder: "https://...",
+                    type: "url",
+                    value: film.finalLink,
+                  }}
+                />
               </div>
             </div>
 
@@ -484,7 +630,22 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-green-500"></div>
               <div className="flex-1">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Online</dt>
-                <dd className="mt-1 text-sm font-medium text-gray-900">{formatDate(film.onlineDate)}</dd>
+                <FilmInlineCell
+                  id={project.id}
+                  name="onlineDate"
+                  type="date"
+                  display={formatDate(film.onlineDate)}
+                  value={film.onlineDate?.toISOString() ?? undefined}
+                  canEdit={canEdit}
+                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                  extraField={{
+                    name: "onlineLink",
+                    label: "Link zum Online-Video",
+                    placeholder: "https://...",
+                    type: "url",
+                    value: film.onlineLink,
+                  }}
+                />
               </div>
             </div>
 
@@ -492,7 +653,15 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-gray-400"></div>
               <div className="flex-1">
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Letzter Kontakt</dt>
-                <dd className="mt-1 text-sm font-medium text-gray-900">{formatDate(film.lastContact)}</dd>
+                <FilmInlineCell
+                  id={project.id}
+                  name="lastContact"
+                  type="date"
+                  display={formatDate(film.lastContact)}
+                  value={film.lastContact?.toISOString() ?? undefined}
+                  canEdit={canEdit}
+                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                />
               </div>
             </div>
           </div>
@@ -533,7 +702,8 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                 <PreviewVersionItem
                   key={version.id}
                   version={version}
-                  isAdmin={canDeletePreview}
+                  isAdmin={isAdmin}
+                  canEdit={canEdit}
                 />
               ))}
               {film.firstCutToClient && film.previewVersions.length > 0 && (
@@ -543,6 +713,14 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                   <span className="text-xs text-gray-500">(Alter Eintrag vor Versionierung)</span>
                 </div>
               )}
+            </div>
+          )}
+          {canEdit && (
+            <div className="mt-4">
+              <AddPreviewVersionButton
+                projectId={project.id}
+                nextVersion={(film.previewVersions[0]?.version ?? 0) + 1}
+              />
             </div>
           )}
           </div>
