@@ -104,10 +104,8 @@ const formatDateTime = (value?: Date | string | null) => {
     if (!match) return "-";
 
     const [, year, month, day, hours, minutes] = match;
-    // Format as "24. Okt. 2025, 14:30"
-    const date = new Date(2000, parseInt(month) - 1, parseInt(day)); // Only for month name
-    const monthName = new Intl.DateTimeFormat("de-DE", { month: "short" }).format(date);
-    return `${day}. ${monthName} ${year}, ${hours}:${minutes}`;
+    // Format as "24.10.2025, 14:30"
+    return `${day}.${month}.${year}, ${hours}:${minutes}`;
   } catch {
     return "-";
   }

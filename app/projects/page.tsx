@@ -43,11 +43,33 @@ const STATUSES = ["WEBTERMIN", "MATERIAL", "UMSETZUNG", "DEMO", "ONLINE"] as con
 const PRIORITIES = ["NONE", "PRIO_1", "PRIO_2", "PRIO_3"] as const;
 const CMS = ["SHOPWARE", "JOOMLA", "LOGO", "PRINT", "OTHER"] as const;
 
-const fmtDate = (d?: Date | string | null) =>
-  d ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(d)) : "-";
+const fmtDate = (d?: Date | string | null) => {
+  if (!d) return "-";
+  try {
+    // Naive formatting - extract date components directly without timezone conversion
+    const dateStr = typeof d === 'string' ? d : d.toISOString();
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return "-";
+    const [, year, month, day] = match;
+    return `${day}.${month}.${year}`;
+  } catch {
+    return "-";
+  }
+};
 
-const fmtDateTime = (d?: Date | string | null) =>
-  d ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(d)) : "-";
+const fmtDateTime = (d?: Date | string | null) => {
+  if (!d) return "-";
+  try {
+    // Naive formatting - extract date/time components directly without timezone conversion
+    const dateStr = typeof d === 'string' ? d : d.toISOString();
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!match) return "-";
+    const [, year, month, day, hours, minutes] = match;
+    return `${day}.${month}.${year}, ${hours}:${minutes}`;
+  } catch {
+    return "-";
+  }
+};
 
 const mm = (n?: number | null) => (n ? `${Math.floor(n / 60)}h ${n % 60}m` : "-");
 

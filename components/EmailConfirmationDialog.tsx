@@ -30,6 +30,9 @@ type EmailData = {
     customerNo: string | null;
     email: string | null;
     contact: string | null;
+    salutation: string | null;
+    firstname: string | null;
+    lastname: string | null;
     agency?: {
       id: string;
       name: string;

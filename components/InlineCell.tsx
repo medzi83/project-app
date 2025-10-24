@@ -299,20 +299,20 @@ export default function InlineCell({
 function vToString(v: Props["value"], type: Props["type"]) {
   if (v === null || v === undefined) return "";
   if (type === "date") {
-    const d = new Date(String(v));
-    if (Number.isNaN(d.getTime())) return "";
-    return d.toISOString().slice(0, 10);
+    // Naive parsing - just extract date without timezone conversion
+    const str = String(v);
+    if (typeof str === 'string' && str.includes('T')) {
+      return str.slice(0, 10); // Extract "2025-10-24" from "2025-10-24T00:00:00.000Z"
+    }
+    return str;
   }
-  if (type === "datetime") {
-    const d = new Date(String(v));
-    if (Number.isNaN(d.getTime())) return "";
-    // Format für datetime-local: YYYY-MM-DDTHH:mm
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  if (type === "datetime" || type === "datetime-with-type") {
+    // Naive parsing - just extract datetime without timezone conversion
+    const str = String(v);
+    if (typeof str === 'string' && str.includes('T')) {
+      return str.slice(0, 16); // Extract "2025-10-24T14:30" from "2025-10-24T14:30:00.000Z"
+    }
+    return str;
   }
   if (type === "tri") return v === true ? "yes" : v === false ? "no" : "unknown";
   return String(v);

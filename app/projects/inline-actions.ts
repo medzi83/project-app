@@ -33,7 +33,8 @@ const FormSchema = z.object({
   extraValue: z.string().optional(), // For datetime-with-type: webterminType
 });
 
-const dateKeys = new Set(["webDate","demoDate","onlineDate","lastMaterialAt"]);
+const dateKeys = new Set(["demoDate","onlineDate","lastMaterialAt"]);
+const dateTimeKeys = new Set(["webDate"]); // webDate has time component
 const hourKeys  = new Set(["effortBuildMin","effortDemoMin"]);
 const triKeys  = new Set(["accessible"]);
 const statusRelevantWebsiteKeys = new Set(["pStatus","webDate","demoDate","onlineDate","materialStatus"]);
@@ -42,7 +43,10 @@ function coerce(key: string, v: string | undefined) {
   if (v === undefined) return null;
   const s = v.trim();
   if (s === "") return null;
-  if (dateKeys.has(key)) return new Date(s);
+  // For datetime fields: "2025-10-24T14:30" -> store as "2025-10-24T14:30:00.000Z" (naive, no timezone conversion)
+  if (dateTimeKeys.has(key)) return new Date(s + ':00.000Z');
+  // For date-only fields: "2025-10-24" -> store as "2025-10-24T00:00:00.000Z" (naive, no timezone conversion)
+  if (dateKeys.has(key)) return new Date(s + 'T00:00:00.000Z');
   if (hourKeys.has(key)) {
     const numeric = Number(s.replace(",", "."));
     if (!Number.isFinite(numeric)) return null;

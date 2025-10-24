@@ -9,6 +9,9 @@ type MissingClientData = {
   clientId: string;
   clientName: string;
   currentEmail: string | null;
+  currentSalutation: string | null;
+  currentFirstname: string | null;
+  currentLastname: string | null;
   currentContact: string | null;
   currentAgencyId: string | null;
   missingEmail: boolean;
@@ -62,6 +65,9 @@ export function EmailConfirmationHandler() {
                 clientId: client.id,
                 clientName: client.name,
                 currentEmail: client.email || null,
+                currentSalutation: client.salutation || null,
+                currentFirstname: client.firstname || null,
+                currentLastname: client.lastname || null,
                 currentContact: client.contact || null,
                 currentAgencyId: client.agencyId || null,
                 missingEmail,
@@ -212,6 +218,9 @@ export function EmailConfirmationHandler() {
             clientId: client.id,
             clientName: client.name,
             currentEmail: client.email || null,
+            currentSalutation: client.salutation || null,
+            currentFirstname: client.firstname || null,
+            currentLastname: client.lastname || null,
             currentContact: client.contact || null,
             currentAgencyId: client.agencyId || null,
             missingEmail: false, // Allow editing even if not missing
@@ -241,6 +250,9 @@ export function EmailConfirmationHandler() {
         clientId={missingClientData.clientId}
         clientName={missingClientData.clientName}
         currentEmail={missingClientData.currentEmail}
+        currentSalutation={missingClientData.currentSalutation}
+        currentFirstname={missingClientData.currentFirstname}
+        currentLastname={missingClientData.currentLastname}
         currentContact={missingClientData.currentContact}
         currentAgencyId={missingClientData.currentAgencyId}
         missingEmail={missingClientData.missingEmail}
@@ -260,6 +272,9 @@ export function EmailConfirmationHandler() {
         clientId={missingClientData.clientId}
         clientName={missingClientData.clientName}
         currentEmail={missingClientData.currentEmail}
+        currentSalutation={missingClientData.currentSalutation}
+        currentFirstname={missingClientData.currentFirstname}
+        currentLastname={missingClientData.currentLastname}
         currentContact={missingClientData.currentContact}
         currentAgencyId={missingClientData.currentAgencyId}
         missingEmail={missingClientData.missingEmail}

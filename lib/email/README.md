@@ -101,9 +101,12 @@ Templates können folgende Variablen verwenden (werden automatisch ersetzt):
 - `{{project.agentName}}` - Name des zuständigen Agents
 
 **Kunde:**
-- `{{client.name}}` - Kundenname
+- `{{client.name}}` - Firmenname des Kunden
 - `{{client.customerNo}}` - Kundennummer
-- `{{client.contact}}` - Kontaktperson
+- `{{client.salutation}}` - Anrede der Kontaktperson (Herr/Frau)
+- `{{client.firstname}}` - Vorname der Kontaktperson
+- `{{client.lastname}}` - Nachname der Kontaktperson
+- `{{client.contact}}` - Vor- und Nachname der Kontaktperson (kombiniert)
 - `{{client.phone}}` - Telefonnummer
 
 **Agent:**
@@ -122,7 +125,6 @@ Templates können folgende Variablen verwenden (werden automatisch ersetzt):
 - `{{film.status}}` - Film-Status
 - `{{film.shootDate}}` - Dreh-/Fototermin (formatiert)
 - `{{film.filmerName}}` - Name des Filmers
-- `{{film.cutterName}}` - Name des Cutters
 - `{{film.previewLink}}` - Link zur neuesten Vorabversion
 - `{{film.previewDate}}` - Datum der neuesten Vorabversion (formatiert)
 - `{{film.previewVersion}}` - Versionsnummer der neuesten Vorabversion (z.B. "1", "2")

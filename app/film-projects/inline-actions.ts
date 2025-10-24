@@ -99,14 +99,25 @@ export async function updateFilmInlineField(formData: FormData): Promise<{ succe
   const parsedValue = coerce(filmKey, value);
   const normalizedFinalLinkInput = normalizeLink(finalLinkRaw);
   const normalizedOnlineLinkInput = normalizeLink(onlineLinkRaw);
+
+  // Load existing film data including the field being updated (for trigger comparison)
   const existingFilm = await prisma.projectFilm.findUnique({
     where: { projectId: id },
     select: {
       finalLink: true,
       onlineDate: true,
       onlineLink: true,
+      finalToClient: true,
+      firstCutToClient: true,
+      scouting: true,
+      scriptToClient: true,
+      scriptApproved: true,
+      shootDate: true,
     },
   });
+
+  // Store old value for trigger comparison
+  const oldValue = existingFilm?.[filmKey as keyof typeof existingFilm] ?? null;
   const updateData: Prisma.ProjectFilmUncheckedUpdateInput = {};
   const createData: Prisma.ProjectFilmUncheckedCreateInput = { projectId: id };
 
@@ -251,6 +262,25 @@ export async function updateFilmInlineField(formData: FormData): Promise<{ succe
     update: updateData,
     create: createData,
   });
+
+  // Process email triggers for date changes (like finalToClient, onlineDate, etc.)
+  const dateFieldsForTriggers = [
+    'finalToClient', 'onlineDate', 'firstCutToClient',
+    'scouting', 'scriptToClient', 'scriptApproved', 'shootDate'
+  ];
+
+  if (dateFieldsForTriggers.includes(filmKey)) {
+    try {
+      await processTriggers(
+        id,
+        { [filmKey]: parsedValue },
+        { [filmKey]: oldValue }
+      );
+    } catch (error) {
+      console.error("Error processing triggers:", error);
+      // Don't fail the update if trigger processing fails
+    }
+  }
 
   revalidatePath("/film-projects");
   revalidatePath(`/film-projects/${id}`);

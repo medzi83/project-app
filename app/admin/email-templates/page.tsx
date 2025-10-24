@@ -20,8 +20,11 @@ const VARIABLE_GROUPS: VariableGroup[] = [
   {
     label: "Kunden",
     items: [
-      { placeholder: "{{client.name}}", description: "Name des Kunden" },
-      { placeholder: "{{client.contact}}", description: "Ansprechperson des Kunden" },
+      { placeholder: "{{client.name}}", description: "Firmenname des Kunden" },
+      { placeholder: "{{client.salutation}}", description: "Anrede der Kontaktperson (Herr/Frau)" },
+      { placeholder: "{{client.firstname}}", description: "Vorname der Kontaktperson" },
+      { placeholder: "{{client.lastname}}", description: "Nachname der Kontaktperson" },
+      { placeholder: "{{client.contact}}", description: "Vor- und Nachname der Kontaktperson" },
       { placeholder: "{{client.phone}}", description: "Telefonnummer des Kunden" },
       { placeholder: "{{client.customerNo}}", description: "Kundennummer" },
     ],
@@ -52,7 +55,6 @@ const VARIABLE_GROUPS: VariableGroup[] = [
       { placeholder: "{{film.status}}", description: "Status des Filmprojekts" },
       { placeholder: "{{film.shootDate}}", description: "Drehtermin" },
       { placeholder: "{{film.filmerName}}", description: "Filmer Name" },
-      { placeholder: "{{film.cutterName}}", description: "Cutter Name" },
     ],
   },
   {

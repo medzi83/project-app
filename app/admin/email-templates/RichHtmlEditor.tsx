@@ -33,6 +33,19 @@ export default function RichHtmlEditor({
     }
   }, [mode, value]);
 
+  // Prevent browser from auto-applying formatting
+  useEffect(() => {
+    if (mode === "rich" && typeof window !== "undefined") {
+      // Disable browser's default formatting behavior
+      try {
+        document.execCommand("styleWithCSS", false, "false");
+        document.execCommand("defaultParagraphSeparator", false, "p");
+      } catch (e) {
+        // Ignore if commands not supported
+      }
+    }
+  }, [mode]);
+
   const focusEditor = () => {
     editorRef.current?.focus();
   };
@@ -54,6 +67,17 @@ export default function RichHtmlEditor({
       if (isEmpty) {
         // Remove any active formatting
         document.execCommand("removeFormat", false);
+      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Prevent Ctrl+B, Ctrl+I, Ctrl+U shortcuts from accidentally formatting
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'i' || e.key === 'u')) {
+      // Only allow if user explicitly wants it (shift key also pressed for example)
+      // For now, let's prevent accidental shortcuts
+      if (!e.shiftKey) {
+        e.preventDefault();
       }
     }
   };
@@ -141,6 +165,7 @@ export default function RichHtmlEditor({
             onInput={handleRichInput}
             onPaste={handlePaste}
             onFocus={handleFocus}
+            onKeyDown={handleKeyDown}
           />
           {value.trim().length === 0 && (
             <span className="pointer-events-none absolute left-3 top-2 text-sm text-gray-400">

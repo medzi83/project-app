@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Copy, Check } from "lucide-react";
 
 export type VariableGroup = {
   label: string;
@@ -14,9 +14,20 @@ type VariableGroupsPanelProps = {
 
 export default function VariableGroupsPanel({ groups }: VariableGroupsPanelProps) {
   const [openGroupIndex, setOpenGroupIndex] = useState<number | null>(null);
+  const [copiedPlaceholder, setCopiedPlaceholder] = useState<string | null>(null);
 
   const toggleGroup = (index: number) => {
     setOpenGroupIndex((prev) => (prev === index ? null : index));
+  };
+
+  const copyToClipboard = async (placeholder: string) => {
+    try {
+      await navigator.clipboard.writeText(placeholder);
+      setCopiedPlaceholder(placeholder);
+      setTimeout(() => setCopiedPlaceholder(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
   };
 
   return (
@@ -52,9 +63,23 @@ export default function VariableGroupsPanel({ groups }: VariableGroupsPanelProps
                   <ul className="space-y-2 px-3 py-3">
                     {group.items.map((item) => (
                       <li key={item.placeholder} className="flex flex-col gap-1">
-                        <code className="inline-block rounded border border-gray-300 bg-gray-50 px-2 py-1 font-mono text-[11px] text-gray-800">
-                          {item.placeholder}
-                        </code>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 rounded border border-gray-300 bg-gray-50 px-2 py-1 font-mono text-[11px] text-gray-800">
+                            {item.placeholder}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(item.placeholder)}
+                            className="flex-shrink-0 p-1.5 rounded hover:bg-gray-100 transition-colors"
+                            title="In Zwischenablage kopieren"
+                          >
+                            {copiedPlaceholder === item.placeholder ? (
+                              <Check className="h-3.5 w-3.5 text-green-600" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5 text-gray-500" />
+                            )}
+                          </button>
+                        </div>
                         <span className="text-xs text-gray-600">{item.description}</span>
                       </li>
                     ))}

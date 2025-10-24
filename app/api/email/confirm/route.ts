@@ -80,6 +80,9 @@ export async function GET(request: NextRequest) {
             customerNo: clientRecord.customerNo ?? null,
             email: clientRecord.email ?? null,
             contact: clientRecord.contact ?? null,
+            salutation: clientRecord.salutation ?? null,
+            firstname: clientRecord.firstname ?? null,
+            lastname: clientRecord.lastname ?? null,
             agencyId: clientRecord.agencyId ?? null,
             agency: clientRecord.agency ?? null,
           }

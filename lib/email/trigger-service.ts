@@ -91,6 +91,9 @@ export async function processTriggers(
           email: true,
           customerNo: true,
           contact: true,
+          salutation: true,
+          firstname: true,
+          lastname: true,
           phone: true,
           agency: {
             select: {
@@ -390,7 +393,13 @@ function replacePlaceholders(text: string, project: ProjectWithDetails): string 
 
     "{{client.name}}": project.client?.name ?? "",
     "{{client.customerNo}}": project.client?.customerNo ?? "",
-    "{{client.contact}}": project.client?.contact ?? "",
+    "{{client.salutation}}": project.client?.salutation ?? "",
+    "{{client.firstname}}": project.client?.firstname ?? "",
+    "{{client.lastname}}": project.client?.lastname ?? "",
+    "{{client.contact}}":
+      project.client?.firstname && project.client?.lastname
+        ? `${project.client.firstname} ${project.client.lastname}`
+        : project.client?.contact ?? "",
     "{{client.phone}}": project.client?.phone ?? "",
 
     "{{agent.name}}": project.agent?.name ?? "",
@@ -408,7 +417,6 @@ function replacePlaceholders(text: string, project: ProjectWithDetails): string 
     "{{film.status}}": project.film?.status ?? "",
     "{{film.shootDate}}": formatDate(project.film?.shootDate ?? null),
     "{{film.filmerName}}": project.film?.filmer?.name ?? "",
-    "{{film.cutterName}}": project.film?.cutter?.name ?? "",
     "{{film.previewLink}}": latestPreviewLink,
     "{{film.previewDate}}": latestPreviewDate,
     "{{film.previewVersion}}": latestPreviewVersion,
