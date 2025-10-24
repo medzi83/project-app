@@ -82,7 +82,12 @@ const agentBadgeStyle = (color?: string | null): CSSProperties | undefined => {
 const formatDate = (value?: Date | string | null) => {
   if (!value) return "-";
   try {
-    return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(value));
+    const date = new Date(value);
+    // Use UTC to avoid timezone issues - dates without time should be displayed as-is
+    return new Intl.DateTimeFormat("de-DE", {
+      dateStyle: "medium",
+      timeZone: "UTC"
+    }).format(date);
   } catch {
     return "-";
   }
@@ -91,7 +96,12 @@ const formatDate = (value?: Date | string | null) => {
 const formatDateTime = (value?: Date | string | null) => {
   if (!value) return "-";
   try {
-    return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+    // Use Europe/Berlin timezone for datetime values
+    return new Intl.DateTimeFormat("de-DE", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Europe/Berlin"
+    }).format(new Date(value));
   } catch {
     return "-";
   }
