@@ -83,10 +83,10 @@ const formatDate = (value?: Date | string | null) => {
   if (!value) return "-";
   try {
     const date = new Date(value);
-    // Use UTC to avoid timezone issues - dates without time should be displayed as-is
+    // All dates are stored as midnight Berlin time, so display in Berlin timezone
     return new Intl.DateTimeFormat("de-DE", {
       dateStyle: "medium",
-      timeZone: "UTC"
+      timeZone: "Europe/Berlin"
     }).format(date);
   } catch {
     return "-";

@@ -14,8 +14,8 @@ export const formatDateTime = (value: Date | string | null | undefined): string 
 };
 
 /**
- * Format date only (no time) for German locale with UTC timezone
- * Uses UTC to avoid timezone shift issues for dates stored without time component
+ * Format date only (no time) for German locale with Berlin timezone
+ * All dates are stored as midnight Berlin time, so we need to display them in Berlin timezone
  */
 export const formatDate = (value: Date | string | null | undefined): string => {
   if (!value) return "-";
@@ -24,7 +24,7 @@ export const formatDate = (value: Date | string | null | undefined): string => {
 
   return new Intl.DateTimeFormat("de-DE", {
     dateStyle: "medium",
-    timeZone: "UTC"
+    timeZone: "Europe/Berlin"
   }).format(date);
 };
 
