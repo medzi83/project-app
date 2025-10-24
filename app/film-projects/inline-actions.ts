@@ -63,40 +63,15 @@ function coerce(key: string, v: string | undefined) {
   const s = v.trim();
   if (s === "") return null;
 
-  // For datetime fields (with time component), parse as Berlin time
+  // For datetime fields: "2025-10-24T14:30" -> store as "2025-10-24T14:30:00.000Z" (naive, no timezone conversion)
   if (dateTimeKeys.has(key)) {
-    // Input format: "2025-10-24T14:30" (datetime-local from browser)
-    // User enters this time in Berlin timezone, but browser sends it without timezone info
-    // We need to interpret it as Berlin time, not UTC
-
-    // Parse the components
-    const match = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-    if (!match) return new Date(s); // Fallback to default parsing
-
-    const [, year, month, day, hours, minutes] = match;
-
-    // Create a date string in Berlin timezone using ISO format with explicit timezone
-    // We use 'Europe/Berlin' offset which handles DST automatically
-    const date = new Date(`${year}-${month}-${day}T${hours}:${minutes}:00`);
-
-    // Get the timezone offset for Berlin at this specific date
-    const berlinDate = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Berlin' }));
-    const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
-    const offset = (berlinDate.getTime() - utcDate.getTime());
-
-    // Adjust the date by the offset to store it correctly in UTC
-    return new Date(date.getTime() - offset);
+    // Simply append seconds and treat as UTC (naive storage)
+    return new Date(s + ':00.000Z');
   }
 
-  // For date-only fields, create date at midnight Berlin time
+  // For date-only fields: "2025-10-24" -> store as "2025-10-24T00:00:00.000Z" (naive, no timezone conversion)
   if (dateKeys.has(key)) {
-    // Input format: "2025-10-24" (date from browser)
-    // Create at midnight Berlin time
-    const date = new Date(s + 'T00:00:00');
-    const berlinDate = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Berlin' }));
-    const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
-    const offset = (berlinDate.getTime() - utcDate.getTime());
-    return new Date(date.getTime() - offset);
+    return new Date(s + 'T00:00:00.000Z');
   }
 
   return s;

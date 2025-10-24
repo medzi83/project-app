@@ -156,29 +156,16 @@ export default function FilmInlineCell({
 
   // EDIT MODE
   const vStr = value ?? "";
-  const vDate = type === "date" && vStr ? new Date(vStr).toISOString().slice(0, 10) : vStr;
+  const vDate = type === "date" && vStr ? vStr.slice(0, 10) : vStr;
   const vDateTime = type === "datetime" && vStr ? (() => {
-    const d = new Date(vStr);
-    if (Number.isNaN(d.getTime())) return "";
-
-    // Convert to Berlin timezone (Europe/Berlin)
-    const berlinTime = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Europe/Berlin',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }).formatToParts(d);
-
-    const year = berlinTime.find(p => p.type === 'year')?.value;
-    const month = berlinTime.find(p => p.type === 'month')?.value;
-    const day = berlinTime.find(p => p.type === 'day')?.value;
-    const hour = berlinTime.find(p => p.type === 'hour')?.value;
-    const minute = berlinTime.find(p => p.type === 'minute')?.value;
-
-    return `${year}-${month}-${day}T${hour}:${minute}`;
+    // Naive parsing - just extract the date/time components WITHOUT any timezone conversion
+    // Input: "2025-10-24T14:30:00.000Z" or ISO string
+    // Output: "2025-10-24T14:30"
+    // Don't use new Date() at all - it converts timezones!
+    if (typeof vStr === 'string' && vStr.includes('T')) {
+      return vStr.slice(0, 16); // Extract "2025-10-24T14:30" directly from string
+    }
+    return vStr;
   })() : vStr;
   const extraDefaultValue = extraField?.value ?? "";
   const shouldAutoSubmit = !extraField;

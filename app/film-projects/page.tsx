@@ -97,12 +97,17 @@ const formatDate = (value?: Date | string | null) => {
 const formatDateTime = (value?: Date | string | null) => {
   if (!value) return "-";
   try {
-    // Use Europe/Berlin timezone for datetime values
-    return new Intl.DateTimeFormat("de-DE", {
-      dateStyle: "medium",
-      timeStyle: "short",
-      timeZone: "Europe/Berlin"
-    }).format(new Date(value));
+    // Naive formatting - extract date/time components directly without timezone conversion
+    const dateStr = typeof value === 'string' ? value : value.toISOString();
+    // Extract: "2025-10-24T14:30:00.000Z" -> date and time parts
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!match) return "-";
+
+    const [, year, month, day, hours, minutes] = match;
+    // Format as "24. Okt. 2025, 14:30"
+    const date = new Date(2000, parseInt(month) - 1, parseInt(day)); // Only for month name
+    const monthName = new Intl.DateTimeFormat("de-DE", { month: "short" }).format(date);
+    return `${day}. ${monthName} ${year}, ${hours}:${minutes}`;
   } catch {
     return "-";
   }
