@@ -18,6 +18,9 @@ type ProjectWithDetails = Project & {
         email: string | null;
         customerNo: string | null;
         contact: string | null;
+        salutation: string | null;
+        firstname: string | null;
+        lastname: string | null;
         phone: string | null;
         agency: { id: string } | null;
       }
