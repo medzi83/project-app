@@ -64,10 +64,10 @@ export function deriveFilmStatus(film: FilmStatusInput): FilmStatus {
   // Beendet - P-Status auf beendet
   if (film.status === "BEENDET") return "BEENDET";
 
-  // Online - Datum bei Online
+  // Online - NUR wenn Online-Datum gesetzt ist
   if (film.onlineDate) return "ONLINE";
 
-  // Finalversion - Finalversion an Kunden
+  // Finalversion - Finalversion an Kunden (aber noch nicht online)
   if (film.finalToClient) return "FINALVERSION";
 
   // Vorabversion - Check latest preview version with valid sentDate OR firstCutToClient

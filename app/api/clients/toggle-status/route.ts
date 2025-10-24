@@ -52,6 +52,41 @@ export async function POST(request: NextRequest) {
       data: { [validatedField]: newValue },
     });
 
+    // If setting client to "finished", also mark all their projects as finished
+    if (validatedField === "finished" && newValue === true) {
+      // Get all projects for this client
+      const projects = await prisma.project.findMany({
+        where: { clientId },
+        select: {
+          id: true,
+          type: true,
+          film: { select: { projectId: true } },
+          website: { select: { projectId: true } },
+        },
+      });
+
+      // Update each project based on its type
+      for (const project of projects) {
+        if (project.type === "FILM" && project.film) {
+          await prisma.projectFilm.update({
+            where: { projectId: project.id },
+            data: { status: "BEENDET" },
+          });
+        } else if (project.type === "WEBSITE" && project.website) {
+          await prisma.projectWebsite.update({
+            where: { projectId: project.id },
+            data: { pStatus: "BEENDET" },
+          });
+        } else if (project.type === "SOCIAL") {
+          // Social projects don't have a specific status field, set main status to ONLINE
+          await prisma.project.update({
+            where: { id: project.id },
+            data: { status: "ONLINE" },
+          });
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       [validatedField]: updatedClient[validatedField],

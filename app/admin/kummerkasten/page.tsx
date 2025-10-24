@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTime } from "@/lib/date-utils";
+import { FeedbackResponseForm } from "./FeedbackResponseForm";
 
 const feedbackTypeLabels: Record<string, string> = {
   BUG: "Bug/Fehler",
@@ -173,31 +174,38 @@ export default async function KummerkastenPage() {
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <form action={updateFeedbackStatus} className="flex gap-2 items-center">
-                  <input type="hidden" name="id" value={feedback.id} />
-                  <Select name="status" defaultValue={feedback.status}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="OPEN">Offen</SelectItem>
-                      <SelectItem value="IN_PROGRESS">In Bearbeitung</SelectItem>
-                      <SelectItem value="RESOLVED">Erledigt</SelectItem>
-                      <SelectItem value="DISMISSED">Abgelehnt</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button type="submit" size="sm">
-                    Status ändern
-                  </Button>
-                </form>
+              <div className="space-y-4">
+                <FeedbackResponseForm
+                  feedbackId={feedback.id}
+                  initialResponse={feedback.adminResponse}
+                />
 
-                <form action={deleteFeedback}>
-                  <input type="hidden" name="id" value={feedback.id} />
-                  <Button type="submit" size="sm" variant="destructive">
-                    Löschen
-                  </Button>
-                </form>
+                <div className="flex flex-wrap items-center gap-3">
+                  <form action={updateFeedbackStatus} className="flex gap-2 items-center">
+                    <input type="hidden" name="id" value={feedback.id} />
+                    <Select name="status" defaultValue={feedback.status}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="OPEN">Offen</SelectItem>
+                        <SelectItem value="IN_PROGRESS">In Bearbeitung</SelectItem>
+                        <SelectItem value="RESOLVED">Erledigt</SelectItem>
+                        <SelectItem value="DISMISSED">Abgelehnt</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button type="submit" size="sm">
+                      Status ändern
+                    </Button>
+                  </form>
+
+                  <form action={deleteFeedback}>
+                    <input type="hidden" name="id" value={feedback.id} />
+                    <Button type="submit" size="sm" variant="destructive">
+                      Löschen
+                    </Button>
+                  </form>
+                </div>
               </div>
             </article>
                     );

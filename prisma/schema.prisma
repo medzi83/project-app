@@ -535,6 +535,7 @@ model Feedback {
   status             FeedbackStatus @default(OPEN)
   authorId           String
   author             User           @relation("FeedbackAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  adminResponse      String?        // Admin's response to the feedback
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   viewedByAuthor     Boolean        @default(false) // Has the author seen this feedback after it was closed?
