@@ -638,6 +638,60 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
 
       return (timeB - timeA) * direction;
     });
+  } else if (sp.sort === "filmStatus") {
+    // Sort by derived film status
+    const direction = sp.dir === "desc" ? -1 : 1;
+
+    // Status hierarchy for sorting (higher = more advanced)
+    const statusOrder: Record<FilmStatus, number> = {
+      BEENDET: 9,
+      ONLINE: 8,
+      FINALVERSION: 7,
+      VORABVERSION: 6,
+      SCHNITT: 5,
+      DREH: 4,
+      SKRIPTFREIGABE: 3,
+      SKRIPT: 2,
+      SCOUTING: 1,
+    };
+
+    allFilmProjects = [...loadedProjects].sort((a, b) => {
+      const filmA = a.film;
+      const filmB = b.film;
+
+      if (!filmA && !filmB) return 0;
+      if (!filmA) return 1;
+      if (!filmB) return -1;
+
+      const statusA = deriveFilmStatus({
+        status: filmA.status,
+        onlineDate: filmA.onlineDate,
+        finalToClient: filmA.finalToClient,
+        firstCutToClient: filmA.previewVersions?.[0]?.sentDate ?? filmA.firstCutToClient,
+        shootDate: filmA.shootDate,
+        scriptApproved: filmA.scriptApproved,
+        scriptToClient: filmA.scriptToClient,
+        scouting: filmA.scouting,
+        previewVersions: filmA.previewVersions,
+      });
+
+      const statusB = deriveFilmStatus({
+        status: filmB.status,
+        onlineDate: filmB.onlineDate,
+        finalToClient: filmB.finalToClient,
+        firstCutToClient: filmB.previewVersions?.[0]?.sentDate ?? filmB.firstCutToClient,
+        shootDate: filmB.shootDate,
+        scriptApproved: filmB.scriptApproved,
+        scriptToClient: filmB.scriptToClient,
+        scouting: filmB.scouting,
+        previewVersions: filmB.previewVersions,
+      });
+
+      const orderA = statusOrder[statusA] ?? 0;
+      const orderB = statusOrder[statusB] ?? 0;
+
+      return (orderB - orderA) * direction;
+    });
   }
 
   // Pagination
@@ -803,7 +857,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
           <table className="min-w-[1400px] w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wide text-gray-700">
               <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
-                <Th>Status</Th>
+                <Th href={mkSort("filmStatus")} active={sp.sort==="filmStatus"} dir={sp.dir}>Status</Th>
                 <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir}>Kd.-Nr.</Th>
                 <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir}>Name / Firma</Th>
                 <Th href={mkSort("scope")} active={sp.sort==="scope"} dir={sp.dir}>Umfang</Th>

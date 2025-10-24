@@ -27,6 +27,32 @@ const formatLink = (value?: string | null, labelOverride?: string) => {
   return { label: labelOverride ?? trimmed, href };
 };
 
+const getYouTubeEmbedUrl = (url: string): string | null => {
+  try {
+    // Handle various YouTube URL formats
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/,
+      /youtube\.com\/.*[?&]v=([^&\s]+)/
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return `https://www.youtube.com/embed/${match[1]}`;
+      }
+    }
+
+    // If already an embed URL, return as is
+    if (url.includes('youtube.com/embed/')) {
+      return url;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 const DERIVED_STATUS_LABELS = {
   BEENDET: "Beendet",
   ONLINE: "Online",
@@ -101,7 +127,6 @@ export default async function FilmProjectDetailPage({ params }: Props) {
       film: {
         include: {
           filmer: true,
-          cutter: true,
           previewVersions: {
             orderBy: { version: 'desc' },
           },
@@ -183,6 +208,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
 
   const film = project.film;
   const isAdmin = session.user.role === "ADMIN";
+  const canDeletePreview = session.user.role === "ADMIN" || session.user.role === "AGENT";
   const finalLinkData = formatLink(film.finalLink, "Zum Video");
   const onlineLinkData = formatLink(film.onlineLink ?? (film.onlineDate ? film.finalLink : undefined), "Zum Video");
   const derivedStatus = deriveFilmStatus({
@@ -293,10 +319,10 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               href={onlineLinkData.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center gap-3 px-6 py-3 text-base font-bold text-white bg-gradient-to-r from-red-600 to-red-700 rounded-xl hover:from-red-700 hover:to-red-800 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
             >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
               </svg>
               Zum Film
             </a>
@@ -383,15 +409,9 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               </dd>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Filmer</dt>
-                <dd className="mt-1 text-sm text-gray-900">{film.filmer?.name ?? "-"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Cutter</dt>
-                <dd className="mt-1 text-sm text-gray-900">{film.cutter?.name ?? "-"}</dd>
-              </div>
+            <div>
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Filmer</dt>
+              <dd className="mt-1 text-sm text-gray-900">{film.filmer?.name ?? "-"}</dd>
             </div>
 
             <div>
@@ -402,7 +422,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
         </div>
 
         {/* Timeline */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden lg:col-span-2">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
             <h2 className="font-semibold text-gray-900 flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -411,7 +431,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               Produktionszeitplan
             </h2>
           </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="p-6 grid grid-cols-1 gap-4">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-gray-500"></div>
               <div className="flex-1">
@@ -478,74 +498,25 @@ export default async function FilmProjectDetailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Links */}
-        {(finalLinkData || onlineLinkData) && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-                Video-Links
-              </h2>
-            </div>
-            <div className="p-6 space-y-4">
-              {finalLinkData && (
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Finalversion</dt>
-                  <dd className="mt-1">
-                    <a
-                      href={finalLinkData.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline flex items-center gap-1 text-sm break-all"
-                    >
-                      {finalLinkData.label}
-                      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
-                  </dd>
-                </div>
-              )}
-              {onlineLinkData && (
-                <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Online (Hauptlink)</dt>
-                  <dd className="mt-1">
-                    <a
-                      href={onlineLinkData.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline flex items-center gap-1 text-sm break-all"
-                    >
-                      {onlineLinkData.label}
-                      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
-                  </dd>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Vorabversionen */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-            </svg>
-            Vorabversionen an Kunden
-            <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              {film.previewVersions.length}
-            </span>
-          </h2>
-        </div>
-        <div className="p-6">
-          {film.previewVersions.length === 0 ? (
+      {/* Vorabversionen & Finalversion */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Vorabversionen */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+              </svg>
+              Vorabversionen an Kunden
+              <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {film.previewVersions.length}
+              </span>
+            </h2>
+          </div>
+          <div className="p-6">
+            {film.previewVersions.length === 0 ? (
             <div className="text-center py-8">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
@@ -562,7 +533,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                 <PreviewVersionItem
                   key={version.id}
                   version={version}
-                  isAdmin={isAdmin}
+                  isAdmin={canDeletePreview}
                 />
               ))}
               {film.firstCutToClient && film.previewVersions.length > 0 && (
@@ -574,8 +545,151 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               )}
             </div>
           )}
+          </div>
+        </div>
+
+        {/* Finalversion & Online-Link */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              Finalversion & Online-Link
+            </h2>
+          </div>
+          <div className="p-6 space-y-4">
+            {derivedStatus === "ONLINE" ? (
+              // When status is ONLINE, only show Online-Link
+              onlineLinkData ? (
+                <div>
+                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Online (Hauptlink)</dt>
+                  <dd className="mt-1">
+                    <a
+                      href={onlineLinkData.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline flex items-center gap-1 text-sm break-all"
+                    >
+                      {onlineLinkData.label}
+                      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </dd>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                  </svg>
+                  <p className="mt-2 text-sm text-gray-500">Noch kein Online-Link</p>
+                </div>
+              )
+            ) : (
+              // When status is not ONLINE, show both Finalversion and Online-Link
+              <>
+                {finalLinkData ? (
+                  <div>
+                    <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Finalversion</dt>
+                    <dd className="mt-1">
+                      <a
+                        href={finalLinkData.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline flex items-center gap-1 text-sm break-all"
+                      >
+                        {finalLinkData.label}
+                        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    </dd>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                    </svg>
+                    <p className="mt-2 text-sm text-gray-500">Noch keine Finalversion</p>
+                  </div>
+                )}
+                {onlineLinkData && (
+                  <div>
+                    <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Online (Hauptlink)</dt>
+                    <dd className="mt-1">
+                      <a
+                        href={onlineLinkData.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline flex items-center gap-1 text-sm break-all"
+                      >
+                        {onlineLinkData.label}
+                        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    </dd>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Video Embeds */}
+      {(finalLinkData || onlineLinkData) && (
+        <div className="space-y-6">
+          {onlineLinkData && getYouTubeEmbedUrl(onlineLinkData.href) && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                  Online-Video
+                </h2>
+              </div>
+              <div className="p-6">
+                <div className="relative" style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    src={getYouTubeEmbedUrl(onlineLinkData.href)!}
+                    className="absolute top-0 left-0 w-full h-full rounded-lg"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title="Online-Video"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {finalLinkData && getYouTubeEmbedUrl(finalLinkData.href) && finalLinkData.href !== onlineLinkData?.href && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                  Finalversion
+                </h2>
+              </div>
+              <div className="p-6">
+                <div className="relative" style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    src={getYouTubeEmbedUrl(finalLinkData.href)!}
+                    className="absolute top-0 left-0 w-full h-full rounded-lg"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title="Finalversion"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
