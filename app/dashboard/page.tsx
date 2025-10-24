@@ -1,9 +1,10 @@
 // /app/dashboard/page.tsx
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { Prisma, ProjectStatus, ProjectType, AgentCategory } from "@prisma/client";
+import type { Prisma, ProjectStatus, ProjectType, AgentCategory, FilmScope } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { buildWebsiteStatusWhere, DONE_PRODUCTION_STATUSES, deriveProjectStatus, STATUS_LABELS } from "@/lib/project-status";
+import { deriveFilmStatus as deriveFilmStatusFromLib } from "@/lib/film-status";
 import { getEffectiveUser, getAuthSession } from "@/lib/authz";
 import { NoticeBoard, type NoticeBoardEntry } from "@/components/NoticeBoard";
 import { InstallationWarningsSlideout } from "./InstallationWarningsSlideout";
@@ -13,6 +14,16 @@ export const metadata = { title: "Dashboard" };
 
 
 const STATUSES: ProjectStatus[] = ["WEBTERMIN", "MATERIAL", "UMSETZUNG", "DEMO", "ONLINE"];
+
+const FILM_SCOPE_LABELS: Record<FilmScope, string> = {
+  FILM: "Film",
+  DROHNE: "Drohne",
+  NACHDREH: "Nachdreh",
+  FILM_UND_DROHNE: "F + D",
+  FOTO: "Foto",
+  GRAD_360: "360°",
+  K_A: "k.A.",
+};
 
 const PROJECT_TYPES: Array<{ key: ProjectType; label: string; href: string }> = [
   { key: "WEBSITE", label: "Webseitenprojekte", href: "/projects" },
@@ -35,6 +46,19 @@ function formatDate(d?: Date | null) {
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
+    });
+  } catch {
+    return "-";
+  }
+}
+
+function formatDateOnly(d?: Date | null) {
+  if (!d) return "-";
+  try {
+    return new Date(d).toLocaleDateString("de-DE", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
   } catch {
     return "-";
@@ -269,6 +293,9 @@ export default async function DashboardPage({
     websiteCount,
     filmCount,
     socialCount,
+    websiteCountUnfiltered,
+    filmCountUnfiltered,
+    socialCountUnfiltered,
     nonWebsiteStatusCountsRaw,
     overdueCandidates,
     dashboardNotices,
@@ -295,6 +322,22 @@ export default async function DashboardPage({
     prisma.project.count({
       where: baseWhere
         ? { AND: [baseWhere, { type: "SOCIAL" }] }
+        : { type: "SOCIAL" },
+    }),
+    // Unfiltered counts (without agent filter) for info tiles
+    prisma.project.count({
+      where: activeProjectWhere
+        ? { AND: [activeProjectWhere, { website: { isNot: null } }] }
+        : { website: { isNot: null } },
+    }),
+    prisma.project.count({
+      where: activeProjectWhere
+        ? { AND: [activeProjectWhere, { film: { isNot: null } }] }
+        : { film: { isNot: null } },
+    }),
+    prisma.project.count({
+      where: activeProjectWhere
+        ? { AND: [activeProjectWhere, { type: "SOCIAL" }] }
         : { type: "SOCIAL" },
     }),
     prisma.project.groupBy({
@@ -447,6 +490,7 @@ export default async function DashboardPage({
       film: {
         select: {
           status: true,
+          scope: true,
           onlineDate: true,
           finalToClient: true,
           firstCutToClient: true,
@@ -571,10 +615,28 @@ export default async function DashboardPage({
   const filmPreviewCount = filmStatusCounts["FINALVERSION"] || 0;
   const filmOnlineCount = filmStatusCounts["ONLINE"] || 0;
 
+  // Count film projects by scope (only for agents with film category)
+  const filmScopeCounts: Record<string, number> = {};
+  if (isAgentView && allowedProjectTypes.includes("FILM")) {
+    filmProjects.forEach((project) => {
+      const scope = project.film?.scope;
+      if (scope) {
+        filmScopeCounts[scope] = (filmScopeCounts[scope] || 0) + 1;
+      }
+    });
+  }
+
   const typeCountMap = new Map<ProjectType, number>([
     ["WEBSITE", websiteCount],
     ["FILM", filmCount],
     ["SOCIAL", socialCount],
+  ]);
+
+  // Unfiltered counts for info tiles (without agent filter)
+  const typeCountMapUnfiltered = new Map<ProjectType, number>([
+    ["WEBSITE", websiteCountUnfiltered],
+    ["FILM", filmCountUnfiltered],
+    ["SOCIAL", socialCountUnfiltered],
   ]);
 
   const nonWebsiteStatusMap = new Map<ProjectType, Map<ProjectStatus, number>>();
@@ -606,12 +668,8 @@ export default async function DashboardPage({
   const withScope = (href: string) => {
     let url = href;
 
-    // Add scope parameter if active
-    if (activeEnabled) {
-      url = `${url}${url.includes("?") ? "&" : "?"}scope=active`;
-    }
-
-    // Add agent filter if in agent view
+    // Don't add scope parameter to project pages - it's only for dashboard filtering
+    // Just add agent filter if in agent view
     if (isAgentView && agentId) {
       url = `${url}${url.includes("?") ? "&" : "?"}agent=${agentId}`;
     }
@@ -624,15 +682,56 @@ export default async function DashboardPage({
     ? PROJECT_TYPES.filter((type) => allowedProjectTypes.includes(type.key))
     : PROJECT_TYPES;
 
-  const overviewTiles = [
-    { key: "ALL", label: activeEnabled ? "Aktive Projekte" : "Projekte gesamt", count: scopedProjectsCount, href: withScope("/projects") },
-    ...visibleProjectTypes.map((type) => ({
-      key: type.key,
-      label: type.label,
-      count: typeCountMap.get(type.key) ?? 0,
-      href: withScope(type.href),
-    })),
-  ];
+  // Build overview tiles
+  // For agents with categories: show assigned types (with agent name) + all types (with "Alle")
+  // For agents without categories or admins: show visible types only
+  const overviewTiles: Array<{ key: string; label: string; count: number; href: string }> = [];
+
+  // Add tiles for assigned project types
+  visibleProjectTypes.forEach((type) => {
+    // For agents with categories: add agent-filtered tile + all-projects tile
+    if (isAgentView && allowedProjectTypes.length > 0) {
+      // Agent-specific tile
+      overviewTiles.push({
+        key: type.key,
+        label: `${type.label} (${effectiveUser?.name ?? "Agent"})`,
+        count: typeCountMap.get(type.key) ?? 0,
+        href: withScope(type.href),
+      });
+
+      // All-projects tile for this type
+      overviewTiles.push({
+        key: `${type.key}_ALL`,
+        label: `${type.label} (Alle)`,
+        count: typeCountMapUnfiltered.get(type.key) ?? 0,
+        href: type.href, // Without agent filter
+      });
+    } else {
+      // For admins/agents without categories: just show the type
+      overviewTiles.push({
+        key: type.key,
+        label: type.label,
+        count: typeCountMap.get(type.key) ?? 0,
+        href: withScope(type.href),
+      });
+    }
+  });
+
+  // For agents with specific categories: show OTHER project types as info (clickable to all projects)
+  if (isAgentView && allowedProjectTypes.length > 0) {
+    const otherProjectTypes = PROJECT_TYPES.filter(
+      (type) => !allowedProjectTypes.includes(type.key)
+    );
+
+    otherProjectTypes.forEach((type) => {
+      overviewTiles.push({
+        key: `${type.key}_INFO`,
+        label: `${type.label} (Alle)`,
+        count: typeCountMapUnfiltered.get(type.key) ?? 0, // Use unfiltered count for info tiles
+        href: type.href, // Link to all projects of this type (without agent filter)
+      });
+    });
+  }
 
   const overdueProjectsCount = overdueCandidates.reduce((count, project) => {
     if (project.status !== "UMSETZUNG") return count;
@@ -643,6 +742,11 @@ export default async function DashboardPage({
     return days !== null && days >= 60 ? count + 1 : count;
   }, 0);
   const statusSections = visibleProjectTypes.map((type) => {
+    // Build label with agent name if in agent view
+    const sectionLabel = isAgentView && allowedProjectTypes.length > 0
+      ? `${type.label} von ${effectiveUser?.name ?? "Agent"}`
+      : type.label;
+
     if (type.key === "WEBSITE") {
       const tiles = [
         ...STATUSES.map((status) => ({
@@ -660,7 +764,7 @@ export default async function DashboardPage({
           href: withScope(appendQueryParam(type.href, "overdue", 1)),
         },
       ];
-      return { ...type, tiles };
+      return { ...type, label: sectionLabel, tiles };
     }
 
     if (type.key === "FILM") {
@@ -722,7 +826,7 @@ export default async function DashboardPage({
           href: withScope("/film-projects?status=ONLINE"),
         },
       ];
-      return { ...type, tiles };
+      return { ...type, label: sectionLabel, tiles };
     }
 
     const statusMap = nonWebsiteStatusMap.get(type.key) ?? new Map<ProjectStatus, number>();
@@ -733,7 +837,7 @@ export default async function DashboardPage({
       staleCount: 0, // Social media projects don't track stale for now
       href: withScope(appendQueryParam(type.href, "status", status)),
     }));
-    return { ...type, tiles };
+    return { ...type, label: sectionLabel, tiles };
   });
 
   const workStoppedProjects = isAgentView && agentId
@@ -741,6 +845,35 @@ export default async function DashboardPage({
         where: (() => {
           const filters: Prisma.ProjectWhereInput[] = [
             { client: { is: { workStopped: true } } },
+            // Exclude finished projects based on type
+            {
+              OR: [
+                // Website projects: exclude if status is ONLINE or pStatus is BEENDET
+                {
+                  type: "WEBSITE",
+                  status: { not: "ONLINE" },
+                  website: {
+                    is: {
+                      pStatus: { notIn: DONE_PRODUCTION_STATUSES },
+                    },
+                  },
+                },
+                // Film projects: exclude if film.status is BEENDET
+                {
+                  type: "FILM",
+                  film: {
+                    is: {
+                      status: { not: "BEENDET" },
+                    },
+                  },
+                },
+                // Social projects: exclude if status is ONLINE
+                {
+                  type: "SOCIAL",
+                  status: { not: "ONLINE" },
+                },
+              ],
+            },
           ];
           if (agentFilterWhere) filters.push(agentFilterWhere);
           return filters.length > 1 ? { AND: filters } : filters[0];
@@ -754,6 +887,28 @@ export default async function DashboardPage({
             select: {
               name: true,
               customerNo: true,
+            },
+          },
+          film: {
+            select: {
+              status: true,
+              onlineDate: true,
+              finalToClient: true,
+              firstCutToClient: true,
+              shootDate: true,
+              scriptApproved: true,
+              scriptToClient: true,
+              scouting: true,
+              previewVersions: {
+                orderBy: { sentDate: "desc" },
+                take: 1,
+                select: { sentDate: true },
+              },
+            },
+          },
+          website: {
+            select: {
+              pStatus: true,
             },
           },
         },
@@ -853,6 +1008,7 @@ export default async function DashboardPage({
 
   if (showAllTypes || userCategories.includes("FILM" as AgentCategory)) {
     upcomingAgendaConditions.push(
+      // Termine: Scouting (zukünftig, nur AKTIV)
       {
         type: "FILM",
         film: {
@@ -860,10 +1016,11 @@ export default async function DashboardPage({
             scouting: {
               gte: now,
             },
-            status: { not: "BEENDET" },
+            status: "AKTIV",
           },
         },
       },
+      // Termine: Dreh (zukünftig, nur AKTIV)
       {
         type: "FILM",
         film: {
@@ -871,7 +1028,33 @@ export default async function DashboardPage({
             shootDate: {
               gte: now,
             },
-            status: { not: "BEENDET" },
+            status: "AKTIV",
+          },
+        },
+      },
+      // Aufgaben: Skript (scouting in Vergangenheit, kein scriptToClient, nur AKTIV)
+      {
+        type: "FILM",
+        film: {
+          is: {
+            scouting: {
+              lt: now,
+            },
+            scriptToClient: null,
+            status: "AKTIV",
+          },
+        },
+      },
+      // Aufgaben: Schnitt (shootDate in Vergangenheit, kein firstCutToClient, nur AKTIV)
+      {
+        type: "FILM",
+        film: {
+          is: {
+            shootDate: {
+              lt: now,
+            },
+            firstCutToClient: null,
+            status: "AKTIV",
           },
         },
       },
@@ -911,6 +1094,17 @@ export default async function DashboardPage({
             select: {
               scouting: true,
               shootDate: true,
+              scriptToClient: true,
+              scriptApproved: true,
+              firstCutToClient: true,
+              finalToClient: true,
+              onlineDate: true,
+              status: true,
+              previewVersions: {
+                orderBy: { sentDate: "desc" },
+                take: 1,
+                select: { sentDate: true },
+              },
             },
           },
           joomlaInstallations: {
@@ -971,15 +1165,65 @@ export default async function DashboardPage({
           return null;
         }
       } else if (project.type === "FILM") {
-        if (project.film?.scouting && new Date(project.film.scouting) >= now) {
+        // Nur AKTIVE Filmprojekte anzeigen
+        if (project.film?.status !== "AKTIV") {
+          return null;
+        }
+
+        // Derive the actual film status to check if project is already further along
+        const latestPreview = project.film?.previewVersions?.[0];
+        const mergedFirstCut = latestPreview?.sentDate ?? project.film?.firstCutToClient;
+        const derivedFilmStatus = deriveFilmStatusFromLib({
+          status: project.film?.status,
+          onlineDate: project.film?.onlineDate,
+          finalToClient: project.film?.finalToClient,
+          firstCutToClient: mergedFirstCut,
+          shootDate: project.film?.shootDate,
+          scriptApproved: project.film?.scriptApproved,
+          scriptToClient: project.film?.scriptToClient,
+          scouting: project.film?.scouting,
+          previewVersions: project.film?.previewVersions,
+        });
+
+        // Termine: Scouting (zukünftig, nur wenn Status noch SCOUTING ist)
+        if (
+          derivedFilmStatus === "SCOUTING" &&
+          project.film?.scouting &&
+          new Date(project.film.scouting) >= now
+        ) {
           taskType = "Scouting";
           taskDate = new Date(project.film.scouting);
           category = "appointment";
-        } else if (project.film?.shootDate && new Date(project.film.shootDate) >= now) {
+        }
+        // Termine: Dreh (zukünftig, nur wenn Status DREH ist)
+        else if (
+          derivedFilmStatus === "DREH" &&
+          project.film?.shootDate &&
+          new Date(project.film.shootDate) >= now
+        ) {
           taskType = "Dreh";
           taskDate = new Date(project.film.shootDate);
           category = "appointment";
-        } else {
+        }
+        // Aufgaben: Skript (nur wenn Status SKRIPT ist)
+        else if (derivedFilmStatus === "SKRIPT") {
+          const scoutingDate = project.film?.scouting ? new Date(project.film.scouting) : null;
+          taskType = scoutingDate
+            ? `Skript erstellen - Scouting war am ${formatDateOnly(scoutingDate)}`
+            : "Skript erstellen";
+          taskDate = null; // Kein separates Datum mehr anzeigen
+          category = "task";
+        }
+        // Aufgaben: Schnitt (nur wenn Status SCHNITT ist)
+        else if (derivedFilmStatus === "SCHNITT") {
+          const shootDate = project.film?.shootDate ? new Date(project.film.shootDate) : null;
+          taskType = shootDate
+            ? `Schnitt erstellen - Dreh war am ${formatDateOnly(shootDate)}`
+            : "Schnitt erstellen";
+          taskDate = null; // Kein separates Datum mehr anzeigen
+          category = "task";
+        }
+        else {
           return null;
         }
       } else {
@@ -1063,7 +1307,7 @@ export default async function DashboardPage({
             )}
             <div className="text-xs font-medium text-blue-700 mt-1">
               {entry.taskType}
-              {entry.taskDate && ` · ${formatDate(entry.taskDate)}`}
+              {entry.taskDate && ` · ${formatDateOnly(entry.taskDate)}`}
             </div>
             {showInstallationStatus && entry.hasInstallation && entry.installationUrl && (
               <div className="text-xs text-green-600 mt-1 truncate">
@@ -1187,9 +1431,9 @@ export default async function DashboardPage({
               </h2>
               <p className="text-sm text-blue-900 font-medium mb-4">
                 {userCategories.includes("WEBSEITE" as AgentCategory) && userCategories.includes("FILM" as AgentCategory)
-                  ? "Anstehende Webtermine, Projekte in Umsetzung sowie Scouting- und Drehtermine."
+                  ? "Webtermine, Projekte in Umsetzung, Scouting-/Drehtermine sowie Skript- und Schnitt-Aufgaben."
                   : userCategories.includes("FILM" as AgentCategory)
-                  ? "Anstehende Scouting- und Drehtermine."
+                  ? "Scouting-/Drehtermine sowie Skript- und Schnitt-Aufgaben."
                   : "Anstehende Webtermine und Projekte in Umsetzung."}
               </p>
               <div className="grid gap-4 md:grid-cols-2">
@@ -1221,11 +1465,15 @@ export default async function DashboardPage({
           ];
           const gradient = gradients[index % gradients.length];
 
+          // Check tile type for visual styling
+          const isAllTile = tile.key.endsWith("_ALL"); // Agent's assigned type, showing all projects
+          const isInfoTile = tile.key.endsWith("_INFO"); // Other types the agent isn't assigned to
+
           return (
             <Link
               key={tile.key}
               href={tile.href}
-              className={`group rounded-2xl bg-gradient-to-br ${gradient} p-5 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1`}
+              className={`group rounded-2xl bg-gradient-to-br ${gradient} p-5 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 ${isAllTile || isInfoTile ? 'opacity-75' : ''}`}
             >
               <div className="text-xs uppercase tracking-wide text-white/80 font-semibold">{tile.label}</div>
               <div className="mt-3 text-3xl sm:text-4xl font-bold text-white">{tile.count}</div>
@@ -1278,6 +1526,40 @@ export default async function DashboardPage({
           ))}
         </div>
       </section>
+
+      {/* Film Scopes - nur für Filmagenten */}
+      {isAgentView && allowedProjectTypes.includes("FILM") && Object.keys(filmScopeCounts).length > 0 && (
+        <section className="rounded-2xl border border-cyan-100 bg-white shadow-lg overflow-hidden">
+          <div className="px-5 py-4 border-b border-cyan-100 bg-gradient-to-r from-cyan-50 to-blue-50">
+            <h2 className="font-bold text-lg bg-gradient-to-r from-cyan-700 to-blue-600 bg-clip-text text-transparent">
+              Filmprojekte nach Umfang
+            </h2>
+          </div>
+          <div className="p-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+              {Object.entries(FILM_SCOPE_LABELS)
+                .filter(([scope]) => scope !== "K_A") // Filter out "k.A."
+                .map(([scope, label]) => {
+                  const count = filmScopeCounts[scope] || 0;
+                  return (
+                    <Link
+                      key={scope}
+                      href={withScope(`/film-projects?scope=${scope}`)}
+                      className="group rounded-xl border-2 border-gray-200 bg-gradient-to-br from-white to-gray-50 p-3 shadow-sm hover:shadow-md hover:border-cyan-400 transition-all transform hover:-translate-y-0.5"
+                    >
+                      <div className="text-xs uppercase tracking-wide text-gray-600 font-semibold group-hover:text-cyan-700 transition-colors">
+                        {label}
+                      </div>
+                      <div className="mt-2 text-2xl font-bold text-gray-900 group-hover:text-cyan-600 transition-colors">
+                        {count}
+                      </div>
+                    </Link>
+                  );
+                })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {!isAgentView && (
         <section className="rounded-2xl border border-green-100 bg-white shadow-lg overflow-hidden">

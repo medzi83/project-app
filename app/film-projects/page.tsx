@@ -471,14 +471,37 @@ type Props = {
 
 export default async function FilmProjectsPage({ searchParams }: Props) {
   const session = await getAuthSession();
-  if (!session) redirect("/login");
+  if (!session || !session.user.id) redirect("/login");
   if (!session.user.role || !["ADMIN", "AGENT"].includes(session.user.role)) {
     redirect("/");
   }
 
   const spRaw = await searchParams;
 
-  // Load user preferences for default filters
+  // Check if user explicitly wants to reset all filters
+  const resetFilters = str(spRaw.reset) === "1";
+
+  // If reset is requested, clear saved filter preferences in database
+  if (resetFilters) {
+    await prisma.userPreferences.upsert({
+      where: { userId: session.user.id },
+      update: {
+        filmProjectsAgentFilter: [],
+        filmProjectsStatusFilter: [],
+        filmProjectsPStatusFilter: [],
+        filmProjectsScopeFilter: [],
+      },
+      create: {
+        userId: session.user.id,
+        filmProjectsAgentFilter: [],
+        filmProjectsStatusFilter: [],
+        filmProjectsPStatusFilter: [],
+        filmProjectsScopeFilter: [],
+      },
+    });
+  }
+
+  // Load user preferences for default filters (AFTER potentially resetting them)
   const userPreferences = await prisma.userPreferences.findUnique({
     where: { userId: session.user.id },
   });
@@ -497,21 +520,42 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
     ? (Array.isArray(userPreferences.filmProjectsScopeFilter) ? userPreferences.filmProjectsScopeFilter as string[] : [])
     : undefined;
 
-  // Use saved filters only if no URL parameters are present
+  // Check if form was submitted (this hidden field is present when user clicks Apply button)
+  const formSubmitted = str(spRaw.submitted) === "1";
+
+  // Parse URL parameters
   const agentParam = arr(spRaw.agent);
   const statusParam = arr(spRaw.status);
   const pstatusParam = arr(spRaw.pstatus);
   const scopeParam = arr(spRaw.scope);
+  const cutterParam = arr(spRaw.cutter);
+  const qParam = str(spRaw.q);
 
+  // Only use saved filters if:
+  // 1. Form was NOT submitted (user didn't click Apply button)
+  // 2. User didn't click reset
+  // 3. No other parameters present
+  const hasAnyParams =
+    agentParam.length > 0 ||
+    statusParam.length > 0 ||
+    pstatusParam.length > 0 ||
+    scopeParam.length > 0 ||
+    cutterParam.length > 0 ||
+    qParam;
+
+  const useSavedFilters = !formSubmitted && !resetFilters && !hasAnyParams;
+
+  // When reset is triggered, ensure filters are cleared by using empty arrays
+  // When form is submitted without params, also use empty arrays (not saved filters)
   let sp: Search = {
     sort: str(spRaw.sort) ?? "standard",
     dir: (str(spRaw.dir) as "asc" | "desc") ?? "desc",
-    q: str(spRaw.q) ?? "",
-    agent: agentParam.length > 0 ? agentParam : savedAgentFilter,
-    cutter: arr(spRaw.cutter),
-    status: statusParam.length > 0 ? statusParam : savedStatusFilter,
-    pstatus: pstatusParam.length > 0 ? pstatusParam : savedPStatusFilter,
-    scope: scopeParam.length > 0 ? scopeParam : savedScopeFilter,
+    q: resetFilters ? "" : (qParam ?? ""),
+    agent: resetFilters ? [] : (useSavedFilters ? savedAgentFilter : agentParam),
+    cutter: resetFilters ? [] : cutterParam,
+    status: resetFilters ? [] : (useSavedFilters ? savedStatusFilter : statusParam),
+    pstatus: resetFilters ? [] : (useSavedFilters ? savedPStatusFilter : pstatusParam),
+    scope: resetFilters ? [] : (useSavedFilters ? savedScopeFilter : scopeParam),
     page: str(spRaw.page) ?? "1",
     ps: str(spRaw.ps) ?? "50",
   };
@@ -668,17 +712,12 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
               {sp.page && <input type="hidden" name="page" value={sp.page} />}
               <button type="submit" className="px-3 py-1.5 text-xs font-medium rounded-lg border border-green-200 bg-white text-green-700 hover:bg-green-50 transition-colors">Standardsortierung</button>
             </form>
-            <SaveFilterButton
-              currentAgent={sp.agent}
-              currentStatus={sp.status}
-              currentPStatus={sp.pstatus}
-              currentScope={sp.scope}
-            />
           </div>
         </div>
         <div className="p-6">
           <form method="get" className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="sort" value={sp.sort} />
+            <input type="hidden" name="submitted" value="1" />
 
             <div className="flex flex-col gap-1 w-48">
               <label className="text-xs uppercase tracking-wide text-gray-500">Kunde suchen</label>
@@ -735,7 +774,13 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
 
             <div className="flex flex-wrap gap-2">
               <button type="submit" className="px-4 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-colors shadow-sm">Anwenden</button>
-              <Link href="/film-projects" className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">Zurücksetzen</Link>
+              <SaveFilterButton
+                currentAgent={sp.agent}
+                currentStatus={sp.status}
+                currentPStatus={sp.pstatus}
+                currentScope={sp.scope}
+              />
+              <Link href="/film-projects?reset=1" className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">Zurücksetzen</Link>
             </div>
           </form>
         </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { STATUS_LABELS } from "@/lib/project-status";
+import { deriveFilmStatus, FILM_STATUS_LABELS } from "@/lib/film-status";
 import type { ProjectStatus } from "@prisma/client";
 
 type WorkStoppedProject = {
@@ -13,6 +14,20 @@ type WorkStoppedProject = {
   client: {
     name: string;
     customerNo: string | null;
+  } | null;
+  film?: {
+    status: string | null;
+    onlineDate: Date | null;
+    finalToClient: Date | null;
+    firstCutToClient: Date | null;
+    shootDate: Date | null;
+    scriptApproved: Date | null;
+    scriptToClient: Date | null;
+    scouting: Date | null;
+    previewVersions: Array<{ sentDate: Date }>;
+  } | null;
+  website?: {
+    pStatus: string | null;
   } | null;
 };
 
@@ -71,9 +86,27 @@ export default function WorkStoppedProjectsAccordion({
                     : project.type === "SOCIAL"
                     ? "Social Media"
                     : project.type;
-                const statusLabel =
-                  STATUS_LABELS[project.status as ProjectStatus] ??
-                  project.status;
+
+                // Für Filmprojekte den abgeleiteten Status verwenden
+                let statusLabel: string;
+                if (project.type === "FILM" && project.film) {
+                  const filmStatus = deriveFilmStatus({
+                    status: project.film.status,
+                    onlineDate: project.film.onlineDate,
+                    finalToClient: project.film.finalToClient,
+                    firstCutToClient: project.film.firstCutToClient,
+                    shootDate: project.film.shootDate,
+                    scriptApproved: project.film.scriptApproved,
+                    scriptToClient: project.film.scriptToClient,
+                    scouting: project.film.scouting,
+                    previewVersions: project.film.previewVersions,
+                  });
+                  statusLabel = FILM_STATUS_LABELS[filmStatus];
+                } else {
+                  // Für Website- und Social-Projekte die normalen Status-Labels verwenden
+                  statusLabel = STATUS_LABELS[project.status as ProjectStatus] ?? project.status;
+                }
+
                 const customerLabel =
                   [project.client?.customerNo, project.client?.name]
                     .filter(Boolean)
