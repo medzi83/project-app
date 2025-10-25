@@ -4,7 +4,7 @@
       "maxDuration": 60
     },
     "app/api/admin/joomla-extract/route.ts": {
-      "maxDuration": 600
+      "maxDuration": 300
     },
     "app/api/admin/joomla-install/route.ts": {
       "maxDuration": 300
