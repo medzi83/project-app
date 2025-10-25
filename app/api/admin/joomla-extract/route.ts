@@ -194,15 +194,17 @@ if [ -f .htaccess ]; then
   echo "✓ Set .htaccess permissions"
 fi
 
-# 3. Update configuration.php with new database credentials
+# 3. Update configuration.php with new database credentials and paths
 if [ -f configuration.php ]; then
   sed -i "s/public \\$host = '[^']*';/public \\$host = '${escapedHost}';/" configuration.php
   sed -i "s/public \\$user = '[^']*';/public \\$user = '${escapedDbName}';/" configuration.php
   sed -i "s/public \\$password = '[^']*';/public \\$password = '${escapedPassword}';/" configuration.php
   sed -i "s/public \\$db = '[^']*';/public \\$db = '${escapedDbName}';/" configuration.php
+  sed -i "s|public \\$log_path = '[^']*';|public \\$log_path = '${targetPath}/administrator/logs';|" configuration.php
+  sed -i "s|public \\$tmp_path = '[^']*';|public \\$tmp_path = '${targetPath}/tmp';|" configuration.php
   chmod 644 configuration.php
   chown ${customer.loginname}:${customer.loginname} configuration.php
-  echo "✓ Updated configuration.php with new DB credentials"
+  echo "✓ Updated configuration.php with DB credentials and paths"
 fi
 
 # 4. Import SQL dump into database (Akeeba multi-part SQL support)

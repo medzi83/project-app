@@ -228,7 +228,13 @@ Das System ermöglicht die vollautomatische Installation einer Joomla-Basis auf 
      echo "✓ Renamed htaccess.bak to .htaccess"
    fi
 
-   # 2. configuration.php hochladen
+   # 2. Update configuration.php with DB credentials and paths
+   sed -i "s/public \$host = '[^']*';/public \$host = 'localhost';/" configuration.php
+   sed -i "s/public \$user = '[^']*';/public \$user = '${dbName}';/" configuration.php
+   sed -i "s/public \$password = '[^']*';/public \$password = '${dbPassword}';/" configuration.php
+   sed -i "s/public \$db = '[^']*';/public \$db = '${dbName}';/" configuration.php
+   sed -i "s|public \$log_path = '[^']*';|public \$log_path = '${targetPath}/administrator/logs';|" configuration.php
+   sed -i "s|public \$tmp_path = '[^']*';|public \$tmp_path = '${targetPath}/tmp';|" configuration.php
 
    # 3. Multi-Part SQL Import (Akeeba Backup)
    if [ -f site.sql ] && [ -f site.s01 ]; then
