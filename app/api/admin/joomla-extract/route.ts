@@ -143,7 +143,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Post-process the extracted files via single SSH command
-    const targetPath = `${customer.documentroot}/${folderName}`;
+    // Remove trailing slash from documentroot to avoid double slashes
+    const docroot = customer.documentroot?.replace(/\/$/, '') || customer.documentroot;
+    const targetPath = `${docroot}/${folderName}`;
     // Always use localhost for MySQL since the script runs ON the server via SSH
     const mysqlHost = "localhost";
 
@@ -377,7 +379,8 @@ echo "=== POST-PROCESSING COMPLETE ==="
               return rejectUpload(new Error(`SFTP error: ${err.message}`));
             }
 
-            const targetPath = `${customer.documentroot}/${folderName}`;
+            const docroot = customer.documentroot?.replace(/\/$/, '') || customer.documentroot;
+            const targetPath = `${docroot}/${folderName}`;
             const remotePath = `${targetPath}/.htaccess`;
 
             // Write the file
@@ -438,7 +441,8 @@ echo "=== POST-PROCESSING COMPLETE ==="
         const urlObj = new URL(installUrl);
         const standardDomain = urlObj.hostname;
 
-        const targetPath = `${customer.documentroot}/${folderName}`;
+        const docroot = customer.documentroot?.replace(/\/$/, '') || customer.documentroot;
+        const targetPath = `${docroot}/${folderName}`;
         const finalInstallUrl = installUrl.replace("/kickstart.php", "");
 
         await prisma.joomlaInstallation.create({

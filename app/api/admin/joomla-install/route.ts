@@ -158,7 +158,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const targetPath = `${customer.documentroot}/${folderName}`;
+    // Remove trailing slash from documentroot to avoid double slashes
+    const docroot = customer.documentroot?.replace(/\/$/, '') || customer.documentroot;
+    const targetPath = `${docroot}/${folderName}`;
     const protocol = useHttps ? "https" : "http";
     const installUrl = `${protocol}://${standardDomain}/${folderName}/kickstart.php`;
 
