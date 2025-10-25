@@ -227,17 +227,9 @@ export async function POST(request: NextRequest) {
       const kickstartBuffer = await sftpStorage.get(`${BACKUP_PATH}/kickstart.php`) as Buffer;
       await sftpTarget.put(kickstartBuffer, `${targetPath}/kickstart.php`);
 
-      // Download .htaccess from Vautron 6 (small file - can use buffer)
-      try {
-        const htaccessBuffer = await sftpStorage.get(`${BACKUP_PATH}/.htaccess`) as Buffer;
-        await sftpTarget.put(htaccessBuffer, `${targetPath}/.htaccess`);
-        console.log("✓ Transferred .htaccess from Vautron 6");
-      } catch (error) {
-        console.warn("⚠ No .htaccess found in backup folder:", error);
-      }
-
       // Stream large backup file directly from Vautron 6 to target server
       // This avoids loading the entire file into memory
+      // NOTE: .htaccess comes from the backup (htaccess.bak), not from Vautron 6
       const sourceStream = (await sftpStorage.get(`${BACKUP_PATH}/${backupFileName}`) as unknown) as Readable;
       await sftpTarget.put(sourceStream, `${targetPath}/${backupFileName}`);
 
@@ -258,7 +250,6 @@ export async function POST(request: NextRequest) {
       const commands = [
         `chown -R ${customerUsername}:${customerUsername} ${targetPath}`,
         `chmod -R 775 ${targetPath}`,
-        `chmod 644 ${targetPath}/.htaccess 2>/dev/null || true`,
         `chmod 664 ${targetPath}/*.php ${targetPath}/*.jpa ${targetPath}/*.zip 2>/dev/null || true`,
       ].join(" && ");
 

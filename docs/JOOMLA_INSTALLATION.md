@@ -10,8 +10,8 @@ Das System ermöglicht die vollautomatische Installation einer Joomla-Basis auf 
 
 1. **Storage Server (Vautron 6)**: `109.235.60.55`
    - Speicherort: `/var/customers/basis-backup/`
-   - Enthält immer genau 1x `kickstart.php`, 1x `.htaccess` und 1x `.jpa` Backup
-   - Die `.htaccess` ist speziell für Joomla konfiguriert und wird mitübertragen
+   - Enthält immer genau 1x `kickstart.php` und 1x `.jpa` Backup
+   - Die `.htaccess` kommt aus dem `.jpa` Backup (als `htaccess.bak`)
    - Alte Backups werden automatisch gelöscht beim Upload neuer Dateien
 
 2. **Ziel-Server**: Beliebiger Froxlor-Server
@@ -135,11 +135,8 @@ Das System ermöglicht die vollautomatische Installation einer Joomla-Basis auf 
    const kickstartBuffer = await sftpStorage.get('/var/customers/basis-backup/kickstart.php');
    await sftpTarget.put(kickstartBuffer, `${targetPath}/kickstart.php`);
 
-   // .htaccess (klein, Buffer) - WICHTIG für Joomla!
-   const htaccessBuffer = await sftpStorage.get('/var/customers/basis-backup/.htaccess');
-   await sftpTarget.put(htaccessBuffer, `${targetPath}/.htaccess`);
-
    // backup.jpa (groß, Stream)
+   // HINWEIS: .htaccess kommt aus dem Backup als htaccess.bak
    const sourceStream = await sftpStorage.get('/var/customers/basis-backup/backup.jpa');
    await sftpTarget.put(sourceStream, `${targetPath}/backup.jpa`);
    ```
@@ -154,7 +151,6 @@ Das System ermöglicht die vollautomatische Installation einer Joomla-Basis auf 
    sshClient.exec(`
      chown -R ${customer.loginname}:${customer.loginname} ${targetPath} &&
      chmod -R 775 ${targetPath} &&
-     chmod 644 ${targetPath}/.htaccess &&
      chmod 664 ${targetPath}/*.php ${targetPath}/*.jpa ${targetPath}/*.zip
    `);
    ```
@@ -226,9 +222,15 @@ Das System ermöglicht die vollautomatische Installation einer Joomla-Basis auf 
    Bash-Script wird auf Ziel-Server ausgeführt:
 
    ```bash
-   # 1. configuration.php hochladen
+   # 1. htaccess.bak umbenennen zu .htaccess
+   if [ -f htaccess.bak ]; then
+     mv -f htaccess.bak .htaccess
+     echo "✓ Renamed htaccess.bak to .htaccess"
+   fi
 
-   # 2. Multi-Part SQL Import (Akeeba Backup)
+   # 2. configuration.php hochladen
+
+   # 3. Multi-Part SQL Import (Akeeba Backup)
    if [ -f site.sql ] && [ -f site.s01 ]; then
      # Kombiniere alle Teile
      cat site.sql site.s* > /tmp/combined.sql
@@ -240,13 +242,13 @@ Das System ermöglicht die vollautomatische Installation einer Joomla-Basis auf 
      mysql -u ${dbName} -p'${dbPassword}' ${dbName} < /tmp/combined.sql
    fi
 
-   # 3. installation/ Ordner löschen
+   # 4. installation/ Ordner löschen
    rm -rf installation
 
-   # 4. kickstart.php + .jpa löschen
+   # 5. kickstart.php + .jpa löschen
    rm -f kickstart.php *.jpa *.zip
 
-   # 5. Owner setzen
+   # 6. Owner setzen
    chown -R ${customer.loginname}:${customer.loginname} ${targetPath}
    ```
 
@@ -579,10 +581,9 @@ POST /api/admin/joomla-extract
 
 1. Gehe zu `/admin/joomla-backup`
 2. Upload neue `kickstart.php` (wird nie überschrieben)
-3. Upload neue `.htaccess` (speziell für Joomla konfiguriert, WICHTIG!)
-4. Upload neue `.jpa` (alte wird automatisch gelöscht)
+3. Upload neue `.jpa` (alte wird automatisch gelöscht)
 
-**WICHTIG**: Die `.htaccess` muss im Backup-Ordner liegen, da sie für die korrekte Funktion von Joomla essentiell ist. Sie wird bei jeder Installation automatisch mit übertragen.
+**WICHTIG**: Die `.htaccess` ist im `.jpa` Backup enthalten (als `htaccess.bak`). Sie wird beim Entpacken automatisch zu `.htaccess` umbenannt und ist die korrekte Joomla-Konfiguration.
 
 ### Installationsdaten abrufen
 

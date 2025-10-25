@@ -177,19 +177,17 @@ export async function POST(request: NextRequest) {
             const postProcessScript = `
 cd ${targetPath} || exit 1
 
-# 1. .htaccess wurde bereits von Vautron 6 kopiert
-# Falls sie fehlt, verwende Backup-Variante aus der .jpa
-if [ ! -f .htaccess ]; then
-  if [ -f htaccess.bak ]; then
-    mv htaccess.bak .htaccess
-    echo "✓ Renamed htaccess.bak to .htaccess"
-  elif [ -f htaccess.txt ]; then
-    cp htaccess.txt .htaccess
-    echo "✓ Copied htaccess.txt to .htaccess"
-  fi
+# 1. Nach dem Entpacken: htaccess.bak umbenennen (überschreibt die von Vautron 6)
+# Die htaccess.bak aus dem Backup ist die korrekte für Joomla!
+if [ -f htaccess.bak ]; then
+  mv -f htaccess.bak .htaccess
+  echo "✓ Renamed htaccess.bak to .htaccess (overwrote Vautron 6 version)"
+elif [ -f htaccess.txt ] && [ ! -f .htaccess ]; then
+  cp htaccess.txt .htaccess
+  echo "✓ Copied htaccess.txt to .htaccess"
 fi
 
-# 2. Ensure .htaccess has correct permissions (already transferred from Vautron 6)
+# 2. Ensure .htaccess has correct permissions
 if [ -f .htaccess ]; then
   chmod 644 .htaccess
   chown ${customer.loginname}:${customer.loginname} .htaccess
