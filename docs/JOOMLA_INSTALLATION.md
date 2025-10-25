@@ -10,7 +10,8 @@ Das System ermöglicht die vollautomatische Installation einer Joomla-Basis auf 
 
 1. **Storage Server (Vautron 6)**: `109.235.60.55`
    - Speicherort: `/var/customers/basis-backup/`
-   - Enthält immer genau 1x `kickstart.php` und 1x `.jpa` Backup
+   - Enthält immer genau 1x `kickstart.php`, 1x `.htaccess` und 1x `.jpa` Backup
+   - Die `.htaccess` ist speziell für Joomla konfiguriert und wird mitübertragen
    - Alte Backups werden automatisch gelöscht beim Upload neuer Dateien
 
 2. **Ziel-Server**: Beliebiger Froxlor-Server
@@ -134,6 +135,10 @@ Das System ermöglicht die vollautomatische Installation einer Joomla-Basis auf 
    const kickstartBuffer = await sftpStorage.get('/var/customers/basis-backup/kickstart.php');
    await sftpTarget.put(kickstartBuffer, `${targetPath}/kickstart.php`);
 
+   // .htaccess (klein, Buffer) - WICHTIG für Joomla!
+   const htaccessBuffer = await sftpStorage.get('/var/customers/basis-backup/.htaccess');
+   await sftpTarget.put(htaccessBuffer, `${targetPath}/.htaccess`);
+
    // backup.jpa (groß, Stream)
    const sourceStream = await sftpStorage.get('/var/customers/basis-backup/backup.jpa');
    await sftpTarget.put(sourceStream, `${targetPath}/backup.jpa`);
@@ -149,6 +154,7 @@ Das System ermöglicht die vollautomatische Installation einer Joomla-Basis auf 
    sshClient.exec(`
      chown -R ${customer.loginname}:${customer.loginname} ${targetPath} &&
      chmod -R 775 ${targetPath} &&
+     chmod 644 ${targetPath}/.htaccess &&
      chmod 664 ${targetPath}/*.php ${targetPath}/*.jpa ${targetPath}/*.zip
    `);
    ```
@@ -523,12 +529,14 @@ POST /api/admin/joomla-extract
 
 ### Durchschnittliche Zeiten
 
-- **Upload zu Vautron 6** (105 MB): ~60-90 Sekunden
-- **Transfer Vautron 6 → Ziel**: ~2-3 Minuten (Stream)
-- **Extraktion** (12.000 Dateien): ~2-4 Minuten
-- **Post-Processing** (DB Import): ~30-60 Sekunden
+- **Upload zu Vautron 6** (105 MB): ~60-90 Sekunden (nur lokal, nicht auf Vercel)
+- **Transfer Vautron 6 → Ziel**: ~30-45 Sekunden (Stream)
+- **Extraktion** (12.000 Dateien): ~90-120 Sekunden
+- **Post-Processing** (DB Import): ~30-45 Sekunden
 
-**Gesamt**: ~5-8 Minuten für komplette Installation
+**Gesamt**: ~3 Minuten für komplette Installation (Stand: 2025-10)
+
+**Hinweis**: Die ursprüngliche Zeitangabe von 5-8 Minuten wurde durch Optimierungen auf etwa 3 Minuten reduziert. Bei sehr großen Backups oder langsamen Serververbindungen kann es länger dauern.
 
 ### Optimierungen
 
@@ -571,7 +579,10 @@ POST /api/admin/joomla-extract
 
 1. Gehe zu `/admin/joomla-backup`
 2. Upload neue `kickstart.php` (wird nie überschrieben)
-3. Upload neue `.jpa` (alte wird automatisch gelöscht)
+3. Upload neue `.htaccess` (speziell für Joomla konfiguriert, WICHTIG!)
+4. Upload neue `.jpa` (alte wird automatisch gelöscht)
+
+**WICHTIG**: Die `.htaccess` muss im Backup-Ordner liegen, da sie für die korrekte Funktion von Joomla essentiell ist. Sie wird bei jeder Installation automatisch mit übertragen.
 
 ### Installationsdaten abrufen
 

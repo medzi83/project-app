@@ -177,21 +177,23 @@ export async function POST(request: NextRequest) {
             const postProcessScript = `
 cd ${targetPath} || exit 1
 
-# 1. Rename htaccess.bak to .htaccess (Kickstart renames it)
-if [ -f htaccess.bak ]; then
-  mv htaccess.bak .htaccess
-  echo "✓ Renamed htaccess.bak to .htaccess"
-elif [ -f htaccess.txt ] && [ ! -f .htaccess ]; then
-  cp htaccess.txt .htaccess
-  echo "✓ Copied htaccess.txt to .htaccess"
+# 1. .htaccess wurde bereits von Vautron 6 kopiert
+# Falls sie fehlt, verwende Backup-Variante aus der .jpa
+if [ ! -f .htaccess ]; then
+  if [ -f htaccess.bak ]; then
+    mv htaccess.bak .htaccess
+    echo "✓ Renamed htaccess.bak to .htaccess"
+  elif [ -f htaccess.txt ]; then
+    cp htaccess.txt .htaccess
+    echo "✓ Copied htaccess.txt to .htaccess"
+  fi
 fi
 
-# 2. Update .htaccess RewriteBase for subfolder
+# 2. Ensure .htaccess has correct permissions (already transferred from Vautron 6)
 if [ -f .htaccess ]; then
-  sed -i 's|^# RewriteBase /$|RewriteBase /${folderName}/|' .htaccess
   chmod 644 .htaccess
   chown ${customer.loginname}:${customer.loginname} .htaccess
-  echo "✓ Updated .htaccess RewriteBase"
+  echo "✓ Set .htaccess permissions"
 fi
 
 # 3. Update configuration.php with new database credentials
