@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 
       "{{client.name}}": client?.name ?? "",
       "{{client.customerNo}}": client?.customerNo ?? "",
-      "{{client.contact}}": client?.contact ?? "",
+      "{{client.contact}}": [client?.firstname, client?.lastname].filter(Boolean).join(' ') || "",
       "{{client.phone}}": client?.phone ?? "",
       "{{client.email}}": client?.email ?? "",
 

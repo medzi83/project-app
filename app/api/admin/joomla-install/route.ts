@@ -158,7 +158,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const targetPath = `${customer.documentroot}/${folderName}`;
+    // Normalize documentroot to remove trailing slashes
+    const normalizedDocRoot = customer.documentroot.replace(/\/+$/, '');
+    const targetPath = `${normalizedDocRoot}/${folderName}`;
     const protocol = useHttps ? "https" : "http";
     const installUrl = `${protocol}://${standardDomain}/${folderName}/kickstart.php`;
 

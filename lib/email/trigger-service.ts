@@ -17,7 +17,6 @@ type ProjectWithDetails = Project & {
         name: string;
         email: string | null;
         customerNo: string | null;
-        contact: string | null;
         salutation: string | null;
         firstname: string | null;
         lastname: string | null;
@@ -93,7 +92,6 @@ export async function processTriggers(
           name: true,
           email: true,
           customerNo: true,
-          contact: true,
           salutation: true,
           firstname: true,
           lastname: true,
@@ -141,19 +139,12 @@ export async function processTriggers(
 
   for (const trigger of triggers) {
     try {
-      console.log(`[Trigger Check] Checking trigger: ${trigger.name} (${trigger.triggerType})`);
-      console.log(`[Trigger Check] Updated fields:`, updatedFields);
-      console.log(`[Trigger Check] Old values:`, oldValues);
-      console.log(`[Trigger Check] Conditions:`, trigger.conditions);
-
       const shouldTrigger = await checkTriggerCondition(
         trigger,
         project as ProjectWithDetails,
         updatedFields,
         oldValues
       );
-
-      console.log(`[Trigger Check] Should trigger: ${shouldTrigger}`);
 
       if (shouldTrigger) {
         const queueId = await queueEmail(trigger, project as ProjectWithDetails);
@@ -206,7 +197,6 @@ async function checkTriggerCondition(
 
         // Check if the new value equals the expected value
         const newValue = updatedFields[field];
-        console.log(`[Trigger EQUALS] Field: ${field}, Expected: ${expectedValue}, Actual: ${newValue}, Match: ${newValue === expectedValue}`);
         return newValue === expectedValue;
       }
 
@@ -283,7 +273,6 @@ async function queueEmail(
   // For delayed triggers, skip if no email is available
   if (!recipientEmail) {
     if (shouldSendImmediately) {
-      console.log(`No email found for ${recipientConfig.to}, but creating queue for user confirmation`);
       recipientEmail = ""; // Empty string - user must fill in confirmation dialog
     } else {
       console.warn(`Could not determine recipient email for delayed trigger ${trigger.id}, recipient type: ${recipientConfig.to}`);
@@ -350,10 +339,8 @@ async function queueEmail(
   });
 
   if (shouldSendImmediately) {
-    console.log(`✓ Email queued for confirmation: "${trigger.name}" to ${recipientEmail} (ID: ${queuedEmail.id})`);
     return queuedEmail.id; // Return queue ID for client-side confirmation dialog
   } else {
-    console.log(`Queued email for trigger "${trigger.name}" to ${recipientEmail}, scheduled for ${scheduledFor.toISOString()}`);
     return null;
   }
 }
@@ -400,9 +387,9 @@ function replacePlaceholders(text: string, project: ProjectWithDetails): string 
     "{{client.firstname}}": project.client?.firstname ?? "",
     "{{client.lastname}}": project.client?.lastname ?? "",
     "{{client.contact}}":
-      project.client?.firstname && project.client?.lastname
-        ? `${project.client.firstname} ${project.client.lastname}`
-        : project.client?.contact ?? "",
+      project.client?.firstname || project.client?.lastname
+        ? `${project.client.firstname || ""} ${project.client.lastname || ""}`.trim()
+        : "",
     "{{client.phone}}": project.client?.phone ?? "",
 
     "{{agent.name}}": project.agent?.name ?? "",

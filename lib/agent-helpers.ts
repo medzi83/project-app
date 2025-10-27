@@ -1,8 +1,15 @@
 /**
  * Helper functions for managing Web-Agents and their WT (Webtermin) aliases.
  *
- * Web-Agents can have a WT alias for web projects (e.g., "Nico" has "Nico WT").
- * These are NOT separate agents but aliases that map to the same base agent.
+ * WT = "Webtermin" - Bezeichnet einen Agenten, der nur für den initialen Webtermin zuständig ist,
+ * aber nicht zwingend das spätere Projekt umsetzt.
+ *
+ * Beispiel:
+ * - "Nico" = Macht das komplette Website-Projekt (Umsetzung, Demo, Online)
+ * - "Nico WT" = Macht nur den Webtermin (Beratungsgespräch), Projekt kann später an anderen Agenten gehen
+ *
+ * Wichtig: Dies sind KEINE separaten Agenten, sondern Aliases die auf denselben Base-Agent verweisen.
+ * Der Unterschied wird über das `isWTAssignment` Flag in ProjectWebsite gespeichert.
  */
 
 export type AgentWithAlias = {
@@ -17,14 +24,18 @@ export type AgentWithAlias = {
 };
 
 /**
- * Generates a WT alias ID from a base agent ID
+ * Generiert eine WT-Alias-ID aus einer Base-Agent-ID
+ * @param baseAgentId - Die ID des Basis-Agenten
+ * @returns Agent-ID mit "_WT" Suffix (z.B. "abc123_WT")
  */
 export function getWTAliasId(baseAgentId: string): string {
   return `${baseAgentId}_WT`;
 }
 
 /**
- * Generates a WT alias name from a base agent name
+ * Generiert einen WT-Alias-Namen aus einem Base-Agent-Namen
+ * @param baseAgentName - Der Name des Basis-Agenten
+ * @returns Agent-Name mit " WT" Suffix (z.B. "Nico WT")
  */
 export function getWTAliasName(baseAgentName: string | null): string {
   if (!baseAgentName) return "WT";
@@ -32,14 +43,18 @@ export function getWTAliasName(baseAgentName: string | null): string {
 }
 
 /**
- * Checks if an agent ID is a WT alias
+ * Prüft ob eine Agent-ID ein WT-Alias ist
+ * @param agentId - Die zu prüfende Agent-ID
+ * @returns true wenn ID mit "_WT" endet
  */
 export function isWTAliasId(agentId: string): boolean {
   return agentId.endsWith("_WT");
 }
 
 /**
- * Extracts the base agent ID from a WT alias ID
+ * Extrahiert die Basis-Agent-ID aus einer WT-Alias-ID
+ * @param agentId - Die Agent-ID (mit oder ohne "_WT" Suffix)
+ * @returns Die Basis-Agent-ID (ohne "_WT" Suffix)
  */
 export function getBaseAgentId(agentId: string): string {
   if (isWTAliasId(agentId)) {
@@ -49,7 +64,13 @@ export function getBaseAgentId(agentId: string): string {
 }
 
 /**
- * Expands a list of agents to include WT aliases for web projects
+ * Erweitert eine Agenten-Liste um WT-Aliases für Website-Projekte
+ *
+ * Für jeden Agenten mit WEBSEITE-Kategorie wird ein zusätzlicher WT-Alias erstellt.
+ * Beispiel: "Nico" → wird zu ["Nico", "Nico WT"]
+ *
+ * @param agents - Liste der Basis-Agenten
+ * @returns Erweiterte Liste mit Basis-Agenten + WT-Aliases
  */
 export function expandAgentsWithWTAliases(
   agents: Array<{
@@ -91,7 +112,22 @@ export function expandAgentsWithWTAliases(
 }
 
 /**
- * Converts a potentially WT alias agent ID back to the base agent ID and isWTAssignment flag for database queries
+ * Konvertiert eine potenzielle WT-Alias-ID zurück zur Basis-Agent-ID und isWTAssignment-Flag für DB-Queries
+ *
+ * Diese Funktion wird verwendet, wenn ein Agent aus einem Dropdown ausgewählt wird.
+ * - Normale Agent-ID: "abc123" → { baseAgentId: "abc123", isWTAssignment: false }
+ * - WT-Alias-ID: "abc123_WT" → { baseAgentId: "abc123", isWTAssignment: true }
+ *
+ * Das isWTAssignment-Flag wird in ProjectWebsite.isWTAssignment gespeichert und zeigt an,
+ * dass dieser Agent nur für den Webtermin zuständig ist.
+ *
+ * @param agentId - Die Agent-ID (kann null, normale ID oder WT-Alias-ID sein)
+ * @returns Objekt mit baseAgentId (für Project.agentId) und isWTAssignment-Flag (für ProjectWebsite.isWTAssignment)
+ *
+ * @example
+ * normalizeAgentIdForDB("abc123")     // { baseAgentId: "abc123", isWTAssignment: false }
+ * normalizeAgentIdForDB("abc123_WT")  // { baseAgentId: "abc123", isWTAssignment: true }
+ * normalizeAgentIdForDB(null)         // { baseAgentId: null, isWTAssignment: false }
  */
 export function normalizeAgentIdForDB(agentId: string | null | undefined): {
   baseAgentId: string | null;
@@ -100,6 +136,10 @@ export function normalizeAgentIdForDB(agentId: string | null | undefined): {
   if (!agentId) return { baseAgentId: null, isWTAssignment: false };
 
   const isWT = isWTAliasId(agentId);
+
+  // Note: Validation dass WT nur für Website-Projekte verwendet wird,
+  // erfolgt auf Anwendungsebene (WT-Aliases werden nur für Website-Projekte in Dropdowns angezeigt)
+
   return {
     baseAgentId: getBaseAgentId(agentId),
     isWTAssignment: isWT,

@@ -745,7 +745,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
   return (
     <div className="p-6 space-y-6">
       {/* Modern Header */}
-      <div className="rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 p-6 shadow-lg">
+      <div className="rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 p-6 shadow-lg">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
             <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -754,7 +754,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
           </div>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-white">Filmprojekte</h1>
-            <p className="text-green-100 text-sm mt-1">{total} {total === 1 ? 'Projekt' : 'Projekte'} gesamt</p>
+            <p className="text-purple-100 text-sm mt-1">{total} {total === 1 ? 'Projekt' : 'Projekte'} gesamt</p>
           </div>
           {session.user.role === "ADMIN" && (
             <DangerActionButton action={deleteAllFilmProjects} confirmText="Wirklich ALLE Filmprojekte dauerhaft löschen?">
@@ -764,9 +764,9 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-green-200 bg-white shadow-sm">
-        <div className="px-6 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200 rounded-t-2xl flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-green-900">Filter & Suche</h2>
+      <div className="rounded-2xl border border-purple-200 bg-white shadow-sm">
+        <div className="px-6 py-3 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200 rounded-t-2xl flex items-center gap-3">
+          <h2 className="text-sm font-semibold text-purple-900">Filter & Suche</h2>
           <div className="flex gap-2">
             <form method="get" className="contents">
               <input type="hidden" name="sort" value="standard" />

@@ -473,7 +473,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
   return (
     <div className="p-6 space-y-6">
       {/* Modern Header */}
-      <div className="rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 p-6 shadow-lg">
+      <div className="rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-6 shadow-lg">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
             <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -482,7 +482,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
           </div>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-white">Webseitenprojekte</h1>
-            <p className="text-purple-100 text-sm mt-1">{total} {total === 1 ? 'Projekt' : 'Projekte'} gesamt</p>
+            <p className="text-blue-100 text-sm mt-1">{total} {total === 1 ? 'Projekt' : 'Projekte'} gesamt</p>
           </div>
           {role === "ADMIN" && session.user.role === "ADMIN" && (
             <DangerActionButton action={deleteAllProjects} confirmText="Wirklich ALLE Projekte dauerhaft löschen?">ALLE Projekte löschen</DangerActionButton>
@@ -491,9 +491,9 @@ export default async function ProjectsPage({ searchParams }: Props) {
       </div>
 
       {/* Filter */}
-<div className="rounded-2xl border border-purple-200 bg-white shadow-sm">
-  <div className="px-6 py-3 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200 rounded-t-2xl">
-    <h2 className="text-sm font-semibold text-purple-900">Filter & Suche</h2>
+<div className="rounded-2xl border border-blue-200 bg-white shadow-sm">
+  <div className="px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 rounded-t-2xl">
+    <h2 className="text-sm font-semibold text-blue-900">Filter & Suche</h2>
   </div>
     <div className="p-6">
     <form method="get" className="flex flex-wrap items-end gap-3">

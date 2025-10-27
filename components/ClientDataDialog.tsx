@@ -26,7 +26,6 @@ type ClientDataDialogProps = {
   currentSalutation?: string | null;
   currentFirstname?: string | null;
   currentLastname?: string | null;
-  currentContact: string | null;
   currentAgencyId: string | null;
   missingEmail: boolean;
   missingContact: boolean;
@@ -43,7 +42,6 @@ export function ClientDataDialog({
   currentSalutation,
   currentFirstname,
   currentLastname,
-  currentContact,
   currentAgencyId,
   missingEmail,
   missingContact,
@@ -55,7 +53,6 @@ export function ClientDataDialog({
   const [salutation, setSalutation] = useState(currentSalutation || "");
   const [firstname, setFirstname] = useState(currentFirstname || "");
   const [lastname, setLastname] = useState(currentLastname || "");
-  const [contact, setContact] = useState(currentContact || "");
   const [agencyId, setAgencyId] = useState(currentAgencyId || "");
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(false);
@@ -110,7 +107,6 @@ export function ClientDataDialog({
           salutation: salutation.trim() || null,
           firstname: firstname.trim() || null,
           lastname: lastname.trim() || null,
-          contact: contact.trim() || null,
           agencyId: agencyId,
         }),
       });

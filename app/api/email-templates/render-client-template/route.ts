@@ -73,9 +73,10 @@ export async function POST(request: NextRequest) {
 
     // Replace placeholders
     const replacePlaceholders = (text: string) => {
+      const clientContact = [client.firstname, client.lastname].filter(Boolean).join(' ') || "";
       return text
         .replace(/\{\{client\.name\}\}/g, client.name || "")
-        .replace(/\{\{client\.contact\}\}/g, client.contact || "")
+        .replace(/\{\{client\.contact\}\}/g, clientContact)
         .replace(/\{\{client\.customerNo\}\}/g, client.customerNo || "")
         .replace(/\{\{client\.phone\}\}/g, client.phone || "")
         .replace(/\{\{agent\.name\}\}/g, currentUser.name || "")

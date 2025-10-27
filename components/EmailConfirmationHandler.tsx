@@ -12,7 +12,6 @@ type MissingClientData = {
   currentSalutation: string | null;
   currentFirstname: string | null;
   currentLastname: string | null;
-  currentContact: string | null;
   currentAgencyId: string | null;
   missingEmail: boolean;
   missingContact: boolean;
@@ -68,7 +67,6 @@ export function EmailConfirmationHandler() {
                 currentSalutation: client.salutation || null,
                 currentFirstname: client.firstname || null,
                 currentLastname: client.lastname || null,
-                currentContact: client.contact || null,
                 currentAgencyId: client.agencyId || null,
                 missingEmail,
                 missingContact,
@@ -140,7 +138,6 @@ export function EmailConfirmationHandler() {
     const maxChecks = pollingReason === "initial" ? 5 : 15;
 
     if (emptyChecks >= maxChecks && intervalRef.current) {
-      console.log(`No pending emails found after ${maxChecks * 2} seconds (${pollingReason}), stopping polling`);
       setIsPolling(false);
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -155,7 +152,6 @@ export function EmailConfirmationHandler() {
       const isInlineCell = target.closest('button[title="Zum Bearbeiten klicken"]');
 
       if (isInlineCell && !isPolling) {
-        console.log("User clicked on editable field, restarting email polling for 30 seconds");
         setIsPolling(true);
         setPollingReason("userClick");
         setEmptyChecks(0);
@@ -221,7 +217,6 @@ export function EmailConfirmationHandler() {
             currentSalutation: client.salutation || null,
             currentFirstname: client.firstname || null,
             currentLastname: client.lastname || null,
-            currentContact: client.contact || null,
             currentAgencyId: client.agencyId || null,
             missingEmail: false, // Allow editing even if not missing
             missingContact: false,
@@ -253,7 +248,6 @@ export function EmailConfirmationHandler() {
         currentSalutation={missingClientData.currentSalutation}
         currentFirstname={missingClientData.currentFirstname}
         currentLastname={missingClientData.currentLastname}
-        currentContact={missingClientData.currentContact}
         currentAgencyId={missingClientData.currentAgencyId}
         missingEmail={missingClientData.missingEmail}
         missingContact={missingClientData.missingContact}
@@ -275,7 +269,6 @@ export function EmailConfirmationHandler() {
         currentSalutation={missingClientData.currentSalutation}
         currentFirstname={missingClientData.currentFirstname}
         currentLastname={missingClientData.currentLastname}
-        currentContact={missingClientData.currentContact}
         currentAgencyId={missingClientData.currentAgencyId}
         missingEmail={missingClientData.missingEmail}
         missingContact={missingClientData.missingContact}

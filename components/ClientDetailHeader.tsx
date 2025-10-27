@@ -15,7 +15,6 @@ type ClientDetailHeaderProps = {
     salutation: string | null;
     firstname: string | null;
     lastname: string | null;
-    contact: string | null;
     agencyId: string | null;
     agency: {
       id: string;
@@ -33,7 +32,7 @@ export function ClientDetailHeader({ client, isAdmin }: ClientDetailHeaderProps)
 
   const handleMailButtonClick = () => {
     // Check if client has required data
-    const hasContactName = client.firstname || client.lastname || client.contact;
+    const hasContactName = client.firstname || client.lastname;
     const needsClientData = !client.email || !client.agencyId || !hasContactName;
 
     if (needsClientData) {
@@ -119,10 +118,9 @@ export function ClientDetailHeader({ client, isAdmin }: ClientDetailHeaderProps)
         currentSalutation={client.salutation}
         currentFirstname={client.firstname}
         currentLastname={client.lastname}
-        currentContact={client.contact}
         currentAgencyId={client.agencyId}
         missingEmail={!client.email}
-        missingContact={!(client.firstname || client.lastname || client.contact)}
+        missingContact={!(client.firstname || client.lastname)}
         missingAgency={!client.agencyId}
         onComplete={handleClientDataComplete}
         onCancel={() => setShowClientDataDialog(false)}
@@ -137,7 +135,6 @@ export function ClientDetailHeader({ client, isAdmin }: ClientDetailHeaderProps)
         clientSalutation={client.salutation}
         clientFirstname={client.firstname}
         clientLastname={client.lastname}
-        clientContact={client.contact}
         onClose={() => setShowEmailDialog(false)}
         onSuccess={handleEmailSuccess}
       />

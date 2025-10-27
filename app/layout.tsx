@@ -1,6 +1,7 @@
 import "./globals.css";
 import AppShell from "@/components/AppShell";
 import AuthSessionProvider from "@/components/AuthSessionProvider";
+import { SessionTimeout } from "@/components/SessionTimeout";
 import { getAuthSession, getEffectiveUser } from "@/lib/authz";
 
 import { prisma } from "@/lib/prisma";
@@ -41,6 +42,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     <html lang="de">
       <body>
         <AuthSessionProvider session={session}>
+          <SessionTimeout />
           {shell ? (
             <AppShell user={shell} counts={counts} devMode={devMode} agencies={agencies}>
               {children}

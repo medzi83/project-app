@@ -386,7 +386,6 @@ export async function manageDomain(formData: FormData) {
   const serverId = formData.get("serverId") as string;
 
   // TODO: Implement domain management
-  console.log("Manage domain:", { clientId, serverId });
 
   return { success: true, message: "Funktion in Vorbereitung" };
 }
@@ -554,7 +553,6 @@ export async function installJoomla(formData: FormData) {
   const serverId = formData.get("serverId") as string;
 
   // TODO: Implement Joomla installation via kickstart.php
-  console.log("Install Joomla:", { clientId, serverId });
 
   return { success: true, message: "Funktion in Vorbereitung" };
 }

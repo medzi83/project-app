@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, createContext, useContext, ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
-export function FeedbackNotificationBadge() {
+// Context for sharing feedback count across all badge instances
+type FeedbackContextType = {
+  count: number;
+  fetchCount: () => void;
+};
+
+const FeedbackContext = createContext<FeedbackContextType | null>(null);
+
+export function FeedbackNotificationProvider({ children }: { children: ReactNode }) {
   const [count, setCount] = useState(0);
   const pathname = usePathname();
 
@@ -30,6 +38,23 @@ export function FeedbackNotificationBadge() {
       fetchCount();
     }
   }, [pathname]);
+
+  return (
+    <FeedbackContext.Provider value={{ count, fetchCount }}>
+      {children}
+    </FeedbackContext.Provider>
+  );
+}
+
+export function FeedbackNotificationBadge() {
+  const context = useContext(FeedbackContext);
+
+  if (!context) {
+    console.warn("FeedbackNotificationBadge must be used within FeedbackNotificationProvider");
+    return null;
+  }
+
+  const { count } = context;
 
   if (count === 0) return null;
 

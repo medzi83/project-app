@@ -22,7 +22,8 @@ import {
 import DevModeToggle from "@/components/DevModeToggle";
 import FeedbackDialog from "@/components/FeedbackDialog";
 import { GlobalClientSearch } from "@/components/GlobalClientSearch";
-import { FeedbackNotificationBadge } from "@/components/FeedbackNotificationBadge";
+import { FeedbackNotificationBadge, FeedbackNotificationProvider } from "@/components/FeedbackNotificationBadge";
+import { PSNLogo } from "@/components/PSNLogo";
 
 export type Role = "ADMIN" | "AGENT";
 
@@ -69,6 +70,7 @@ export default function AppShell({ user, counts, devMode, agencies, children }: 
   }, []);
 
   return (
+    <FeedbackNotificationProvider>
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
       <div className="sticky top-0 z-40 border-b border-white/20 bg-white/80 backdrop-blur-lg shadow-sm">
         <div className="flex w-full items-center gap-3 px-4 py-3">
@@ -88,7 +90,10 @@ export default function AppShell({ user, counts, devMode, agencies, children }: 
           </Sheet>
 
           <div className="flex items-center gap-3">
-            <Link href="/" className="font-bold text-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">Projektverwaltung</Link>
+            <Link href="/" className="flex items-center gap-2">
+              <PSNLogo size="small" animated={false} />
+              <span className="font-bold text-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">Projektverwaltung</span>
+            </Link>
             {agencies && agencies.length > 0 && (
               <div className="flex items-center gap-2">
                 {agencies.filter(a => a.logoIconPath).map((agency) => (
@@ -174,6 +179,7 @@ export default function AppShell({ user, counts, devMode, agencies, children }: 
         </main>
       </div>
     </div>
+    </FeedbackNotificationProvider>
   );
 }
 

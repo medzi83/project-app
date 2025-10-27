@@ -252,7 +252,7 @@ export default async function ClientsPage({ searchParams }: Props) {
                         <span className="text-gray-400">-</span>
                       )}
                     </td>
-                    <td>{client.contact ?? "-"}</td>
+                    <td>{[client.firstname, client.lastname].filter(Boolean).join(' ') || "-"}</td>
                     <td className="whitespace-nowrap">{
                       phoneHref ? (
                         <a href={phoneHref} className="text-blue-600 hover:underline">

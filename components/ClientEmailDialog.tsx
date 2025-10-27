@@ -29,7 +29,6 @@ type ClientEmailDialogProps = {
   clientSalutation?: string | null;
   clientFirstname?: string | null;
   clientLastname?: string | null;
-  clientContact: string | null;
   onClose: () => void;
   onSuccess: () => void;
 };
@@ -42,14 +41,13 @@ export function ClientEmailDialog({
   clientSalutation,
   clientFirstname,
   clientLastname,
-  clientContact,
   onClose,
   onSuccess,
 }: ClientEmailDialogProps) {
-  // Build contact name from new fields or fall back to old contact field
+  // Build contact name from firstname/lastname
   const contactName = clientFirstname || clientLastname
     ? `${clientSalutation ? clientSalutation + ' ' : ''}${clientFirstname || ''} ${clientLastname || ''}`.trim()
-    : clientContact || '';
+    : '';
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [toEmail, setToEmail] = useState(clientEmail || "");

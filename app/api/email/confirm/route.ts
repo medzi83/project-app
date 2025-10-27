@@ -79,7 +79,6 @@ export async function GET(request: NextRequest) {
             name: clientRecord.name,
             customerNo: clientRecord.customerNo ?? null,
             email: clientRecord.email ?? null,
-            contact: clientRecord.contact ?? null,
             salutation: clientRecord.salutation ?? null,
             firstname: clientRecord.firstname ?? null,
             lastname: clientRecord.lastname ?? null,

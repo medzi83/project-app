@@ -17,6 +17,7 @@ import { FroxlorDataEditor } from "./FroxlorDataEditor";
 import { ClientDataEditor } from "./ClientDataEditor";
 import { ProjectDomainAssignment } from "./ProjectDomainAssignment";
 import { DomainProjectAssignment } from "./DomainProjectAssignment";
+import { DeleteInstallationButton } from "./DeleteInstallationButton";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -228,8 +229,6 @@ export default async function ClientDetailPage({ params }: Props) {
               where: { id: clientId },
               data: { serverId: server.id },
             });
-
-            console.log(`Auto-assigned server ${server.name} to client ${clientName} (${customerNo})`);
 
             // Reload client with updated server info
           client = await prisma.client.findUnique({
@@ -476,8 +475,6 @@ export default async function ClientDetailPage({ params }: Props) {
         if (updatedClient) {
           client = updatedClient;
         }
-
-        console.log(`Auto-synced Froxlor contact data for client ${client.name}: ${froxlorCustomer.firstname} ${froxlorCustomer.name}`);
       }
     } catch (error) {
       console.error("Error auto-syncing Froxlor contact data:", error);
@@ -518,7 +515,6 @@ export default async function ClientDetailPage({ params }: Props) {
           salutation: client.salutation,
           firstname: client.firstname,
           lastname: client.lastname,
-          contact: client.contact,
           agencyId: client.agencyId,
           agency: client.agency,
           workStopped: client.workStopped,
@@ -815,16 +811,24 @@ export default async function ClientDetailPage({ params }: Props) {
                     </div>
 
                     {isAdmin && (
-                      <div className="pt-2 border-t border-blue-200/50 mt-2">
-                        <div className="text-xs text-gray-500 mb-1">
-                          {installation.project ? "Projektzuordnung:" : "Projekt zuordnen:"}
+                      <>
+                        <div className="pt-2 border-t border-blue-200/50 mt-2">
+                          <div className="text-xs text-gray-500 mb-1">
+                            {installation.project ? "Projektzuordnung:" : "Projekt zuordnen:"}
+                          </div>
+                          <InstallationProjectAssignment
+                            installationId={installation.id}
+                            clientProjects={client.projects.filter((p) => p.type === "WEBSITE")}
+                            currentProjectId={installation.project?.id}
+                          />
                         </div>
-                        <InstallationProjectAssignment
-                          installationId={installation.id}
-                          clientProjects={client.projects.filter((p) => p.type === "WEBSITE")}
-                          currentProjectId={installation.project?.id}
-                        />
-                      </div>
+                        <div className="pt-2 border-t border-blue-200/50 mt-2 flex justify-end">
+                          <DeleteInstallationButton
+                            installationId={installation.id}
+                            installationName={`${installation.standardDomain}/${installation.folderName}`}
+                          />
+                        </div>
+                      </>
                     )}
                     </div>
                   );
@@ -879,7 +883,9 @@ export default async function ClientDetailPage({ params }: Props) {
                             <Badge variant="destructive" className="text-xs">Deaktiviert</Badge>
                           )}
                         </div>
-                        <div className="font-mono text-xs text-gray-600 mb-1 break-all">{domain.documentroot}</div>
+                        {!isStandard && (
+                          <div className="font-mono text-xs text-gray-600 mb-1 break-all">{domain.documentroot}</div>
+                        )}
                         <div className="flex gap-3 text-xs text-gray-500">
                           <span>SSL: {domain.ssl_redirect === "1" ? "Ja" : "Nein"}</span>
                           <span>LE: {domain.letsencrypt === "1" ? "Ja" : "Nein"}</span>

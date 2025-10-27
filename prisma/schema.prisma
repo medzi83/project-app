@@ -63,7 +63,6 @@ model Client {
   salutation         String?             // Anrede: "Herr", "Frau", "Divers"
   firstname          String?             // Vorname der Kontaktperson
   lastname           String?             // Nachname der Kontaktperson
-  contact            String?             // Deprecated: wird durch firstname/lastname ersetzt
   email              String?
   phone              String?
   notes              String?

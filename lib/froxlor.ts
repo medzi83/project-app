@@ -669,4 +669,58 @@ export class FroxlorClient {
       };
     }
   }
+
+  /**
+   * Delete a MySQL database by name
+   * Uses the proven method: Find database by name, then delete by ID + customerid
+   * @param databaseName - The name of the database to delete
+   */
+  async deleteDatabase(databaseName: string): Promise<{ success: boolean; message: string }> {
+    try {
+      // Primary method: List databases, find by name, delete with ID + customerid
+      // This is the proven method that works with Froxlor
+      const listResult = await this.request<FroxlorListingPayload<FroxlorDatabase>>('Mysqls.listing');
+
+      if (listResult.status !== 200 || !listResult.data) {
+        return {
+          success: false,
+          message: 'Fehler beim Abrufen der Datenbankliste',
+        };
+      }
+
+      const databases = normalizeFroxlorList(listResult.data);
+      const database = databases.find(db => db.databasename === databaseName);
+
+      if (!database) {
+        return {
+          success: false,
+          message: `Datenbank ${databaseName} nicht gefunden`,
+        };
+      }
+
+      // Delete with ID + customerid (this is the working method)
+      const result = await this.request('Mysqls.delete', {
+        id: database.id,
+        customerid: database.customerid,
+      });
+
+      if (result.status === 200) {
+        return {
+          success: true,
+          message: `Datenbank ${databaseName} erfolgreich gelöscht`,
+        };
+      }
+
+      return {
+        success: false,
+        message: result.status_message || 'Fehler beim Löschen der Datenbank',
+      };
+    } catch (error) {
+      console.error('Error deleting database:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Löschen der Datenbank',
+      };
+    }
+  }
 }

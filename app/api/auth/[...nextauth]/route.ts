@@ -24,7 +24,10 @@ function extractRoleAndClient(value: unknown): RoleAndClient {
 
 
 export const authOptions = {
-  session: { strategy: "jwt" as const },
+  session: {
+    strategy: "jwt" as const,
+    maxAge: 12 * 60 * 60, // 12 hours in seconds
+  },
   providers: [
     Credentials({
       name: "Credentials",
@@ -46,7 +49,8 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: { token: Record<string, unknown>; user?: unknown }) {
+    async jwt({ token, user, trigger }: { token: Record<string, unknown>; user?: unknown; trigger?: string }) {
+      // On sign-in, store the initial login time
       if (user) {
         const details = extractRoleAndClient(user);
         const userId = typeof (user as { id?: unknown }).id === "string" ? (user as { id: string }).id : undefined;
@@ -55,7 +59,19 @@ export const authOptions = {
           token.role = details.role;
         }
         token.clientId = details.clientId;
+        token.iat = Math.floor(Date.now() / 1000); // Set initial authentication time
       }
+
+      // Check if token has expired (12 hours)
+      const iat = typeof token.iat === 'number' ? token.iat : Math.floor(Date.now() / 1000);
+      const maxAge = 12 * 60 * 60; // 12 hours in seconds
+      const currentTime = Math.floor(Date.now() / 1000);
+
+      if (currentTime - iat > maxAge) {
+        // Session expired, return null to force logout
+        return {};
+      }
+
       return token;
     },
     async session(params: { session: Session; token: Record<string, unknown> } & Record<string, unknown>): Promise<Session> {
