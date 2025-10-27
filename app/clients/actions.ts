@@ -28,6 +28,7 @@ export async function deleteSelectedClients(formData: FormData) {
   await prisma.$transaction([
     // Child tables of projects
     prisma.projectNote.deleteMany({ where: { projectId: { in: pids } } }),
+    prisma.projectDomainHistory.deleteMany({ where: { projectId: { in: pids } } }),
     prisma.projectWebsite.deleteMany({ where: { projectId: { in: pids } } }),
     prisma.project.deleteMany({ where: { id: { in: pids } } }),
     // Detach users from clients (do not delete users)

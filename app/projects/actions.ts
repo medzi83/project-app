@@ -29,6 +29,7 @@ export async function deleteAllProjects() {
 
   await prisma.$transaction([
     prisma.projectNote.deleteMany({ where: { projectId: { in: projectIds } } }),
+    prisma.projectDomainHistory.deleteMany({ where: { projectId: { in: projectIds } } }),
     prisma.projectWebsite.deleteMany({ where: { projectId: { in: projectIds } } }),
     prisma.project.deleteMany({ where: { id: { in: projectIds } } }),
   ]);
@@ -43,6 +44,7 @@ export async function deleteProject(formData: FormData) {
 
   await prisma.$transaction([
     prisma.projectNote.deleteMany({ where: { projectId } }),
+    prisma.projectDomainHistory.deleteMany({ where: { projectId } }),
     prisma.projectWebsite.deleteMany({ where: { projectId } }),
     prisma.projectFilm.deleteMany({ where: { projectId } }),
     prisma.project.delete({ where: { id: projectId } }),

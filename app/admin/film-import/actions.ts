@@ -107,7 +107,13 @@ const toDate = (val: string | undefined) => {
     }
     const dNum = Number(dStr);
     const mNum = Number(mStr);
-    const date = new Date(y, mNum - 1, dNum, hh ? Number(hh) : 0, min ? Number(min) : 0);
+
+    // IMPORTANT: Use "naive" ISO string construction to match existing system behavior
+    // This follows the pattern used in inline-actions.ts for consistent date storage
+    // Date is stored as-is in database without timezone conversion
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const isoString = `${y.toString().padStart(4, '0')}-${pad(mNum)}-${pad(dNum)}T${pad(hh ? Number(hh) : 0)}:${pad(min ? Number(min) : 0)}:00.000Z`;
+    const date = new Date(isoString);
     if (!Number.isNaN(date.getTime())) return date;
     return undefined;
   }

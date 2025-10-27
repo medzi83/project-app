@@ -308,7 +308,53 @@ const sshClient = (sftpTarget as any).client;
 
 ---
 
-### Problem 2: "ECONNRESET" beim Upload
+### Problem 2: 2-Minuten-Delay vor Backup-Transfer
+
+**Symptom**: Nach Upload von `kickstart.php` wartet das System ~2 Minuten, bevor der Transfer der `.jpa` Datei startet
+
+**Ursache**: Fehlende SSH-Keepalive-Einstellungen für Storage-Server-Verbindung
+
+**Lösung**:
+```typescript
+// ❌ FALSCH: Keine Keepalive-Einstellungen
+await sftpStorage.connect({
+  host: storageServer.sshHost,
+  readyTimeout: 60000
+});
+
+// ✅ RICHTIG: Mit Keepalive
+await sftpStorage.connect({
+  host: storageServer.sshHost,
+  readyTimeout: 60000,
+  keepaliveInterval: 10000,  // Alle 10 Sekunden
+  keepaliveCountMax: 30
+});
+```
+
+**Weitere Optimierung** - Server-Erkennung für lokale Kopien:
+```typescript
+// Prüfe ob Quelle und Ziel identisch sind
+const isSameServer = storageServer.sshHost === server.sshHost;
+
+if (isSameServer) {
+  // ✅ Nutze direkten cp-Befehl (4 Sekunden statt 2+ Minuten!)
+  conn.exec(`cp ${sourcePath} ${targetPath}`);
+} else {
+  // SFTP-Stream für unterschiedliche Server
+  await pipeline(readStream, writeStream);
+}
+```
+
+**Code-Stellen**:
+- `app/api/admin/joomla-install/route.ts:212-213` (Keepalive für Storage)
+- `app/api/admin/joomla-install/route.ts:230-270` (Server-Erkennung und cp)
+- `app/api/admin/joomla-install/route.ts:293-300` (Stream mit 2MB Chunks)
+
+**Ergebnis**: Installation auf gleichem Server dauert nur noch ~47 Sekunden (vorher 3-5 Minuten)
+
+---
+
+### Problem 3: "ECONNRESET" beim Upload
 
 **Symptom**: Upload bricht bei ~90% ab
 
@@ -330,7 +376,7 @@ await sftpTarget.put(sourceStream, targetPath);
 
 ---
 
-### Problem 3: MySQL Import schlägt fehl
+### Problem 4: MySQL Import schlägt fehl
 
 **Symptom**: Datenbank leer nach Installation
 
@@ -361,7 +407,37 @@ await sftpTarget.put(sourceStream, targetPath);
 
 ---
 
-### Problem 4: "Prisma Client validation error"
+### Problem 5: Doppelte Slashes in Pfaden (`//`)
+
+**Symptom**:
+- Pfade in `configuration.php` haben doppelte Slashes: `/var/customers/webs/M443322//folder/`
+- Löschen von Installationen schlägt fehl wegen Pfad-Validierung
+- In Datenbank gespeicherte Pfade enthalten `//`
+
+**Ursache**: `customer.documentroot` aus Froxlor endet bereits mit `/`, beim Anhängen von `/${folderName}` entsteht `//`
+
+**Lösung**:
+```typescript
+// ❌ FALSCH: Direktes Anhängen
+const targetPath = `${customer.documentroot}/${folderName}`;
+// Ergebnis: /var/customers/webs/M443322//folder
+
+// ✅ RICHTIG: Normalisierung vorher
+const normalizedDocRoot = customer.documentroot.replace(/\/+$/, '');
+const targetPath = `${normalizedDocRoot}/${folderName}`;
+// Ergebnis: /var/customers/webs/M443322/folder
+```
+
+**Code-Stellen**:
+- `app/api/admin/joomla-extract/route.ts:147-148` (Pfad-Konstruktion)
+- `app/api/admin/joomla-install/route.ts:162-163` (Pfad-Konstruktion)
+- `app/api/admin/joomla-installations/[id]/delete/route.ts:244-245` (Pfad-Validierung)
+
+**Rückwärtskompatibilität**: Die Lösch-Funktion normalisiert Pfade automatisch, sodass alte Installationen mit `//` trotzdem gelöscht werden können.
+
+---
+
+### Problem 6: "Prisma Client validation error"
 
 **Symptom**: `Unknown field 'joomlaInstallations'`
 
