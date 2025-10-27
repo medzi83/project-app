@@ -355,76 +355,9 @@ echo "=== POST-PROCESSING COMPLETE ==="
       throw new Error(`Failed to post-process installation: ${postProcessError instanceof Error ? postProcessError.message : String(postProcessError)}`);
     }
 
-    // Upload custom .htaccess file
-    try {
-      console.log("Uploading custom .htaccess file...");
-      const { readFileSync } = await import('fs');
-      const { resolve } = await import('path');
-      const { Client } = await import('ssh2');
-
-      // Read the .htaccess template
-      const htaccessPath = resolve(process.cwd(), 'storage', 'joomla', 'joomla.htaccess');
-      const htaccessContent = readFileSync(htaccessPath, 'utf8');
-
-      // Connect via SSH and upload
-      await new Promise<void>((resolveUpload, rejectUpload) => {
-        const conn = new Client();
-
-        conn.on('ready', () => {
-          conn.sftp((err, sftp) => {
-            if (err) {
-              conn.end();
-              return rejectUpload(new Error(`SFTP error: ${err.message}`));
-            }
-
-            const targetPath = `${customer.documentroot}/${folderName}`;
-            const remotePath = `${targetPath}/.htaccess`;
-
-            // Write the file
-            const writeStream = sftp.createWriteStream(remotePath, {
-              mode: 0o644, // rw-r--r--
-            });
-
-            writeStream.on('close', () => {
-              // Set correct ownership
-              conn.exec(`chown ${customer.loginname}:${customer.loginname} "${remotePath}" && chmod 644 "${remotePath}"`, (err, stream) => {
-                if (err) {
-                  console.warn('⚠ .htaccess uploaded but permissions could not be set');
-                }
-
-                stream.on('close', () => {
-                  conn.end();
-                  console.log('✓ Custom .htaccess uploaded and permissions set');
-                  resolveUpload();
-                });
-              });
-            });
-
-            writeStream.on('error', (err: Error) => {
-              conn.end();
-              rejectUpload(new Error(`Upload error: ${err.message}`));
-            });
-
-            writeStream.write(htaccessContent);
-            writeStream.end();
-          });
-        });
-
-        conn.on('error', (err: Error) => {
-          rejectUpload(new Error(`SSH connection error: ${err.message}`));
-        });
-
-        conn.connect({
-          host: server.sshHost!,
-          port: server.sshPort || 22,
-          username: server.sshUsername!,
-          password: server.sshPassword!,
-        });
-      });
-    } catch (htaccessError) {
-      console.error('ERROR: Failed to upload .htaccess:', htaccessError);
-      // Don't throw - installation was successful, just .htaccess upload failed
-    }
+    // The .htaccess file is already handled by the post-processing script above
+    // It renames htaccess.bak (from the Joomla backup) to .htaccess
+    console.log("✓ .htaccess already configured from backup (htaccess.bak → .htaccess)");
 
     // Save installation data to database
     try {

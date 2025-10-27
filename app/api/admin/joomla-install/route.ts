@@ -209,6 +209,8 @@ export async function POST(request: NextRequest) {
         username: storageServer.sshUsername,
         password: storageServer.sshPassword,
         readyTimeout: 60000, // 60 seconds
+        keepaliveInterval: 10000, // Send keepalive every 10 seconds
+        keepaliveCountMax: 30, // Allow up to 30 keepalive packets
       });
 
       // Connect to target server
@@ -225,15 +227,113 @@ export async function POST(request: NextRequest) {
       // Create target directory
       await sftpTarget.mkdir(targetPath, true);
 
-      // Download kickstart.php from Vautron 6 (small file - can use buffer)
-      const kickstartBuffer = await sftpStorage.get(`${BACKUP_PATH}/kickstart.php`) as Buffer;
-      await sftpTarget.put(kickstartBuffer, `${targetPath}/kickstart.php`);
+      // Check if source and target are the same server
+      // Compare both sshHost and ip to handle different formats
+      const isSameServer =
+        storageServer.sshHost === server.sshHost ||
+        storageServer.ip === server.ip ||
+        storageServer.sshHost === server.ip ||
+        storageServer.ip === server.sshHost;
 
-      // Stream large backup file directly from Vautron 6 to target server
-      // This avoids loading the entire file into memory
-      // NOTE: .htaccess comes from the backup (htaccess.bak), not from Vautron 6
-      const sourceStream = (await sftpStorage.get(`${BACKUP_PATH}/${backupFileName}`) as unknown) as Readable;
-      await sftpTarget.put(sourceStream, `${targetPath}/${backupFileName}`);
+      console.log(`Storage: ${storageServer.sshHost} (${storageServer.ip}), Target: ${server.sshHost} (${server.ip}), Same: ${isSameServer}`);
+
+      if (isSameServer) {
+        console.log(`✓ Same server detected - using direct cp for faster transfer`);
+
+        // Use direct copy command on the same server (much faster!)
+        const sshClient = (sftpTarget as any).client;
+
+        const copyCommands = [
+          `cp ${BACKUP_PATH}/kickstart.php ${targetPath}/kickstart.php`,
+          `cp ${BACKUP_PATH}/${backupFileName} ${targetPath}/${backupFileName}`
+        ].join(" && ");
+
+        await new Promise<void>((resolve, reject) => {
+          sshClient.exec(copyCommands, (err: Error, stream: any) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+
+            let stdout = "";
+            let stderr = "";
+
+            stream
+              .on("close", (code: number) => {
+                if (code !== 0) {
+                  reject(new Error(`cp failed with code ${code}: ${stderr}`));
+                } else {
+                  console.log(`✓ Files copied locally on server`);
+                  resolve();
+                }
+              })
+              .on("data", (data: Buffer) => {
+                stdout += data.toString();
+              })
+              .stderr.on("data", (data: Buffer) => {
+                stderr += data.toString();
+              });
+          });
+        });
+      } else {
+        console.log(`✓ Different servers - streaming files via SFTP`);
+
+        // Download kickstart.php from Vautron 6 (small file - can use buffer)
+        const kickstartBuffer = await sftpStorage.get(`${BACKUP_PATH}/kickstart.php`) as Buffer;
+        await sftpTarget.put(kickstartBuffer, `${targetPath}/kickstart.php`);
+        console.log(`✓ Uploaded kickstart.php`);
+
+        // Stream large backup file using Node.js pipeline for reliable transfer
+        // NOTE: .htaccess comes from the backup (htaccess.bak), not from Vautron 6
+        console.log(`Starting transfer of ${backupFileName}...`);
+
+        try {
+          // Start reading from source
+          const readStream = sftpStorage.createReadStream(`${BACKUP_PATH}/${backupFileName}`, {
+            highWaterMark: 2048 * 1024, // 2MB chunks
+            autoClose: true
+          });
+
+          // Start writing to target
+          const writeStream = sftpTarget.createWriteStream(`${targetPath}/${backupFileName}`, {
+            highWaterMark: 2048 * 1024, // 2MB chunks
+            autoClose: true
+          });
+
+          // Add progress tracking
+          let bytesTransferred = 0;
+          readStream.on('data', (chunk: Buffer) => {
+            bytesTransferred += chunk.length;
+            if (bytesTransferred % (10 * 1024 * 1024) === 0) {
+              console.log(`Transferred ${Math.round(bytesTransferred / (1024 * 1024))} MB...`);
+            }
+          });
+
+          readStream.on('error', (err) => {
+            console.error('Read stream error:', err);
+          });
+
+          writeStream.on('error', (err) => {
+            console.error('Write stream error:', err);
+          });
+
+          // Pipe directly without PassThrough (simpler and faster)
+          await new Promise<void>((resolve, reject) => {
+            readStream.pipe(writeStream);
+
+            writeStream.on('finish', () => {
+              console.log(`✓ Transfer of ${backupFileName} completed (${Math.round(bytesTransferred / (1024 * 1024))} MB)`);
+              resolve();
+            });
+
+            readStream.on('error', reject);
+            writeStream.on('error', reject);
+          });
+        } catch (streamError) {
+          console.error(`Stream transfer failed:`, streamError);
+          throw new Error(`Failed to stream backup file: ${streamError instanceof Error ? streamError.message : 'Unknown error'}`);
+        }
+      }
 
       // Close storage connection, keep target connection open
       await sftpStorage.end();
