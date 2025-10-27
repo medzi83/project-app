@@ -143,7 +143,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Post-process the extracted files via single SSH command
-    const targetPath = `${customer.documentroot}/${folderName}`;
+    // Normalize documentroot to remove trailing slashes
+    const normalizedDocRoot = customer.documentroot.replace(/\/+$/, '');
+    const targetPath = `${normalizedDocRoot}/${folderName}`;
     // Always use localhost for MySQL since the script runs ON the server via SSH
     const mysqlHost = "localhost";
 
@@ -371,7 +373,7 @@ echo "=== POST-PROCESSING COMPLETE ==="
         const urlObj = new URL(installUrl);
         const standardDomain = urlObj.hostname;
 
-        const targetPath = `${customer.documentroot}/${folderName}`;
+        // Use the already normalized targetPath from above (reuse the variable)
         const finalInstallUrl = installUrl.replace("/kickstart.php", "");
 
         await prisma.joomlaInstallation.create({

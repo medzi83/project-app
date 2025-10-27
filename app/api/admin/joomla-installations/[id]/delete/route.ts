@@ -240,8 +240,9 @@ export async function DELETE(
  * STRICT: Only allows deletion of paths matching /var/customers/webs/CUSTOMER/INSTALLATION
  */
 function validateDeletionPath(installPath: string): { valid: boolean; error?: string } {
-  // Remove any trailing slashes for consistent checking
-  const normalizedPath = installPath.replace(/\/+$/, '');
+  // Normalize path: remove trailing slashes AND collapse multiple slashes to single slash
+  let normalizedPath = installPath.replace(/\/+$/, ''); // Remove trailing slashes
+  normalizedPath = normalizedPath.replace(/\/+/g, '/'); // Collapse multiple slashes to single slash
 
   // Prevent path traversal attempts
   if (normalizedPath.includes('..')) {
@@ -334,8 +335,11 @@ async function deleteFilesViaSSH(
       .on("ready", () => {
         clearTimeout(timeout);
 
+        // Normalize path first (remove trailing slashes and collapse multiple slashes)
+        const normalizedPath = installPath.replace(/\/+$/, '').replace(/\/+/g, '/');
+
         // Escape the path for shell - replace any single quotes with '\''
-        const escapedPath = installPath.replace(/'/g, "'\\''");
+        const escapedPath = normalizedPath.replace(/'/g, "'\\''");
 
         // Check if directory exists first
         conn.exec(`test -d '${escapedPath}' && echo "EXISTS" || echo "NOT_FOUND"`, (err, stream) => {
@@ -379,7 +383,7 @@ async function deleteFilesViaSSH(
                     if (code === 0) {
                       resolve({
                         success: true,
-                        message: `Verzeichnis ${installPath} erfolgreich gelöscht`,
+                        message: `Verzeichnis ${normalizedPath} erfolgreich gelöscht`,
                       });
                     } else {
                       resolve({
