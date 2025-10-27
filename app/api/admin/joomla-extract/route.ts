@@ -75,6 +75,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!customer.documentroot) {
+      return NextResponse.json(
+        { success: false, message: "Customer has no document root" },
+        { status: 400 }
+      );
+    }
+
     // Find backup file name from Vautron 6 storage server
     const VAUTRON_6_IP = "109.235.60.55";
     const BACKUP_PATH = "/var/customers/basis-backup";
