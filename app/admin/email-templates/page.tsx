@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getAuthSession } from "@/lib/authz";
+import { getAuthSession, getEffectiveUser } from "@/lib/authz";
 import { redirect } from "next/navigation";
 import TemplateCreationTabs from "./TemplateCreationTabs";
 import TemplatesByCategory from "./TemplatesByCategory";
@@ -89,7 +89,15 @@ const VARIABLE_GROUPS: VariableGroup[] = [
 export default async function EmailTemplatesAdminPage({ searchParams }: Props) {
   const session = await getAuthSession();
   if (!session) redirect("/login");
-  if (session.user.role !== "ADMIN") redirect("/");
+
+  // Allow access for Admins and Agents with SOCIALMEDIA category
+  const effectiveUser = await getEffectiveUser();
+  const isAdmin = session.user.role === "ADMIN";
+  const hasSocialMediaCategory = effectiveUser?.categories?.includes("SOCIALMEDIA") ?? false;
+
+  if (!isAdmin && !hasSocialMediaCategory) {
+    redirect("/");
+  }
 
   const params = await searchParams;
   const successMessage = readMessage(params.success);

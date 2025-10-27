@@ -26,6 +26,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     ? {
         name: effectiveUser?.name ?? session?.user?.name ?? session?.user?.email ?? "Unbekannt",
         role: effectiveRole,
+        categories: effectiveUser?.categories ?? [],
       }
     : null;
 

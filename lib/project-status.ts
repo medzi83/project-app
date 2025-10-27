@@ -242,18 +242,43 @@ export function labelForMaterialStatus(value?: MaterialStatusValue): string {
 export function getProjectDisplayName(project: {
   title?: string | null;
   type: string;
+  website?: {
+    cms?: string | null;
+    cmsOther?: string | null;
+  } | null;
 }): string {
   if (project.title) {
     return project.title;
   }
 
-  // Kein Titel vorhanden - erstelle sinnvollen Fallback
-  const typeLabel = project.type === "WEBSITE" ? "Webseite"
-    : project.type === "FILM" ? "Film"
-    : project.type === "SOCIAL" ? "Social Media"
-    : project.type;
+  // Kein Titel vorhanden - erstelle sinnvollen Fallback basierend auf Typ und CMS
+  if (project.type === "WEBSITE" && project.website) {
+    const cms = project.website.cms;
+    switch (cms) {
+      case "JOOMLA":
+        return "Webseite (Joomla)";
+      case "WORDPRESS":
+        return "Webseite (WordPress)";
+      case "SHOPWARE":
+        return "Shop (Shopware)";
+      case "LOGO":
+        return "Logo";
+      case "PRINT":
+        return "Print";
+      case "CUSTOM":
+        return "Webseite (Custom)";
+      case "OTHER":
+        return project.website.cmsOther || "Anderes";
+      default:
+        return "Webseite";
+    }
+  } else if (project.type === "FILM") {
+    return "Film";
+  } else if (project.type === "SOCIAL") {
+    return "Social Media";
+  }
 
-  return typeLabel;
+  return project.type;
 }
 
 const MATERIAL_STATUS_LABELS: Record<MaterialStatus, string> = {

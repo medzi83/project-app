@@ -2,16 +2,26 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getAuthSession } from "@/lib/authz";
+import { getAuthSession, getEffectiveUser } from "@/lib/authz";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { DEFAULT_SIGNATURE_KEY } from "./constants";
 
-async function requireAdmin() {
+async function requireAdminOrSocialMedia() {
   const session = await getAuthSession();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user) {
     redirect("/");
   }
+
+  // Allow access for Admins and Agents with SOCIALMEDIA category
+  const effectiveUser = await getEffectiveUser();
+  const isAdmin = session.user.role === "ADMIN";
+  const hasSocialMediaCategory = effectiveUser?.categories?.includes("SOCIALMEDIA") ?? false;
+
+  if (!isAdmin && !hasSocialMediaCategory) {
+    redirect("/");
+  }
+
   return session;
 }
 
@@ -84,7 +94,7 @@ function buildRedirect(searchParamKey: string, message?: string) {
 }
 
 export async function createEmailTemplate(formData: FormData) {
-  await requireAdmin();
+  await requireAdminOrSocialMedia();
 
   const parsed = parseForm(CreateTemplateSchema, formData);
   if (!parsed.success) {
@@ -104,7 +114,7 @@ export async function createEmailTemplate(formData: FormData) {
 }
 
 export async function updateEmailTemplate(formData: FormData) {
-  await requireAdmin();
+  await requireAdminOrSocialMedia();
 
   const parsed = parseForm(UpdateTemplateSchema, formData);
   if (!parsed.success) {
@@ -126,7 +136,7 @@ export async function updateEmailTemplate(formData: FormData) {
 }
 
 export async function deleteEmailTemplate(formData: FormData) {
-  await requireAdmin();
+  await requireAdminOrSocialMedia();
 
   const parsed = parseForm(DeleteTemplateSchema, formData);
   if (!parsed.success) {
@@ -160,7 +170,7 @@ export async function deleteEmailTemplate(formData: FormData) {
 }
 
 export async function updateEmailSignature(formData: FormData) {
-  await requireAdmin();
+  await requireAdminOrSocialMedia();
 
   const parsed = parseForm(SignatureSchema, formData);
   if (!parsed.success) {

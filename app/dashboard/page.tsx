@@ -918,14 +918,19 @@ export default async function DashboardPage({
     : [];
 
   // Admin only: Projects that need installation attention
-  const projectsNeedingInstallation = userRole === "ADMIN"
+  // Use buildWebsiteStatusWhere to get projects that are dynamically in UMSETZUNG status
+  const umsetzungWhere = buildWebsiteStatusWhere("UMSETZUNG", new Date());
+  const projectsNeedingInstallation = userRole === "ADMIN" && umsetzungWhere
     ? await prisma.project.findMany({
         where: {
-          type: "WEBSITE",
-          status: "UMSETZUNG",
-          joomlaInstallations: {
-            none: {},
-          },
+          AND: [
+            umsetzungWhere,
+            {
+              joomlaInstallations: {
+                none: {},
+              },
+            },
+          ],
         },
         select: {
           id: true,

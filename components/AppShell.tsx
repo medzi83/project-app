@@ -30,6 +30,7 @@ export type Role = "ADMIN" | "AGENT";
 type User = {
   name: string;
   role: Role;
+  categories?: string[];
 };
 
 type Counts = {
@@ -193,6 +194,7 @@ type NavItem = {
 function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; onNavigate?: () => void }) {
   const pathname = usePathname();
   const navigationRole = user.role;
+  const hasSocialMediaCategory = user.categories?.includes("SOCIALMEDIA") ?? false;
 
   const baseItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -218,6 +220,13 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
       ]
     : [];
 
+  // Social Media agents can access email templates
+  const socialMediaItems: NavItem[] = hasSocialMediaCategory && navigationRole === "AGENT"
+    ? [
+        { label: "Emailvorlagen", href: "/admin/email-templates", icon: Mail },
+      ]
+    : [];
+
   const importItems: NavItem[] = navigationRole === "ADMIN"
     ? [
         { label: "Webseitenprojekte", href: "/admin/import", icon: Upload },
@@ -239,6 +248,12 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
           {adminItems.length > 0 && (
             <div className="mt-6">
               <NavSection label="Admin" items={adminItems} activePath={pathname} onNavigate={onNavigate} />
+            </div>
+          )}
+
+          {socialMediaItems.length > 0 && (
+            <div className="mt-6">
+              <NavSection label="Social Media" items={socialMediaItems} activePath={pathname} onNavigate={onNavigate} />
             </div>
           )}
 

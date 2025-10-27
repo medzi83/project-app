@@ -618,10 +618,55 @@ export default async function ClientDetailPage({ params }: Props) {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {client.projects.map((project) => {
-                const typeLabel = project.type === "WEBSITE" ? "Webseite"
-                  : project.type === "FILM" ? "Film"
-                  : project.type === "SOCIAL" ? "Social Media"
-                  : project.type;
+                // Determine type label and badge style based on project type and CMS
+                let typeLabel: string;
+                let badgeClass: string = "";
+
+                if (project.type === "WEBSITE" && project.website) {
+                  const cms = project.website.cms;
+                  switch (cms) {
+                    case "JOOMLA":
+                      typeLabel = "Webseite (Joomla)";
+                      badgeClass = "bg-blue-100 text-blue-800 border-blue-300";
+                      break;
+                    case "WORDPRESS":
+                      typeLabel = "Webseite (WordPress)";
+                      badgeClass = "bg-indigo-100 text-indigo-800 border-indigo-300";
+                      break;
+                    case "SHOPWARE":
+                      typeLabel = "Shop (Shopware)";
+                      badgeClass = "bg-purple-100 text-purple-800 border-purple-300";
+                      break;
+                    case "LOGO":
+                      typeLabel = "Logo";
+                      badgeClass = "bg-pink-100 text-pink-800 border-pink-300";
+                      break;
+                    case "PRINT":
+                      typeLabel = "Print";
+                      badgeClass = "bg-orange-100 text-orange-800 border-orange-300";
+                      break;
+                    case "CUSTOM":
+                      typeLabel = "Webseite (Custom)";
+                      badgeClass = "bg-cyan-100 text-cyan-800 border-cyan-300";
+                      break;
+                    case "OTHER":
+                      typeLabel = project.website.cmsOther || "Anderes";
+                      badgeClass = "bg-gray-100 text-gray-800 border-gray-300";
+                      break;
+                    default:
+                      typeLabel = "Webseite";
+                      badgeClass = "bg-blue-100 text-blue-800 border-blue-300";
+                  }
+                } else if (project.type === "FILM") {
+                  typeLabel = "Film";
+                  badgeClass = "bg-red-100 text-red-800 border-red-300";
+                } else if (project.type === "SOCIAL") {
+                  typeLabel = "Social Media";
+                  badgeClass = "bg-green-100 text-green-800 border-green-300";
+                } else {
+                  typeLabel = project.type;
+                  badgeClass = "bg-gray-100 text-gray-800 border-gray-300";
+                }
 
                 // Use derived status for website and film projects
                 let statusLabel: string;
@@ -659,16 +704,18 @@ export default async function ClientDetailPage({ params }: Props) {
                       className="block transition-all hover:opacity-80"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className={`text-xs font-semibold ${badgeClass}`}>
                           {typeLabel}
                         </Badge>
                         <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
-                      <div className="text-lg font-bold text-gray-900 mb-1">
-                        {getProjectDisplayName(project)}
-                      </div>
+                      {project.title && (
+                        <div className="text-lg font-bold text-gray-900 mb-1">
+                          {project.title}
+                        </div>
+                      )}
                       <div className="text-sm text-gray-600 mb-1">
                         Status: {statusLabel}
                       </div>

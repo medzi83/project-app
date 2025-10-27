@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthSession } from "@/lib/authz";
+import { getAuthSession, getEffectiveUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import nodemailer from "nodemailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
@@ -10,9 +10,17 @@ export const preferredRegion = 'fra1';
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
+    // Check authentication - Allow Admins and Social Media agents
     const session = await getAuthSession();
-    if (!session || session.user.role !== "ADMIN") {
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const effectiveUser = await getEffectiveUser();
+    const isAdmin = session.user.role === "ADMIN";
+    const hasSocialMediaCategory = effectiveUser?.categories?.includes("SOCIALMEDIA") ?? false;
+
+    if (!isAdmin && !hasSocialMediaCategory) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
