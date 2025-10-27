@@ -309,11 +309,11 @@ export async function POST(request: NextRequest) {
             }
           });
 
-          readStream.on('error', (err) => {
+          readStream.on('error', (err: Error) => {
             console.error('Read stream error:', err);
           });
 
-          writeStream.on('error', (err) => {
+          writeStream.on('error', (err: Error) => {
             console.error('Write stream error:', err);
           });
 
