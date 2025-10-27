@@ -537,6 +537,7 @@ export default async function ClientDetailPage({ params }: Props) {
               email: client.email,
               phone: client.phone,
               notes: client.notes,
+              uploadLinks: client.uploadLinks as string[] | null,
               customerNo: client.customerNo,
               serverId: client.serverId,
               agencyId: client.agencyId,

@@ -25,6 +25,7 @@ type ClientData = {
   email: string | null;
   phone: string | null;
   notes: string | null;
+  uploadLinks: string[] | null;
   customerNo: string | null;
   serverId: string | null;
   agencyId: string | null;
@@ -61,6 +62,10 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
     finished: client.finished,
   });
 
+  const [uploadLinks, setUploadLinks] = useState<string[]>(
+    client.uploadLinks || [""]
+  );
+
   const formatDate = (value?: Date | string | null) => {
     if (!value) return "-";
     try {
@@ -90,6 +95,11 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
     data.append("serverId", formData.serverId);
     data.append("agencyId", formData.agencyId);
     data.append("notes", formData.notes);
+
+    // Filter out empty upload links and send as JSON
+    const filteredUploadLinks = uploadLinks.filter(link => link.trim() !== "");
+    data.append("uploadLinks", JSON.stringify(filteredUploadLinks));
+
     if (formData.workStopped) data.append("workStopped", "on");
     if (formData.finished) data.append("finished", "on");
 
@@ -124,8 +134,29 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
       workStopped: client.workStopped,
       finished: client.finished,
     });
+    setUploadLinks(client.uploadLinks || [""]);
     setIsEditing(false);
     setResult(null);
+  };
+
+  const addUploadLink = () => {
+    setUploadLinks([...uploadLinks, ""]);
+  };
+
+  const removeUploadLink = (index: number) => {
+    if (uploadLinks.length > 1) {
+      const newLinks = uploadLinks.filter((_, i) => i !== index);
+      setUploadLinks(newLinks);
+    } else {
+      // Keep at least one empty input
+      setUploadLinks([""]);
+    }
+  };
+
+  const updateUploadLink = (index: number, value: string) => {
+    const newLinks = [...uploadLinks];
+    newLinks[index] = value;
+    setUploadLinks(newLinks);
   };
 
   if (!isEditing) {
@@ -220,6 +251,27 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
               <div className="text-sm whitespace-pre-wrap">{client.notes}</div>
             </div>
           )}
+          <div>
+            <div className="text-xs text-gray-500">Uploadlinks</div>
+            {client.uploadLinks && client.uploadLinks.length > 0 ? (
+              <div className="space-y-1">
+                {client.uploadLinks.map((link, index) => (
+                  <div key={index}>
+                    <a
+                      href={link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline text-sm break-all"
+                    >
+                      {link}
+                    </a>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-600">-</div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -352,6 +404,50 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
             rows={4}
             className="w-full rounded border p-2 text-sm"
           />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-xs text-gray-500">Uploadlinks</label>
+            <Button
+              type="button"
+              onClick={addUploadLink}
+              variant="outline"
+              size="sm"
+              className="text-xs"
+            >
+              <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Link hinzufügen
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {uploadLinks.map((link, index) => (
+              <div key={index} className="flex gap-2">
+                <input
+                  type="url"
+                  value={link}
+                  onChange={(e) => updateUploadLink(index, e.target.value)}
+                  placeholder="https://example.com/upload"
+                  className="flex-1 rounded border p-2 text-sm"
+                />
+                {uploadLinks.length > 1 && (
+                  <Button
+                    type="button"
+                    onClick={() => removeUploadLink(index)}
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 hover:bg-red-50"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">

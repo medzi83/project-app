@@ -62,8 +62,22 @@ export async function updateClientBasicData(formData: FormData) {
   const serverId = formData.get("serverId") as string;
   const agencyId = formData.get("agencyId") as string;
   const notes = formData.get("notes") as string;
+  const uploadLinksJson = formData.get("uploadLinks") as string;
   const workStopped = formData.get("workStopped") === "on";
   const finished = formData.get("finished") === "on";
+
+  // Parse upload links JSON
+  let uploadLinksData: string[] | undefined = undefined;
+  if (uploadLinksJson) {
+    try {
+      const parsedLinks = JSON.parse(uploadLinksJson);
+      if (Array.isArray(parsedLinks) && parsedLinks.length > 0) {
+        uploadLinksData = parsedLinks;
+      }
+    } catch (error) {
+      console.error("Error parsing upload links:", error);
+    }
+  }
 
   try {
     await prisma.client.update({
@@ -79,6 +93,7 @@ export async function updateClientBasicData(formData: FormData) {
         serverId: serverId || null,
         agencyId: agencyId || null,
         notes: notes || null,
+        uploadLinks: uploadLinksData,
         workStopped,
         finished,
       },

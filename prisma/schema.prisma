@@ -9,76 +9,72 @@ datasource db {
 }
 
 model User {
-  id                       String         @id @default(cuid())
-  email                    String?        @unique
-  name                     String?
-  fullName                 String?
-  roleTitle                String?
-  password                 String
-  role                     Role           @default(CUSTOMER)
-  clientId                 String?
-  createdAt                DateTime       @default(now())
-  updatedAt                DateTime       @updatedAt
-  active                   Boolean        @default(true)
-  color                    String?
-  categories               AgentCategory[]
-  projects                 Project[]      @relation("AgentProjects")
-  notesAuthored            ProjectNote[]  @relation("NoteAuthor")
-  filmProjectsResponsible  ProjectFilm[]  @relation("FilmProjectFilmer")
-  filmProjectsCutting      ProjectFilm[]  @relation("FilmProjectCutter")
-  client                   Client?        @relation(fields: [clientId], references: [id])
-  noticesCreated           Notice[]       @relation("NoticesCreated")
-  noticeAssignments        NoticeRecipient[]
-  noticeAcknowledgements   NoticeAcknowledgement[]
-  feedbacks                Feedback[]     @relation("FeedbackAuthor")
-  preferences              UserPreferences?
+  id                      String                  @id @default(cuid())
+  email                   String?                 @unique
+  name                    String?
+  password                String
+  role                    Role                    @default(CUSTOMER)
+  clientId                String?
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  active                  Boolean                 @default(true)
+  color                   String?
+  categories              AgentCategory[]
+  fullName                String?
+  roleTitle               String?
+  feedbacks               Feedback[]              @relation("FeedbackAuthor")
+  noticesCreated          Notice[]                @relation("NoticesCreated")
+  noticeAcknowledgements  NoticeAcknowledgement[]
+  noticeAssignments       NoticeRecipient[]
+  projects                Project[]               @relation("AgentProjects")
+  filmProjectsCutting     ProjectFilm[]           @relation("FilmProjectCutter")
+  filmProjectsResponsible ProjectFilm[]           @relation("FilmProjectFilmer")
+  notesAuthored           ProjectNote[]           @relation("NoteAuthor")
+  client                  Client?                 @relation(fields: [clientId], references: [id])
+  preferences             UserPreferences?
 
   @@index([clientId])
 }
 
 model UserPreferences {
-  id                          String   @id @default(cuid())
-  userId                      String   @unique
-  user                        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Project list preferences
-  projectsSort                String?  // e.g., "standard", "customerNo", "clientName"
-  projectsSortDir             String?  // "asc" or "desc"
-
-  // Film project list preferences
-  filmProjectsSort            String?
-  filmProjectsSortDir         String?
-  filmProjectsAgentFilter     Json?    // Array of agent IDs
-  filmProjectsStatusFilter    Json?    // Array of status values
-  filmProjectsPStatusFilter   Json?    // Array of p-status values
-  filmProjectsScopeFilter     Json?    // Array of scope values
-
-  createdAt                   DateTime @default(now())
-  updatedAt                   DateTime @updatedAt
+  id                        String   @id @default(cuid())
+  userId                    String   @unique
+  projectsSort              String?
+  projectsSortDir           String?
+  filmProjectsSort          String?
+  filmProjectsSortDir       String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  filmProjectsAgentFilter   Json?
+  filmProjectsPStatusFilter Json?
+  filmProjectsScopeFilter   Json?
+  filmProjectsStatusFilter  Json?
+  user                      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Client {
-  id                 String              @id @default(cuid())
-  name               String
-  salutation         String?             // Anrede: "Herr", "Frau", "Divers"
-  firstname          String?             // Vorname der Kontaktperson
-  lastname           String?             // Nachname der Kontaktperson
-  email              String?
-  phone              String?
-  notes              String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  customerNo         String?             @unique
-  agencyId           String?
-  serverId           String?
-  workStopped        Boolean             @default(false)
-  finished           Boolean             @default(false)
-  server             Server?             @relation(fields: [serverId], references: [id])
-  agency             Agency?             @relation(fields: [agencyId], references: [id], onDelete: SetNull)
-  projects           Project[]
-  users              User[]
+  id                  String               @id @default(cuid())
+  name                String
+  phone               String?
+  notes               String?
+  uploadLinks         Json?                // Array of upload links
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  customerNo          String?              @unique
+  serverId            String?
+  finished            Boolean              @default(false)
+  workStopped         Boolean              @default(false)
+  agencyId            String?
+  email               String?
+  firstname           String?
+  lastname            String?
+  salutation          String?
+  agency              Agency?              @relation(fields: [agencyId], references: [id])
+  server              Server?              @relation(fields: [serverId], references: [id])
+  emailLogs           EmailLog[]
   joomlaInstallations JoomlaInstallation[]
-  emailLogs          EmailLog[]
+  projects            Project[]
+  users               User[]
 
   @@index([name])
   @@index([agencyId])
@@ -86,92 +82,92 @@ model Client {
 }
 
 model Agency {
-  id            String           @id @default(cuid())
-  name          String
-  contactName   String?
-  contactEmail  String?
-  contactPhone  String?
-  street        String?
-  postalCode    String?
-  city          String?
-  country       String?
-  website       String?
-  notes         String?
-  logoPath      String?
-  logoIconPath  String?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  clients       Client[]
+  id              String           @id @default(cuid())
+  name            String
+  contactName     String?
+  contactEmail    String?
+  contactPhone    String?
+  street          String?
+  postalCode      String?
+  city            String?
+  country         String?
+  website         String?
+  notes           String?
+  logoPath        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  logoIconPath    String?
+  clients         Client[]
   emailSignatures EmailSignature[]
-  mailServers   MailServer[]
+  mailServers     MailServer[]
 }
 
 model Project {
-  id        String               @id @default(cuid())
-  title     String?              // Optional: für ergänzende Infos wie "Relaunch", "Warteseite", etc.
-  type      ProjectType          @default(WEBSITE)
-  status    ProjectStatus        @default(WEBTERMIN)
-  important String?
-  clientId  String
-  agentId   String?
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-  agent     User?                @relation("AgentProjects", fields: [agentId], references: [id])
-  client    Client               @relation(fields: [clientId], references: [id])
-  notes     ProjectNote[]
-  website   ProjectWebsite?
-  film      ProjectFilm?
-  emailQueue EmailQueue[]
-  emailLogs  EmailLog[]
+  id                  String               @id @default(cuid())
+  title               String?
+  type                ProjectType          @default(WEBSITE)
+  status              ProjectStatus        @default(WEBTERMIN)
+  important           String?
+  clientId            String
+  agentId             String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  emailLogs           EmailLog[]
+  emailQueue          EmailQueue[]
   joomlaInstallations JoomlaInstallation[]
+  agent               User?                @relation("AgentProjects", fields: [agentId], references: [id])
+  client              Client               @relation(fields: [clientId], references: [id])
+  film                ProjectFilm?
+  notes               ProjectNote[]
+  website             ProjectWebsite?
 
   @@index([clientId, status])
   @@index([agentId])
 }
 
 model ProjectWebsite {
-  projectId       String           @id
-  domain          String?
-  priority        WebsitePriority  @default(NONE)
-  pStatus         ProductionStatus @default(NONE)
-  cms             CMS              @default(JOOMLA)
-  cmsOther        String?
-  webDate         DateTime?
-  webterminType   WebterminType?
-  demoDate        DateTime?
-  onlineDate      DateTime?
-  lastMaterialAt  DateTime?
-  effortBuildMin  Int?
-  effortDemoMin   Int?
-  seo             SEOStatus        @default(NEIN)
-  textit          TextitStatus     @default(NEIN)
-  accessible      Boolean?
-  note            String?
-  demoLink        String?
-  materialStatus  MaterialStatus   @default(ANGEFORDERT)
-  isWTAssignment  Boolean          @default(false)
-  project         Project          @relation(fields: [projectId], references: [id])
-  domainHistory   ProjectDomainHistory[]
+  projectId      String                 @id
+  domain         String?
+  priority       WebsitePriority        @default(NONE)
+  pStatus        ProductionStatus       @default(NONE)
+  cms            CMS                    @default(JOOMLA)
+  cmsOther       String?
+  webDate        DateTime?
+  demoDate       DateTime?
+  onlineDate     DateTime?
+  lastMaterialAt DateTime?
+  effortBuildMin Int?
+  effortDemoMin  Int?
+  seo            SEOStatus              @default(NEIN)
+  textit         TextitStatus           @default(NEIN)
+  accessible     Boolean?
+  note           String?
+  demoLink       String?
+  materialStatus MaterialStatus         @default(ANGEFORDERT)
+  isWTAssignment Boolean                @default(false)
+  webterminType  WebterminType?
+  domainHistory  ProjectDomainHistory[]
+  project        Project                @relation(fields: [projectId], references: [id])
 }
 
 model ProjectDomainHistory {
-  id          String    @id @default(cuid())
-  projectId   String
-  domain      String
-  assignedAt  DateTime  @default(now())
-  removedAt   DateTime?
-  reason      String?   // e.g., "Projekt beendet", "Domain gewechselt", "Relaunch"
-  createdAt   DateTime  @default(now())
-  project     ProjectWebsite @relation(fields: [projectId], references: [projectId])
+  id         String         @id @default(cuid())
+  projectId  String
+  domain     String
+  assignedAt DateTime       @default(now())
+  removedAt  DateTime?
+  reason     String?
+  createdAt  DateTime       @default(now())
+  project    ProjectWebsite @relation(fields: [projectId], references: [projectId])
 
   @@index([projectId])
   @@index([domain])
 }
 
 model ProjectFilm {
-  projectId        String             @id
+  projectId        String               @id
   scope            FilmScope?
-  priority         FilmPriority       @default(NONE)
+  priority         FilmPriority         @default(NONE)
   filmerId         String?
   cutterId         String?
   contractStart    DateTime?
@@ -181,17 +177,17 @@ model ProjectFilm {
   shootDate        DateTime?
   firstCutToClient DateTime?
   finalToClient    DateTime?
-  finalLink        String?
   onlineDate       DateTime?
-  onlineLink       String?
   lastContact      DateTime?
-  status           FilmProjectStatus  @default(AKTIV)
+  status           FilmProjectStatus    @default(AKTIV)
   reminderAt       DateTime?
   note             String?
-  project          Project            @relation(fields: [projectId], references: [id])
-  filmer           User?              @relation("FilmProjectFilmer", fields: [filmerId], references: [id])
-  cutter           User?              @relation("FilmProjectCutter", fields: [cutterId], references: [id])
+  finalLink        String?
+  onlineLink       String?
   previewVersions  FilmPreviewVersion[]
+  cutter           User?                @relation("FilmProjectCutter", fields: [cutterId], references: [id])
+  filmer           User?                @relation("FilmProjectFilmer", fields: [filmerId], references: [id])
+  project          Project              @relation(fields: [projectId], references: [id])
 
   @@index([status])
   @@index([filmerId])
@@ -200,13 +196,13 @@ model ProjectFilm {
 }
 
 model FilmPreviewVersion {
-  id          String      @id @default(cuid())
-  projectId   String
-  version     Int
-  sentDate    DateTime
-  link        String      @default("")
-  createdAt   DateTime    @default(now())
-  project     ProjectFilm @relation(fields: [projectId], references: [projectId], onDelete: Cascade)
+  id        String      @id @default(cuid())
+  projectId String
+  version   Int
+  sentDate  DateTime
+  createdAt DateTime    @default(now())
+  link      String      @default("")
+  project   ProjectFilm @relation(fields: [projectId], references: [projectId], onDelete: Cascade)
 
   @@unique([projectId, version])
   @@index([projectId, sentDate])
@@ -225,20 +221,20 @@ model ProjectNote {
 }
 
 model Server {
-  id                  String              @id @default(cuid())
+  id                  String               @id @default(cuid())
   name                String
-  hostname            String?
   ip                  String
   froxlorUrl          String?
   mysqlUrl            String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
   froxlorApiKey       String?
   froxlorApiSecret    String?
+  hostname            String?
   sshHost             String?
-  sshPort             Int?                @default(22)
-  sshUsername         String?
   sshPassword         String?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  sshPort             Int?                 @default(22)
+  sshUsername         String?
   clients             Client[]
   joomlaInstallations JoomlaInstallation[]
 }
@@ -257,12 +253,195 @@ model MailServer {
   agencyId   String?
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
-  agency     Agency?      @relation(fields: [agencyId], references: [id], onDelete: SetNull)
-  emailQueue EmailQueue[]
   emailLogs  EmailLog[]
+  emailQueue EmailQueue[]
+  agency     Agency?      @relation(fields: [agencyId], references: [id])
 
   @@index([agencyId])
   @@index([name])
+}
+
+model EmailTemplate {
+  id        String                @id @default(cuid())
+  title     String                @unique
+  subject   String
+  body      String
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  category  EmailTemplateCategory @default(GENERAL)
+  triggers  EmailTrigger[]
+
+  @@index([createdAt])
+  @@index([category])
+}
+
+model EmailSignature {
+  key       String   @id
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  agencyId  String?
+  agency    Agency?  @relation(fields: [agencyId], references: [id])
+}
+
+model EmailTrigger {
+  id              String           @id @default(cuid())
+  name            String
+  description     String?
+  active          Boolean          @default(true)
+  triggerType     EmailTriggerType
+  projectType     ProjectType?
+  conditions      Json
+  delayDays       Int?
+  delayType       DelayType?
+  templateId      String
+  recipientConfig Json
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  sentLogs        EmailLog[]
+  queuedEmails    EmailQueue[]
+  template        EmailTemplate    @relation(fields: [templateId], references: [id])
+
+  @@index([active, triggerType])
+  @@index([templateId])
+}
+
+model EmailQueue {
+  id           String       @id @default(cuid())
+  triggerId    String
+  projectId    String
+  scheduledFor DateTime
+  status       QueueStatus  @default(PENDING)
+  toEmail      String
+  ccEmails     String?
+  subject      String
+  body         String
+  mailServerId String?
+  attempts     Int          @default(0)
+  lastAttempt  DateTime?
+  sentAt       DateTime?
+  error        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  mailServer   MailServer?  @relation(fields: [mailServerId], references: [id])
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  trigger      EmailTrigger @relation(fields: [triggerId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledFor])
+  @@index([projectId])
+  @@index([triggerId])
+}
+
+model EmailLog {
+  id           String        @id @default(cuid())
+  triggerId    String?
+  projectId    String?
+  toEmail      String
+  ccEmails     String?
+  subject      String
+  body         String
+  sentAt       DateTime      @default(now())
+  success      Boolean       @default(true)
+  error        String?
+  mailServerId String?
+  clientId     String?
+  client       Client?       @relation(fields: [clientId], references: [id])
+  mailServer   MailServer?   @relation(fields: [mailServerId], references: [id])
+  project      Project?      @relation(fields: [projectId], references: [id])
+  trigger      EmailTrigger? @relation(fields: [triggerId], references: [id])
+
+  @@index([sentAt])
+  @@index([projectId])
+  @@index([triggerId])
+  @@index([clientId])
+}
+
+model Notice {
+  id                     String                  @id @default(cuid())
+  title                  String
+  message                String
+  visibility             NoticeVisibility        @default(GLOBAL)
+  requireAcknowledgement Boolean                 @default(false)
+  isActive               Boolean                 @default(true)
+  createdById            String
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  createdBy              User                    @relation("NoticesCreated", fields: [createdById], references: [id], onDelete: Cascade)
+  acknowledgements       NoticeAcknowledgement[]
+  recipients             NoticeRecipient[]
+
+  @@index([isActive, visibility])
+  @@index([createdById])
+}
+
+model NoticeRecipient {
+  noticeId   String
+  userId     String
+  assignedAt DateTime @default(now())
+  notice     Notice   @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([noticeId, userId])
+  @@index([userId])
+}
+
+model NoticeAcknowledgement {
+  id       String   @id @default(cuid())
+  noticeId String
+  userId   String
+  readAt   DateTime @default(now())
+  notice   Notice   @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noticeId, userId])
+  @@index([userId])
+}
+
+model Feedback {
+  id             String         @id @default(cuid())
+  title          String
+  message        String
+  type           FeedbackType   @default(SUGGESTION)
+  status         FeedbackStatus @default(OPEN)
+  authorId       String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  viewedByAuthor Boolean        @default(false)
+  adminResponse  String?
+  author         User           @relation("FeedbackAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([authorId])
+  @@index([authorId, viewedByAuthor])
+}
+
+model JoomlaInstallation {
+  id                         String   @id @default(cuid())
+  clientId                   String
+  serverId                   String
+  customerNo                 String
+  folderName                 String
+  installPath                String
+  installUrl                 String
+  databaseName               String
+  databasePassword           String
+  standardDomain             String
+  filesExtracted             Int?
+  bytesProcessed             BigInt?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  projectId                  String?
+  projectAssignmentDismissed Boolean  @default(false)
+  client                     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project                    Project? @relation(fields: [projectId], references: [id])
+  server                     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([serverId])
+  @@index([projectId])
+  @@index([customerNo])
+  @@index([createdAt])
+  @@index([projectAssignmentDismissed])
 }
 
 enum EmailTemplateCategory {
@@ -272,152 +451,18 @@ enum EmailTemplateCategory {
   SOCIAL_MEDIA
 }
 
-model EmailTemplate {
-  id        String                 @id @default(cuid())
-  title     String
-  subject   String
-  body      String
-  category  EmailTemplateCategory  @default(GENERAL)
-  createdAt DateTime               @default(now())
-  updatedAt DateTime               @updatedAt
-  triggers  EmailTrigger[]
-
-  @@unique([title])
-  @@index([createdAt])
-  @@index([category])
-}
-
-model EmailSignature {
-  key       String   @id
-  agencyId  String?
-  body      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  agency    Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
-}
-
-model EmailTrigger {
-  id          String            @id @default(cuid())
-  name        String
-  description String?
-  active      Boolean           @default(true)
-  triggerType EmailTriggerType
-  projectType ProjectType?
-  conditions  Json
-  delayDays   Int?
-  delayType   DelayType?
-  templateId  String
-  template    EmailTemplate     @relation(fields: [templateId], references: [id])
-  recipientConfig Json
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  queuedEmails EmailQueue[]
-  sentLogs     EmailLog[]
-
-  @@index([active, triggerType])
-  @@index([templateId])
-}
-
-model EmailQueue {
-  id          String        @id @default(cuid())
-  triggerId   String
-  trigger     EmailTrigger  @relation(fields: [triggerId], references: [id], onDelete: Cascade)
-  projectId   String
-  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  scheduledFor DateTime
-  status       QueueStatus   @default(PENDING)
-  toEmail     String
-  ccEmails    String?
-  subject     String
-  body        String
-  mailServerId String?
-  mailServer   MailServer?   @relation(fields: [mailServerId], references: [id], onDelete: SetNull)
-  attempts    Int           @default(0)
-  lastAttempt DateTime?
-  sentAt      DateTime?
-  error       String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  @@index([status, scheduledFor])
-  @@index([projectId])
-  @@index([triggerId])
-}
-
-model EmailLog {
-  id          String        @id @default(cuid())
-  triggerId   String?
-  trigger     EmailTrigger? @relation(fields: [triggerId], references: [id], onDelete: SetNull)
-  projectId   String?
-  project     Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  clientId    String?
-  client      Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  toEmail     String
-  ccEmails    String?
-  subject     String
-  body        String
-  sentAt      DateTime      @default(now())
-  success     Boolean       @default(true)
-  error       String?
-  mailServerId String?
-  mailServer   MailServer?  @relation(fields: [mailServerId], references: [id], onDelete: SetNull)
-
-  @@index([sentAt])
-  @@index([projectId])
-  @@index([triggerId])
-  @@index([clientId])
-}
-
-model Notice {
-  id                     String                   @id @default(cuid())
-  title                  String
-  message                String
-  visibility             NoticeVisibility         @default(GLOBAL)
-  requireAcknowledgement Boolean                  @default(false)
-  isActive               Boolean                  @default(true)
-  createdById            String
-  createdBy              User                     @relation("NoticesCreated", fields: [createdById], references: [id], onDelete: Cascade)
-  recipients             NoticeRecipient[]
-  acknowledgements       NoticeAcknowledgement[]
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-
-  @@index([isActive, visibility])
-  @@index([createdById])
-}
-
-model NoticeRecipient {
-  noticeId   String
-  notice     Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignedAt DateTime @default(now())
-
-  @@id([noticeId, userId])
-  @@index([userId])
-}
-
-model NoticeAcknowledgement {
-  id       String  @id @default(cuid())
-  noticeId String
-  notice   Notice  @relation(fields: [noticeId], references: [id], onDelete: Cascade)
-  userId   String
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  readAt   DateTime @default(now())
-
-  @@unique([noticeId, userId])
-  @@index([userId])
-}
 enum Role {
   ADMIN
   AGENT
   CUSTOMER
 }
+
 enum ProjectType {
   WEBSITE
   FILM
   SOCIAL
 }
+
 enum ProjectStatus {
   WEBTERMIN
   MATERIAL
@@ -425,12 +470,14 @@ enum ProjectStatus {
   DEMO
   ONLINE
 }
+
 enum WebsitePriority {
   NONE
   PRIO_1
   PRIO_2
   PRIO_3
 }
+
 enum FilmScope {
   FILM
   DROHNE
@@ -440,12 +487,14 @@ enum FilmScope {
   GRAD_360
   K_A
 }
+
 enum FilmPriority {
   NONE
   FILM_SOLO
   PRIO_1
   PRIO_2
 }
+
 enum FilmProjectStatus {
   AKTIV
   BEENDET
@@ -453,6 +502,7 @@ enum FilmProjectStatus {
   VERZICHT
   MMW
 }
+
 enum CMS {
   SHOPWARE
   WORDPRESS
@@ -462,24 +512,28 @@ enum CMS {
   CUSTOM
   OTHER
 }
+
 enum ProductionStatus {
   NONE
   BEENDET
   MMW
   VOLLST_A_K
 }
+
 enum SEOStatus {
   NEIN
   NEIN_NEIN
   JA_NEIN
   JA_JA
 }
+
 enum TextitStatus {
   NEIN
   NEIN_NEIN
   JA_NEIN
   JA_JA
 }
+
 enum MaterialStatus {
   ANGEFORDERT
   TEILWEISE
@@ -514,34 +568,16 @@ enum DelayType {
 
 enum QueueStatus {
   PENDING
-  PENDING_CONFIRMATION
   SENDING
   SENT
   FAILED
   CANCELLED
+  PENDING_CONFIRMATION
 }
 
 enum NoticeVisibility {
   GLOBAL
   TARGETED
-}
-
-model Feedback {
-  id                 String         @id @default(cuid())
-  title              String
-  message            String
-  type               FeedbackType   @default(SUGGESTION)
-  status             FeedbackStatus @default(OPEN)
-  authorId           String
-  author             User           @relation("FeedbackAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  adminResponse      String?        // Admin's response to the feedback
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-  viewedByAuthor     Boolean        @default(false) // Has the author seen this feedback after it was closed?
-
-  @@index([status, createdAt])
-  @@index([authorId])
-  @@index([authorId, viewedByAuthor]) // For efficient unread count queries
 }
 
 enum FeedbackType {
@@ -556,33 +592,4 @@ enum FeedbackStatus {
   IN_PROGRESS
   RESOLVED
   DISMISSED
-}
-
-model JoomlaInstallation {
-  id                        String   @id @default(cuid())
-  clientId                  String
-  client                    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  serverId                  String
-  server                    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  projectId                 String?
-  project                   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  projectAssignmentDismissed Boolean  @default(false)
-  customerNo                String
-  folderName                String
-  installPath               String
-  installUrl                String
-  databaseName              String
-  databasePassword          String
-  standardDomain            String
-  filesExtracted            Int?
-  bytesProcessed            BigInt?
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
-
-  @@index([clientId])
-  @@index([serverId])
-  @@index([projectId])
-  @@index([customerNo])
-  @@index([createdAt])
-  @@index([projectAssignmentDismissed])
 }
