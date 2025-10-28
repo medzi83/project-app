@@ -22,18 +22,9 @@ export default async function NewProjectPage({ searchParams }: Props) {
   const clientError = str(params.clientError);
   const projectError = str(params.projectError);
   const clientIdFromQuery = str(params.cid);
-  const clientSearch = str(params.clientSearch);
 
   const [clients, agents, agencies] = await Promise.all([
     prisma.client.findMany({
-      where: clientSearch
-        ? {
-            OR: [
-              { name: { contains: clientSearch, mode: "insensitive" } },
-              { customerNo: { contains: clientSearch, mode: "insensitive" } },
-            ],
-          }
-        : undefined,
       orderBy: { name: "asc" },
     }),
     prisma.user.findMany({
@@ -79,21 +70,23 @@ export default async function NewProjectPage({ searchParams }: Props) {
   return (
     <div className="p-6 space-y-10">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">Projekt anlegen</h1>
+        <h1 className="text-2xl font-semibold">Neues Projekt anlegen</h1>
         <p className="text-sm text-muted-foreground">
-          Lege bei Bedarf zuerst einen Kunden an, wähle ihn anschließend aus und erstelle danach das gewünschte Projekt.
+          Wähle zunächst, ob du ein Projekt für einen bestehenden Kunden oder einen neuen Kunden anlegen möchtest.
         </p>
       </header>
 
-      <details className="rounded-lg border" open={Boolean(clientError)}>
-        <summary className="flex cursor-pointer items-center justify-between gap-4 px-6 py-4">
+      <details className="rounded-lg border bg-white" open={Boolean(clientError)}>
+        <summary className="flex cursor-pointer items-center justify-between gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
           <div>
-            <h2 className="text-lg font-semibold">Neuen Kunden anlegen</h2>
+            <h2 className="text-lg font-semibold">Neukunde anlegen</h2>
             <p className="text-sm text-muted-foreground">
-              Bereits vorhandene Kunden findest du weiter unten in der Auswahl.
+              Falls der Kunde noch nicht in der Datenbank vorhanden ist, lege ihn hier zuerst an.
             </p>
           </div>
-          <span className="text-sm text-muted-foreground">optional</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground bg-gray-100 px-3 py-1 rounded-full">Optional</span>
+          </div>
         </summary>
         <div className="space-y-4 border-t px-6 py-6">
           {clientError && <p className="text-sm text-red-600">{clientError}</p>}
@@ -141,42 +134,17 @@ export default async function NewProjectPage({ searchParams }: Props) {
       </details>
 
       <section className="rounded-lg border bg-white">
-        <div className="border-b px-6 py-5">
-          <h2 className="text-lg font-semibold">Projekt erfassen</h2>
+        <div className="border-b px-6 py-5 bg-gray-50">
+          <h2 className="text-lg font-semibold">Projekt für Bestandskunden</h2>
           <p className="text-sm text-muted-foreground">
-            Kunde auswählen oder suchen und Projekttyp festlegen.
+            Suche einen bestehenden Kunden und lege ein neues Projekt an.
           </p>
         </div>
 
         <div className="space-y-6 px-6 py-6">
-          <form method="get" className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="client-search" className="text-xs uppercase tracking-wide text-muted-foreground">
-                Kunde suchen
-              </label>
-              <input
-                id="client-search"
-                name="clientSearch"
-                defaultValue={clientSearch ?? ""}
-                className="rounded border p-2"
-                placeholder="Kundennr. oder Name"
-              />
-            </div>
-            {clientIdFromQuery && <input type="hidden" name="cid" value={clientIdFromQuery} />}
-            <button type="submit" className="rounded border px-3 py-2 text-sm">Filtern</button>
-            {clientSearch && (
-              <Link
-                href={`/projects/new?${new URLSearchParams(clientIdFromQuery ? { cid: clientIdFromQuery } : {}).toString()}`}
-                className="text-sm underline"
-              >
-                Zurücksetzen
-              </Link>
-            )}
-          </form>
-
           {projectError && (
-            <div className="rounded border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {projectError}
+            <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <strong>Fehler:</strong> {projectError}
             </div>
           )}
 

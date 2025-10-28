@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
-import { createProject } from "./actions";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { EmailConfirmationDialog } from "@/components/EmailConfirmationDialog";
 
 type Option = { value: string; label: string };
 
@@ -110,6 +111,48 @@ export function UnifiedProjectForm({
   personOptions: Option[];
   clientIdFromQuery?: string;
 }) {
+  const router = useRouter();
+  const [selectedClient, setSelectedClient] = useState<string>(clientIdFromQuery || "");
+  const [projectTypes, setProjectTypes] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [emailQueueIds, setEmailQueueIds] = useState<string[]>([]);
+  const [createdClientId, setCreatedClientId] = useState<string | null>(null);
+
+  // Handler for checkbox changes
+  const handleProjectTypeChange = (type: string, checked: boolean) => {
+    setProjectTypes(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(type);
+      } else {
+        newSet.delete(type);
+      }
+      return newSet;
+    });
+  };
+
+  // Filter clients based on search query
+  const filteredClients = searchQuery.trim()
+    ? clientOptions.filter((client) =>
+        client.label.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : clientOptions;
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.client-search-container')) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   useEffect(() => {
     const form = document.getElementById("project-form");
     if (!form) return;
@@ -171,176 +214,451 @@ export function UnifiedProjectForm({
     };
   }, []);
 
+  // Get selected client label for display
+  const selectedClientLabel = selectedClient
+    ? clientOptions.find(c => c.value === selectedClient)?.label || ""
+    : "";
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const formData = new FormData(e.currentTarget);
+      const data: Record<string, string | File> = {};
+
+      // Collect all form data
+      formData.forEach((value, key) => {
+        data[key] = value;
+      });
+
+      // Add selected project types
+      data.selectedProjectTypes = JSON.stringify(Array.from(projectTypes));
+
+      // Call API
+      const response = await fetch("/api/projects/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Fehler: ${error.error || "Projekt konnte nicht angelegt werden"}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const result = await response.json();
+      setCreatedClientId(result.clientId);
+
+      // If there are email queue IDs, show the email dialog
+      if (result.queueIds && result.queueIds.length > 0) {
+        setEmailQueueIds(result.queueIds);
+      } else {
+        // No emails to send, redirect directly
+        router.push(`/clients/${result.clientId}`);
+      }
+    } catch (error) {
+      console.error("Error creating project:", error);
+      alert("Ein Fehler ist aufgetreten. Bitte versuche es erneut.");
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle email dialog completion
+  const handleEmailComplete = () => {
+    if (createdClientId) {
+      router.push(`/clients/${createdClientId}`);
+    }
+  };
+
   return (
-    <form action={createProject} className="space-y-6" id="project-form">
-      <div className="rounded border bg-gray-50 p-4">
-        <fieldset className="flex flex-wrap gap-4">
-          <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Projekttyp auswählen *
-          </legend>
-          <label className="flex items-center gap-2">
-            <input type="radio" name="projectType" value="WEBSITE" className="h-4 w-4" required />
-            <span>Website</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="radio" name="projectType" value="FILM" className="h-4 w-4" required />
-            <span>Film</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="radio" name="projectType" value="BOTH" className="h-4 w-4" required />
-            <span>Website + Film (2 Projekte)</span>
-          </label>
-        </fieldset>
-      </div>
+    <>
+      {/* Email Confirmation Dialog */}
+      {emailQueueIds.length > 0 && (
+        <EmailConfirmationDialog
+          queueIds={emailQueueIds}
+          onComplete={handleEmailComplete}
+        />
+      )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <label className="flex flex-col gap-1 md:col-span-2 lg:col-span-1">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">Kunde *</span>
-          <select name="clientId" required defaultValue={clientIdFromQuery ?? ""} className="rounded border p-2">
-            <option value="" disabled>
-              Kunde wählen
-            </option>
-            {clientOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">Projekttitel</span>
-          <input name="title" className="rounded border p-2" placeholder="optional" />
-        </label>
-        <label className="website-agent-select flex flex-col gap-1 hidden">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">Agent (Webseite)</span>
-          <select name="agentId" defaultValue="" className="rounded border p-2">
-            {websiteAgentOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="film-agent-select flex flex-col gap-1 hidden">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">Agent (Film)</span>
-          <select name="agentId" defaultValue="" className="rounded border p-2">
-            {filmAgentOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <form onSubmit={handleSubmit} className="space-y-8" id="project-form">
+        {/* Hidden field for selected project types */}
+        <input type="hidden" name="selectedProjectTypes" value={JSON.stringify(Array.from(projectTypes))} />
 
-      <div className="website-fields space-y-6 hidden">
-        <h3 className="text-base font-semibold border-b pb-2">Website-Daten</h3>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">Domain</span>
-            <input name="domain" className="rounded border p-2" placeholder="optional" />
-          </label>
-          <SelectField name="priority" label="Priorität" options={PRIORITY_OPTIONS} defaultValue="NONE" />
-          <SelectField name="cms" label="CMS" options={CMS_OPTIONS} defaultValue="JOOMLA" />
-          <label className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">CMS (frei)</span>
-            <input name="cmsOther" className="rounded border p-2" placeholder="optional" />
-          </label>
-          <SelectField name="pStatus" label="P-Status" options={PRODUCTION_OPTIONS} defaultValue="NONE" />
+      {/* Schritt 1: Kundenauswahl mit Live-Suche */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white font-semibold">
+            1
+          </div>
+          <h3 className="text-lg font-semibold">Kunde suchen und auswählen</h3>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <DateField name="webDate" label="Webtermin" />
-          <SelectField name="webterminType" label="Art des Webtermins" options={WEBTERMIN_TYPES} defaultValue="" />
-          <DateField name="demoDate" label="Demo an Kunden" />
-          <DateField name="onlineDate" label="Online" />
-          <DateField name="lastMaterialAt" label="Letzter Materialeingang" />
-          <NumberField name="effortBuildMin" label="Aufwand Umsetzung (Stunden)" />
-          <NumberField name="effortDemoMin" label="Aufwand Demo (Stunden)" />
-        </div>
+        <div className="ml-11 space-y-4">
+          <div className="relative client-search-container">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                Kunde suchen (nach Name oder Kundennummer) *
+              </span>
+              <input
+                type="text"
+                value={selectedClient ? selectedClientLabel : searchQuery}
+                onChange={(e) => {
+                  if (selectedClient) {
+                    // Clear selection when user starts typing again
+                    setSelectedClient("");
+                  }
+                  setSearchQuery(e.target.value);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => setShowDropdown(true)}
+                placeholder="Tippe, um zu suchen..."
+                className="rounded border p-2 text-base"
+                autoComplete="off"
+              />
+            </label>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <SelectField
-            name="materialStatus"
-            label="Material"
-            options={MATERIAL_STATUS_OPTIONS}
-            defaultValue="ANGEFORDERT"
-          />
-          <SelectField name="seo" label="SEO" options={SEO_OPTIONS} defaultValue="NEIN" />
-          <SelectField name="textit" label="Textit" options={TEXTIT_OPTIONS} defaultValue="NEIN" />
-          <SelectField name="accessible" label="Barrierefrei" options={TRI} defaultValue="unknown" />
-        </div>
+            {/* Hidden input for form submission */}
+            <input type="hidden" name="clientId" value={selectedClient} required />
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">Demolink</span>
-            <input name="demoLink" className="rounded border p-2" placeholder="https://..." />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">Hinweise (Website)</span>
-            <textarea name="websiteNote" rows={3} className="rounded border p-2" placeholder="optional" />
-          </label>
-        </div>
-      </div>
+            {/* Dropdown with filtered results */}
+            {showDropdown && !selectedClient && searchQuery && (
+              <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg max-h-60 overflow-auto">
+                {filteredClients.length > 0 ? (
+                  <ul className="py-1">
+                    {filteredClients.slice(0, 20).map((option) => (
+                      <li
+                        key={option.value}
+                        onClick={() => {
+                          setSelectedClient(option.value);
+                          setSearchQuery("");
+                          setShowDropdown(false);
+                        }}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                      >
+                        {option.label}
+                      </li>
+                    ))}
+                    {filteredClients.length > 20 && (
+                      <li className="px-4 py-2 text-sm text-muted-foreground italic">
+                        ... und {filteredClients.length - 20} weitere. Verfeinere deine Suche.
+                      </li>
+                    )}
+                  </ul>
+                ) : (
+                  <div className="px-4 py-3 text-sm text-muted-foreground">
+                    Keine Kunden gefunden. Versuche einen anderen Suchbegriff.
+                  </div>
+                )}
+              </div>
+            )}
 
-      <div className="film-fields space-y-6 hidden">
-        <h3 className="text-base font-semibold border-b pb-2">Film-Daten</h3>
+            {/* Show all clients when focused but no search query */}
+            {showDropdown && !selectedClient && !searchQuery && (
+              <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg max-h-60 overflow-auto">
+                <ul className="py-1">
+                  {clientOptions.slice(0, 20).map((option) => (
+                    <li
+                      key={option.value}
+                      onClick={() => {
+                        setSelectedClient(option.value);
+                        setShowDropdown(false);
+                      }}
+                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                    >
+                      {option.label}
+                    </li>
+                  ))}
+                  {clientOptions.length > 20 && (
+                    <li className="px-4 py-2 text-sm text-muted-foreground italic">
+                      ... und {clientOptions.length - 20} weitere. Nutze die Suche.
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <SelectField name="scope" label="Umfang" options={FILM_SCOPE_OPTIONS} defaultValue="FILM" />
-          <SelectField name="filmPriority" label="Prio / Nur Film" options={FILM_PRIORITY_OPTIONS} defaultValue="NONE" />
-          <SelectField name="status" label="Status" options={FILM_STATUS_OPTIONS} defaultValue="AKTIV" />
-        </div>
+          {/* Selected client display */}
+          {selectedClient && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded">
+              <span className="text-sm font-medium text-green-900">
+                ✓ Ausgewählt: {selectedClientLabel}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedClient("");
+                  setSearchQuery("");
+                }}
+                className="ml-auto text-sm text-green-700 hover:text-green-900 underline"
+              >
+                Ändern
+              </button>
+            </div>
+          )}
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <SelectField name="filmerId" label="Verantwortl. Filmer" options={personOptions} defaultValue="" />
-          <SelectField name="cutterId" label="Cutter" options={personOptions} defaultValue="" />
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <DateField name="contractStart" label="Vertragsbeginn" />
-          <DateField name="scouting" label="Scouting" />
-          <DateField name="scriptToClient" label="Skript an Kunden" />
-          <DateField name="scriptApproved" label="Skriptfreigabe" />
-          <DateField name="shootDate" label="Dreh- / Fototermin" />
-          <DateField name="firstCutToClient" label="Vorabversion an Kunden" />
-          <DateField name="finalToClient" label="Finalversion an Kunden" />
-          <DateField name="filmOnlineDate" label="Online" />
-          <DateField name="lastContact" label="Letzter Kontakt" />
-          <DateField name="reminderAt" label="Wiedervorlage am" />
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">Finalversion-Link</span>
-            <input type="url" name="finalLink" className="rounded border p-2" placeholder="https://domain.tld/film" />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">Hauptlink (Online)</span>
-            <input type="url" name="onlineLink" className="rounded border p-2" placeholder="https://domain.tld/live" />
-          </label>
-        </div>
-
-        <div className="grid gap-4">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">Hinweis (Film)</span>
-            <textarea name="filmNote" rows={3} className="rounded border p-2" placeholder="optional" />
-          </label>
+          {!selectedClient && (
+            <p className="text-sm text-muted-foreground">
+              💡 Kunde nicht in der Liste? Lege zuerst oben einen neuen Kunden an.
+            </p>
+          )}
         </div>
       </div>
 
-      <FormActions saveLabel="Projekt speichern" />
-    </form>
+      {/* Schritt 2: Projekttyp (nur sichtbar wenn Kunde ausgewählt) */}
+      {selectedClient && (
+        <>
+          <div className="border-t pt-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white font-semibold">
+                2
+              </div>
+              <h3 className="text-lg font-semibold">Projekttyp auswählen</h3>
+            </div>
+
+            <div className="ml-11">
+              <div className="rounded border bg-gray-50 p-4">
+                <fieldset className="flex flex-wrap gap-4">
+                  <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Welche Art(en) von Projekt? (Mehrfachauswahl möglich) *
+                  </legend>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="projectTypes"
+                      value="WEBSITE"
+                      className="h-4 w-4"
+                      checked={projectTypes.has("WEBSITE")}
+                      onChange={(e) => handleProjectTypeChange("WEBSITE", e.target.checked)}
+                    />
+                    <span className="font-medium">Website</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="projectTypes"
+                      value="FILM"
+                      className="h-4 w-4"
+                      checked={projectTypes.has("FILM")}
+                      onChange={(e) => handleProjectTypeChange("FILM", e.target.checked)}
+                    />
+                    <span className="font-medium">Film</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="projectTypes"
+                      value="SOCIAL_MEDIA"
+                      className="h-4 w-4"
+                      checked={projectTypes.has("SOCIAL_MEDIA")}
+                      onChange={(e) => handleProjectTypeChange("SOCIAL_MEDIA", e.target.checked)}
+                    />
+                    <span className="font-medium">Social Media</span>
+                  </label>
+                </fieldset>
+                {projectTypes.size === 0 && (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Wähle mindestens einen Projekttyp aus.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Schritt 3: Projektdetails (nur sichtbar wenn mindestens ein Projekttyp ausgewählt) */}
+          {projectTypes.size > 0 && (
+            <div className="border-t pt-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white font-semibold">
+                  3
+                </div>
+                <h3 className="text-lg font-semibold">Projektdetails</h3>
+              </div>
+
+              <div className="ml-11 space-y-6">
+                {/* Gemeinsame Felder für alle Projekttypen */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Projekttitel</span>
+                    <input name="title" className="rounded border p-2" placeholder="optional" />
+                  </label>
+                </div>
+
+                {/* Website-spezifische Schnellfelder */}
+                {projectTypes.has("WEBSITE") && (
+                  <div className="rounded-lg border bg-blue-50 p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-blue-900">Wichtige Website-Infos</h4>
+                    <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
+                      <SelectField name="websiteAgentId" label="Agent" options={websiteAgentOptions} defaultValue="" />
+                      <SelectField name="cms" label="CMS *" options={CMS_OPTIONS} defaultValue="JOOMLA" />
+                      <SelectField name="textit" label="Texte vorhanden?" options={TEXTIT_OPTIONS} defaultValue="NEIN" />
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground">Webtermin (Datum + Zeit)</span>
+                        <input type="datetime-local" name="webDate" className="rounded border p-2" />
+                      </div>
+                      <SelectField name="webterminType" label="Art des Termins" options={WEBTERMIN_TYPES} defaultValue="" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Film-spezifische Schnellfelder */}
+                {projectTypes.has("FILM") && (
+                  <div className="rounded-lg border bg-purple-50 p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-purple-900">Wichtige Film-Infos</h4>
+                    <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                      <SelectField name="filmAgentId" label="Agent" options={filmAgentOptions} defaultValue="" />
+                      <SelectField name="scope" label="Umfang *" options={FILM_SCOPE_OPTIONS} defaultValue="FILM" />
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground">Scouting (Datum + Zeit)</span>
+                        <input type="datetime-local" name="scouting" className="rounded border p-2" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Social-Media-spezifische Schnellfelder */}
+                {projectTypes.has("SOCIAL_MEDIA") && (
+                  <div className="rounded-lg border bg-green-50 p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-green-900">Wichtige Social-Media-Infos</h4>
+                    <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                      <SelectField name="socialAgentId" label="Agent" options={websiteAgentOptions} defaultValue="" />
+                      <label className="flex flex-col gap-1">
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground">Plattformen</span>
+                        <input name="socialPlatforms" className="rounded border p-2" placeholder="z.B. Instagram, Facebook" />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground">Posting-Frequenz</span>
+                        <input name="socialFrequency" className="rounded border p-2" placeholder="z.B. täglich, wöchentlich" />
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Hinweis auf weitere Felder */}
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <p className="text-sm text-muted-foreground">
+                    💡 Weitere Details kannst du nach dem Anlegen auf der Projektseite ergänzen.
+                  </p>
+                </div>
+
+                {/* Versteckte zusätzliche Felder - werden vom useEffect-Handler ein/ausgeblendet */}
+                <div className="website-fields space-y-6 hidden">
+                  <h3 className="text-base font-semibold border-b pb-2">Weitere Website-Details (optional)</h3>
+
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Domain</span>
+                      <input name="domain" className="rounded border p-2" placeholder="optional" />
+                    </label>
+                    <SelectField name="priority" label="Priorität" options={PRIORITY_OPTIONS} defaultValue="NONE" />
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">CMS (frei)</span>
+                      <input name="cmsOther" className="rounded border p-2" placeholder="optional" />
+                    </label>
+                    <SelectField name="pStatus" label="P-Status" options={PRODUCTION_OPTIONS} defaultValue="NONE" />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <SelectField name="webterminType" label="Art des Webtermins" options={WEBTERMIN_TYPES} defaultValue="" />
+                    <DateField name="demoDate" label="Demo an Kunden" />
+                    <DateField name="onlineDate" label="Online" />
+                    <DateField name="lastMaterialAt" label="Letzter Materialeingang" />
+                    <NumberField name="effortBuildMin" label="Aufwand Umsetzung (Stunden)" />
+                    <NumberField name="effortDemoMin" label="Aufwand Demo (Stunden)" />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <SelectField
+                      name="materialStatus"
+                      label="Material"
+                      options={MATERIAL_STATUS_OPTIONS}
+                      defaultValue="ANGEFORDERT"
+                    />
+                    <SelectField name="seo" label="SEO" options={SEO_OPTIONS} defaultValue="NEIN" />
+                    <SelectField name="accessible" label="Barrierefrei" options={TRI} defaultValue="unknown" />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Demolink</span>
+                      <input name="demoLink" className="rounded border p-2" placeholder="https://..." />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Hinweise (Website)</span>
+                      <textarea name="websiteNote" rows={3} className="rounded border p-2" placeholder="optional" />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="film-fields space-y-6 hidden">
+                  <h3 className="text-base font-semibold border-b pb-2">Weitere Film-Details (optional)</h3>
+
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <SelectField name="filmPriority" label="Prio / Nur Film" options={FILM_PRIORITY_OPTIONS} defaultValue="NONE" />
+                    <SelectField name="status" label="Status" options={FILM_STATUS_OPTIONS} defaultValue="AKTIV" />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <SelectField name="filmerId" label="Verantwortl. Filmer" options={personOptions} defaultValue="" />
+                    <SelectField name="cutterId" label="Cutter" options={personOptions} defaultValue="" />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <DateField name="contractStart" label="Vertragsbeginn" />
+                    <DateField name="scriptToClient" label="Skript an Kunden" />
+                    <DateField name="scriptApproved" label="Skriptfreigabe" />
+                    <DateField name="shootDate" label="Dreh- / Fototermin" />
+                    <DateField name="firstCutToClient" label="Vorabversion an Kunden" />
+                    <DateField name="finalToClient" label="Finalversion an Kunden" />
+                    <DateField name="filmOnlineDate" label="Online" />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Finalversion-Link</span>
+                      <input type="url" name="finalLink" className="rounded border p-2" placeholder="https://domain.tld/film" />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Hauptlink (Online)</span>
+                      <input type="url" name="onlineLink" className="rounded border p-2" placeholder="https://domain.tld/live" />
+                    </label>
+                  </div>
+
+                  <div className="grid gap-4">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Hinweis (Film)</span>
+                      <textarea name="filmNote" rows={3} className="rounded border p-2" placeholder="optional" />
+                    </label>
+                  </div>
+
+                  {/* Versteckte Felder für Backend (werden nicht im UI angezeigt) */}
+                  <input type="hidden" name="lastContact" value="" />
+                  <input type="hidden" name="reminderAt" value="" />
+                </div>
+
+                <FormActions saveLabel="Projekt speichern" isSubmitting={isSubmitting} />
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      </form>
+    </>
   );
 }
 
 function DateField({ name, label }: { name: string; label: string }) {
-  return (
+  return label ? (
     <label className="flex flex-col gap-1">
       <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
       <input type="date" name={name} className="rounded border p-2" />
     </label>
+  ) : (
+    <input type="date" name={name} className="rounded border p-2" />
   );
 }
 
@@ -378,14 +696,18 @@ function SelectField({
   );
 }
 
-function FormActions({ saveLabel }: { saveLabel: string }) {
+function FormActions({ saveLabel, isSubmitting }: { saveLabel: string; isSubmitting?: boolean }) {
   return (
     <div className="flex items-center justify-end gap-3">
       <Link href="/projects" className="rounded border px-4 py-2">
         Abbrechen
       </Link>
-      <button type="submit" className="rounded bg-black px-4 py-2 text-white">
-        {saveLabel}
+      <button
+        type="submit"
+        className="rounded bg-black px-4 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? "Wird gespeichert..." : saveLabel}
       </button>
     </div>
   );
