@@ -52,11 +52,29 @@ export function EmailConfirmationHandler() {
         if (res.ok) {
           const data = await res.json();
           const client = data.client;
+          const queueEmail = data.toEmail || "";
 
           if (client) {
             const missingEmail = !client.email || client.email.trim() === "";
-            const missingContact = !client.contact || client.contact.trim() === "";
+            const missingContact = (!client.firstname || client.firstname.trim() === "") && (!client.lastname || client.lastname.trim() === "");
             const missingAgency = !client.agencyId;
+
+            // If queue email is empty but client has email, update queue and skip pre-dialog
+            if (queueEmail.trim() === "" && !missingEmail) {
+              // Update queue with client email
+              await fetch(`/api/email/update-queue`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  queueId: queueIds[0],
+                  toEmail: client.email
+                }),
+              });
+              // Skip pre-dialog and show email dialog directly
+              setCheckingClientData(false);
+              setClientDataChecked(true);
+              return;
+            }
 
             if (missingEmail || missingContact || missingAgency) {
               // Show pre-dialog for missing data (with existing data included)

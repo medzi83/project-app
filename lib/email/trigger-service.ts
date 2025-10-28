@@ -21,7 +21,12 @@ type ProjectWithDetails = Project & {
         firstname: string | null;
         lastname: string | null;
         phone: string | null;
-        agency: { id: string } | null;
+        agency: {
+          id: string;
+          name: string;
+          contactPhone: string | null;
+          contactEmail: string | null;
+        } | null;
       }
     | null;
   agent?:
@@ -99,6 +104,9 @@ export async function processTriggers(
           agency: {
             select: {
               id: true,
+              name: true,
+              contactPhone: true,
+              contactEmail: true,
             },
           },
         },
@@ -349,11 +357,32 @@ async function queueEmail(
  * Replace placeholders in template text with actual project data
  */
 function replacePlaceholders(text: string, project: ProjectWithDetails): string {
-  const formatDate = (value?: Date | null) =>
-    value ? value.toLocaleDateString("de-DE") : "";
+  // Naive formatting - extract date/time components directly without timezone conversion
+  const formatDate = (value?: Date | null) => {
+    if (!value) return "";
+    try {
+      const dateStr = typeof value === 'string' ? value : value.toISOString();
+      const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!match) return "";
+      const [, year, month, day] = match;
+      return `${day}.${month}.${year}`;
+    } catch {
+      return "";
+    }
+  };
 
-  const formatDateTime = (value?: Date | null) =>
-    value ? value.toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : "";
+  const formatDateTime = (value?: Date | null) => {
+    if (!value) return "";
+    try {
+      const dateStr = typeof value === 'string' ? value : value.toISOString();
+      const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+      if (!match) return "";
+      const [, year, month, day, hours, minutes] = match;
+      return `${day}.${month}.${year}, ${hours}:${minutes}`;
+    } catch {
+      return "";
+    }
+  };
 
   const formatWebterminType = (type?: string | null) => {
     switch (type) {
@@ -391,6 +420,10 @@ function replacePlaceholders(text: string, project: ProjectWithDetails): string 
         ? `${project.client.firstname || ""} ${project.client.lastname || ""}`.trim()
         : "",
     "{{client.phone}}": project.client?.phone ?? "",
+
+    "{{agency.name}}": project.client?.agency?.name ?? "",
+    "{{agency.phone}}": project.client?.agency?.contactPhone ?? "",
+    "{{agency.email}}": project.client?.agency?.contactEmail ?? "",
 
     "{{agent.name}}": project.agent?.name ?? "",
     "{{agent.fullName}}": project.agent?.fullName ?? "",
