@@ -648,19 +648,38 @@ export default async function ProjectDetail({ params }: Props) {
               </dd>
             </div>
 
-            {website?.demoLink && (
+            {(project.joomlaInstallations && project.joomlaInstallations.length > 0) || website?.demoLink ? (
               <div>
                 <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Demo-Link</dt>
-                <dd className="mt-1 text-sm">
-                  <a href={website.demoLink.startsWith("http") ? website.demoLink : `https://${website.demoLink}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                    {website.demoLink}
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
+                <dd className="mt-1 text-sm space-y-2">
+                  {project.joomlaInstallations && project.joomlaInstallations.length > 0 ? (
+                    project.joomlaInstallations.map((installation) => (
+                      <div key={installation.id} className="flex items-start gap-2">
+                        <a
+                          href={installation.installUrl.startsWith("http") ? installation.installUrl : `https://${installation.installUrl}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          {installation.installUrl}
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                        <span className="text-xs text-gray-500">({installation.folderName})</span>
+                      </div>
+                    ))
+                  ) : website?.demoLink ? (
+                    <a href={website.demoLink.startsWith("http") ? website.demoLink : `https://${website.demoLink}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                      {website.demoLink}
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  ) : null}
                 </dd>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 

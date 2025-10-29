@@ -87,9 +87,23 @@ export default function InlineCell({
       const result = await updateInlineField(fd);
       setEditing(false);
 
-      // If email was triggered, don't refresh - let the email confirmation dialog handle it
-      // The dialog will reload the page when closed (via EmailConfirmationHandler.handleComplete)
-      if (result?.emailTriggered) {
+      // If installation check is needed, trigger the event
+      if (result?.needsInstallationCheck && result?.projectId) {
+        const event = new CustomEvent("checkInstallation", {
+          detail: { projectId: result.projectId },
+        });
+        window.dispatchEvent(event);
+        // Don't refresh immediately, let the dialog handle it
+        return;
+      }
+
+      // If email was triggered, dispatch event with queueIds
+      if (result?.emailTriggered && result?.queueIds) {
+        const event = new CustomEvent("emailConfirmationNeeded", {
+          detail: { queueIds: result.queueIds },
+        });
+        window.dispatchEvent(event);
+        // Don't refresh immediately, let the email dialog handle it
         return;
       }
 

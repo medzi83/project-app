@@ -1270,6 +1270,13 @@ export default async function DashboardPage({
       : null,
   ].filter((group): group is { key: string; title: string; items: AgentAgendaEntry[] } => group !== null);
 
+  // Get most recent project update for KPI tile
+  const mostRecentProject = await prisma.project.findFirst({
+    where: baseWhere,
+    orderBy: { updatedAt: "desc" },
+    select: { updatedAt: true },
+  });
+
   const renderAgendaEntry = (entry: AgentAgendaEntry) => {
     // Nur Installation-Status für Website-Projekte in Umsetzung anzeigen
     const showInstallationStatus = entry.category === "task" && entry.taskType === "In Umsetzung";
@@ -1325,48 +1332,6 @@ export default async function DashboardPage({
       </Link>
     );
   };
-
-  // Zuletzt aktualisierte Projekte
-  const recentProjects = await prisma.project.findMany({
-    where: baseWhere,
-    orderBy: { updatedAt: "desc" },
-    take: 8,
-    select: {
-      id: true,
-      title: true,
-      status: true,
-      updatedAt: true,
-      createdAt: true,
-      client: { select: { name: true, customerNo: true } },
-      notes: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        select: {
-          text: true,
-          createdAt: true,
-          author: { select: { name: true } },
-        },
-      },
-    },
-  });
-
-  // Helper fuer Aktivitaetslabel
-  function activityInfo(p: (typeof recentProjects)[number]) {
-    const lastNote = p.notes[0];
-    if (lastNote) {
-      // Heuristik: wenn updatedAt ~ letzte Notiz (+/-2 Minuten)
-      const diff = Math.abs(new Date(p.updatedAt).getTime() - new Date(lastNote.createdAt).getTime());
-      if (diff <= 2 * 60 * 1000) {
-        return {
-          label: "Notiz hinzugefuegt",
-          detail:
-            (lastNote.author?.name ? `${lastNote.author.name}: ` : "") +
-            (lastNote.text.length > 80 ? `${lastNote.text.slice(0, 80)}...` : lastNote.text),
-        };
-      }
-    }
-    return { label: "Projekt aktualisiert", detail: `Status: ${p.status}` };
-  }
 
   return (
     <main className="p-6 space-y-6">
@@ -1489,7 +1454,7 @@ export default async function DashboardPage({
         <div className="rounded-2xl bg-gradient-to-br from-slate-600 to-gray-700 p-5 shadow-lg">
           <div className="text-xs uppercase tracking-wide text-white/80 font-semibold">Letztes Projekt-Update</div>
           <div className="mt-3 text-base font-bold text-white sm:text-lg">
-            {formatDate(recentProjects[0]?.updatedAt)}
+            {formatDate(mostRecentProject?.updatedAt)}
           </div>
         </div>
       </section>
@@ -1562,42 +1527,6 @@ export default async function DashboardPage({
                   );
                 })}
             </div>
-          </div>
-        </section>
-      )}
-
-      {!isAgentView && (
-        <section className="rounded-2xl border border-green-100 bg-white shadow-lg overflow-hidden">
-          <div className="px-5 py-4 border-b border-green-100 bg-gradient-to-r from-green-50 to-emerald-50">
-            <h2 className="font-bold text-lg bg-gradient-to-r from-green-700 to-emerald-600 bg-clip-text text-transparent">Zuletzt aktualisierte Projekte</h2>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {recentProjects.length === 0 ? (
-              <div className="p-6 text-sm text-gray-500">Noch keine Projekte vorhanden.</div>
-            ) : (
-              recentProjects.map((p) => {
-                const { label, detail } = activityInfo(p);
-                const customerLabel = [p.client?.customerNo, p.client?.name].filter(Boolean).join(" - ");
-                return (
-                  <Link
-                    key={p.id}
-                    href={`/projects/${p.id}`}
-                    className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-gradient-to-r hover:from-green-50/50 hover:to-emerald-50/30 transition-all group"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
-                        <div className="font-bold text-gray-900 truncate group-hover:text-green-700 transition-colors">{customerLabel || "Kunde unbekannt"}</div>
-                        <div className="font-medium text-sm text-gray-600 truncate">{p.title ?? `Projekt #${p.id}`}</div>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1 truncate">
-                        {label} - {detail} - aktualisiert: {formatDate(p.updatedAt)} - erstellt: {formatDate(p.createdAt)}
-                      </div>
-                    </div>
-                    <span className="text-sm text-green-600 group-hover:text-green-700 font-medium shrink-0">Details →</span>
-                  </Link>
-                );
-              })
-            )}
           </div>
         </section>
       )}

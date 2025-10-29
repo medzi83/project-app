@@ -56,7 +56,7 @@ function coerce(key: string, v: string | undefined) {
   return s;
 }
 
-export async function updateInlineField(formData: FormData): Promise<{ emailTriggered: boolean }> {
+export async function updateInlineField(formData: FormData): Promise<{ emailTriggered: boolean; queueIds?: string[]; needsInstallationCheck?: boolean; projectId?: string }> {
   const session = await getAuthSession();
   if (!session?.user || !["ADMIN","AGENT"].includes(session.user.role || "")) {
     throw new Error("FORBIDDEN");
@@ -68,6 +68,8 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
   const { target, id, key, value, extraValue } = parsed.data;
 
   let emailTriggered = false;
+  let emailQueueIds: string[] = [];
+  let needsInstallationCheck = false;
 
   if (target === "project") {
     const projectKey = ProjectKey.parse(key);
@@ -140,6 +142,19 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
         const nextValue = parsedValue instanceof Date ? parsedValue : null;
         updateData.demoDate = nextValue;
         createData.demoDate = nextValue;
+
+        // Check if this is a new demoDate being set (not null) and was previously null
+        if (nextValue && !oldValue) {
+          // Check if project already has an installation
+          const existingInstallation = await prisma.joomlaInstallation.findFirst({
+            where: { projectId: id },
+          });
+
+          // Only mark for installation check if no installation exists
+          if (!existingInstallation) {
+            needsInstallationCheck = true;
+          }
+        }
         break;
       }
       case "onlineDate": {
@@ -204,19 +219,24 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
       create: createData,
     });
 
-    // Process email triggers and get confirmation queue IDs
-    try {
-      const queueIds = await processTriggers(
-        id,
-        { [websiteKey]: parsedValue },
-        { [websiteKey]: oldValue }
-      );
-      if (queueIds && queueIds.length > 0) {
-        emailTriggered = true;
+    // If installation check is needed, skip email triggers for now
+    // They will be processed after installation is assigned
+    if (!needsInstallationCheck) {
+      // Process email triggers and get confirmation queue IDs
+      try {
+        const queueIds = await processTriggers(
+          id,
+          { [websiteKey]: parsedValue },
+          { [websiteKey]: oldValue }
+        );
+        if (queueIds && queueIds.length > 0) {
+          emailTriggered = true;
+          emailQueueIds = queueIds;
+        }
+      } catch (error) {
+        console.error("Error processing triggers:", error);
+        // Don't fail the update if trigger processing fails
       }
-    } catch (error) {
-      console.error("Error processing triggers:", error);
-      // Don't fail the update if trigger processing fails
     }
 
     if (statusRelevantWebsiteKeys.has(websiteKey)) {
@@ -251,7 +271,12 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
   }
 
   revalidatePath("/projects");
-  return { emailTriggered };
+  return {
+    emailTriggered,
+    queueIds: emailQueueIds.length > 0 ? emailQueueIds : undefined,
+    needsInstallationCheck: needsInstallationCheck ? true : undefined,
+    projectId: needsInstallationCheck ? id : undefined
+  };
 }
 
 

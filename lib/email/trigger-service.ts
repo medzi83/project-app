@@ -11,6 +11,9 @@ type ProjectWithDetails = Project & {
         previewVersions?: Array<{ sentDate: Date; link: string; version: number }>;
       })
     | null;
+  joomlaInstallations?: Array<{
+    installUrl: string;
+  }>;
   client?:
     | {
         id: string;
@@ -90,6 +93,12 @@ export async function processTriggers(
             take: 1,
           },
         },
+      },
+      joomlaInstallations: {
+        select: {
+          installUrl: true,
+        },
+        take: 1,
       },
       client: {
         select: {
@@ -434,7 +443,7 @@ function replacePlaceholders(text: string, project: ProjectWithDetails): string 
     "{{website.domain}}": project.website?.domain ?? "",
     "{{website.webDate}}": formatDateTime(project.website?.webDate ?? null),
     "{{website.demoDate}}": formatDate(project.website?.demoDate ?? null),
-    "{{website.demoLink}}": project.website?.demoLink ?? "",
+    "{{website.demoLink}}": project.joomlaInstallations?.[0]?.installUrl || project.website?.demoLink || "",
 
     "{{film.scope}}": project.film?.scope ?? "",
     "{{film.status}}": project.film?.status ?? "",

@@ -20,24 +20,37 @@ type MissingClientData = {
 
 export function EmailConfirmationHandler() {
   const [queueIds, setQueueIds] = useState<string[]>([]);
-  const [emptyChecks, setEmptyChecks] = useState(0);
-  const [isPolling, setIsPolling] = useState(true);
-  const [pollingReason, setPollingReason] = useState<"initial" | "userClick">("initial");
   const [missingClientData, setMissingClientData] = useState<MissingClientData>(null);
   const [checkingClientData, setCheckingClientData] = useState(false);
   const [clientDataChecked, setClientDataChecked] = useState(false);
   const [isReloading, setIsReloading] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const pathname = usePathname();
 
-  // Restart polling when route changes
+  // Reset state when route changes
   useEffect(() => {
-    setIsPolling(true);
-    setEmptyChecks(0);
-    setPollingReason("initial");
+    setQueueIds([]);
     setClientDataChecked(false);
     setMissingClientData(null);
   }, [pathname]);
+
+  // Listen for email confirmation requests (from inline actions or installation dialog)
+  useEffect(() => {
+    const handleEmailConfirmationNeeded = (event: Event) => {
+      const customEvent = event as CustomEvent<{ queueIds: string[] }>;
+      const { queueIds: newQueueIds } = customEvent.detail;
+      if (newQueueIds && newQueueIds.length > 0) {
+        setQueueIds(newQueueIds);
+        setClientDataChecked(false);
+        setMissingClientData(null);
+      }
+    };
+
+    window.addEventListener("emailConfirmationNeeded", handleEmailConfirmationNeeded);
+
+    return () => {
+      window.removeEventListener("emailConfirmationNeeded", handleEmailConfirmationNeeded);
+    };
+  }, []);
 
   // Check if client data is missing when queueIds change
   useEffect(() => {
@@ -103,82 +116,6 @@ export function EmailConfirmationHandler() {
 
     checkClientData();
   }, [queueIds, checkingClientData, clientDataChecked]);
-
-  useEffect(() => {
-    // Check for pending email confirmations from database
-    const checkForPendingEmails = async () => {
-      try {
-        const res = await fetch("/api/email/pending-confirmations");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.queueIds && data.queueIds.length > 0) {
-            setQueueIds(data.queueIds);
-            setEmptyChecks(0); // Reset counter when we find pending emails
-          } else {
-            // Increment empty check counter only if still polling
-            if (isPolling) {
-              setEmptyChecks((prev) => prev + 1);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error checking for pending emails:", error);
-      }
-    };
-
-    // Only set up interval if polling is active
-    if (!isPolling) {
-      return;
-    }
-
-    // Check immediately on mount
-    checkForPendingEmails();
-
-    // Set up polling interval
-    intervalRef.current = setInterval(() => {
-      // Only check if no dialog is currently open and polling is active
-      if (queueIds.length === 0 && isPolling) {
-        checkForPendingEmails();
-      }
-    }, 2000);
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [queueIds.length, isPolling]);
-
-  // Stop polling based on reason:
-  // - Initial page load: 5 checks (10 seconds) to catch queued emails
-  // - User clicked field: 15 checks (30 seconds) to wait for user input
-  useEffect(() => {
-    const maxChecks = pollingReason === "initial" ? 5 : 15;
-
-    if (emptyChecks >= maxChecks && intervalRef.current) {
-      setIsPolling(false);
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, [emptyChecks, pollingReason]);
-
-  // Restart polling when user clicks on an editable field
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      // Check if click is on or within an InlineCell button
-      const target = e.target as HTMLElement;
-      const isInlineCell = target.closest('button[title="Zum Bearbeiten klicken"]');
-
-      if (isInlineCell && !isPolling) {
-        setIsPolling(true);
-        setPollingReason("userClick");
-        setEmptyChecks(0);
-      }
-    };
-
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
-  }, [isPolling]);
 
   const handleComplete = () => {
     setQueueIds([]);
