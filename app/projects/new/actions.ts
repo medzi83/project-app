@@ -66,8 +66,10 @@ function mapFilmStatusToProjectStatus(status: FilmProjectStatus): ProjectStatus 
 /* ---------- Client anlegen ---------- */
 const ClientSchema = z.object({
   name: z.string().min(1, "Name fehlt"),
-  customerNo: z.string().optional().transform((v) => v?.trim() || null),
-  contact: z.string().optional().transform((v) => v?.trim() || null),
+  customerNo: z.string().min(1, "Kundennummer fehlt").trim(),
+  salutation: z.string().optional().transform((v) => v?.trim() || null),
+  firstname: z.string().optional().transform((v) => v?.trim() || null),
+  lastname: z.string().optional().transform((v) => v?.trim() || null),
   email: z.string().optional().transform((v) => v?.trim() || null),
   phone: z.string().optional().transform((v) => v?.trim() || null),
   agencyId: z.string().optional().transform((v) => v?.trim() || null),

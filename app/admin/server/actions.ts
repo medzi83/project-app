@@ -19,6 +19,7 @@ const CreateServerSchema = z.object({
   name: z.string().min(1, "Bitte Servernamen angeben").trim(),
   ip: z.string().min(1, "Bitte IP-Adresse angeben").trim(),
   froxlorUrl: z.string().url("UngÃ¼ltige URL").trim().optional().or(z.literal("")),
+  froxlorVersion: z.enum(["1.x", "2.0+"]).default("2.0+"),
   mysqlUrl: z.string().url("UngÃ¼ltige URL").trim().optional().or(z.literal("")),
   froxlorApiKey: z.string().trim().optional().or(z.literal("")),
   froxlorApiSecret: z.string().trim().optional().or(z.literal("")),
@@ -37,12 +38,13 @@ export async function createServer(formData: FormData) {
     redirect(`/admin/server?error=${encodeURIComponent(msg)}`);
   }
 
-  const { name, ip, froxlorUrl, mysqlUrl, froxlorApiKey, froxlorApiSecret, sshHost, sshPort, sshUsername, sshPassword } = parsed.data;
+  const { name, ip, froxlorUrl, froxlorVersion, mysqlUrl, froxlorApiKey, froxlorApiSecret, sshHost, sshPort, sshUsername, sshPassword } = parsed.data;
   await prisma.server.create({
     data: {
       name,
       ip,
       froxlorUrl: froxlorUrl || null,
+      froxlorVersion: froxlorVersion || "2.0+",
       mysqlUrl: mysqlUrl || null,
       froxlorApiKey: froxlorApiKey || null,
       froxlorApiSecret: froxlorApiSecret || null,
@@ -62,6 +64,7 @@ const UpdateServerSchema = z.object({
   name: z.string().min(1).trim(),
   ip: z.string().min(1).trim(),
   froxlorUrl: z.string().url().trim().optional().or(z.literal("")),
+  froxlorVersion: z.enum(["1.x", "2.0+"]).default("2.0+"),
   mysqlUrl: z.string().url().trim().optional().or(z.literal("")),
   froxlorApiKey: z.string().trim().optional().or(z.literal("")),
   froxlorApiSecret: z.string().trim().optional().or(z.literal("")),
@@ -80,13 +83,14 @@ export async function updateServer(formData: FormData) {
     redirect(`/admin/server?error=${encodeURIComponent(msg)}`);
   }
 
-  const { id, name, ip, froxlorUrl, mysqlUrl, froxlorApiKey, froxlorApiSecret, sshHost, sshPort, sshUsername, sshPassword } = parsed.data;
+  const { id, name, ip, froxlorUrl, froxlorVersion, mysqlUrl, froxlorApiKey, froxlorApiSecret, sshHost, sshPort, sshUsername, sshPassword } = parsed.data;
   await prisma.server.update({
     where: { id },
     data: {
       name,
       ip,
       froxlorUrl: froxlorUrl || null,
+      froxlorVersion: froxlorVersion || "2.0+",
       mysqlUrl: mysqlUrl || null,
       froxlorApiKey: froxlorApiKey || null,
       froxlorApiSecret: froxlorApiSecret || null,
@@ -219,4 +223,107 @@ export async function deleteMailServer(formData: FormData) {
   await prisma.mailServer.delete({ where: { id: parsed.data.id } });
   revalidatePath("/admin/server");
   redirect("/admin/server?mailOk=1");
+}
+
+// ===== Database Server Actions =====
+
+const CreateDatabaseServerSchema = z.object({
+  serverId: z.string().min(1, "Server ID fehlt"),
+  name: z.string().min(1, "Name fehlt").trim(),
+  version: z.string().min(1, "Version fehlt").trim(),
+  host: z.string().min(1, "Host fehlt").trim(),
+  port: z.coerce.number().min(1, "Port muss > 0 sein").max(65535, "Port ist zu groß"),
+  isDefault: z.enum(["yes", "no"]).default("no"),
+});
+
+const UpdateDatabaseServerSchema = CreateDatabaseServerSchema.extend({
+  id: z.string().min(1),
+});
+
+const DeleteDatabaseServerSchema = z.object({
+  id: z.string().min(1),
+});
+
+export async function createDatabaseServer(formData: FormData) {
+  await requireAdmin();
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = CreateDatabaseServerSchema.safeParse(raw);
+  if (!parsed.success) {
+    const msg = parsed.error.issues.map((issue) => issue.message).join("; ");
+    redirect(`/admin/server?dbError=${encodeURIComponent(msg)}`);
+  }
+
+  const { serverId, name, version, host, port, isDefault } = parsed.data;
+
+  // If this is set as default, unset all other defaults for this server
+  if (isDefault === "yes") {
+    await prisma.databaseServer.updateMany({
+      where: { serverId },
+      data: { isDefault: false },
+    });
+  }
+
+  await prisma.databaseServer.create({
+    data: {
+      serverId,
+      name,
+      version,
+      host,
+      port,
+      isDefault: isDefault === "yes",
+    },
+  });
+
+  revalidatePath("/admin/server");
+  redirect("/admin/server?dbOk=1");
+}
+
+export async function updateDatabaseServer(formData: FormData) {
+  await requireAdmin();
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = UpdateDatabaseServerSchema.safeParse(raw);
+  if (!parsed.success) {
+    const msg = parsed.error.issues.map((issue) => issue.message).join("; ");
+    redirect(`/admin/server?dbError=${encodeURIComponent(msg)}`);
+  }
+
+  const { id, serverId, name, version, host, port, isDefault } = parsed.data;
+
+  // If this is set as default, unset all other defaults for this server
+  if (isDefault === "yes") {
+    await prisma.databaseServer.updateMany({
+      where: {
+        serverId,
+        id: { not: id }
+      },
+      data: { isDefault: false },
+    });
+  }
+
+  await prisma.databaseServer.update({
+    where: { id },
+    data: {
+      name,
+      version,
+      host,
+      port,
+      isDefault: isDefault === "yes",
+    },
+  });
+
+  revalidatePath("/admin/server");
+  redirect("/admin/server?dbOk=1");
+}
+
+export async function deleteDatabaseServer(formData: FormData) {
+  await requireAdmin();
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = DeleteDatabaseServerSchema.safeParse(raw);
+  if (!parsed.success) {
+    redirect("/admin/server");
+  }
+
+  await prisma.databaseServer.delete({ where: { id: parsed.data.id } });
+  revalidatePath("/admin/server");
+  redirect("/admin/server?dbOk=1");
 }

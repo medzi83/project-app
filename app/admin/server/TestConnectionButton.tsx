@@ -6,12 +6,14 @@ type TestConnectionButtonProps = {
   froxlorUrl: string | null;
   froxlorApiKey: string | null;
   froxlorApiSecret: string | null;
+  froxlorVersion: string | null;
 };
 
 export function TestConnectionButton({
   froxlorUrl,
   froxlorApiKey,
   froxlorApiSecret,
+  froxlorVersion,
 }: TestConnectionButtonProps) {
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -30,6 +32,7 @@ export function TestConnectionButton({
           froxlorUrl,
           froxlorApiKey,
           froxlorApiSecret,
+          froxlorVersion: froxlorVersion || "2.0+",
         }),
       });
 

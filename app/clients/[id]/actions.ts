@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { revalidatePath } from "next/cache";
-import { FroxlorClient } from "@/lib/froxlor";
+import { FroxlorClient, createFroxlorClientFromServer } from "@/lib/froxlor";
 import type { FroxlorCustomerUpdateInput } from "@/lib/froxlor";
 
 export async function deleteEmailLog(emailLogId: string) {

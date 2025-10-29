@@ -7,11 +7,39 @@ type FroxlorConfig = {
   url: string;
   apiKey: string;
   apiSecret: string;
+  version?: string; // "1.x" or "2.0+" (default: "2.0+")
 };
 
+/**
+ * Helper type for server objects with Froxlor credentials
+ */
+type ServerWithFroxlor = {
+  froxlorUrl: string | null;
+  froxlorApiKey: string | null;
+  froxlorApiSecret: string | null;
+  froxlorVersion?: string | null;
+};
+
+/**
+ * Create a Froxlor client from a server object
+ * Returns null if server doesn't have complete Froxlor configuration
+ */
+export function createFroxlorClientFromServer(server: ServerWithFroxlor): FroxlorClient | null {
+  if (!server.froxlorUrl || !server.froxlorApiKey || !server.froxlorApiSecret) {
+    return null;
+  }
+
+  return new FroxlorClient({
+    url: server.froxlorUrl,
+    apiKey: server.froxlorApiKey,
+    apiSecret: server.froxlorApiSecret,
+    version: server.froxlorVersion || undefined,
+  });
+}
+
 type FroxlorResponse<T = unknown> = {
-  status: number;
-  status_message: string;
+  status?: number; // Deprecated in Froxlor 2.0+, kept for backward compatibility
+  status_message?: string;
   data?: T;
 };
 
@@ -158,6 +186,7 @@ export class FroxlorClient {
 
   /**
    * Make a request to the Froxlor API
+   * Supports both legacy (1.x) and modern (2.0+) authentication
    */
   private async request<T = unknown>(
     command: string,
@@ -169,35 +198,62 @@ export class FroxlorClient {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
+    // Determine API version (default to 2.0+)
+    const isLegacyApi = this.config.version === '1.x';
+
     try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          header: {
-            apikey: this.config.apiKey,
-            secret: this.config.apiSecret,
+      let response: Response;
+
+      if (isLegacyApi) {
+        // Legacy Froxlor 1.x: apikey/secret in request body
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          body: {
+          body: JSON.stringify({
+            header: {
+              apikey: this.config.apiKey,
+              secret: this.config.apiSecret,
+            },
+            body: {
+              command,
+              params,
+            },
+          }),
+          signal: controller.signal,
+        });
+      } else {
+        // Modern Froxlor 2.0+: HTTP Basic Authentication
+        const authString = Buffer.from(`${this.config.apiKey}:${this.config.apiSecret}`).toString('base64');
+
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${authString}`,
+          },
+          body: JSON.stringify({
             command,
             params,
-          },
-        }),
-        signal: controller.signal,
-      });
+          }),
+          signal: controller.signal,
+        });
+      }
 
       clearTimeout(timeoutId);
 
       const jsonResponse = await response.json();
 
       if (!response.ok) {
-        // Try to extract the actual error message from Froxlor's response
+        // Both versions use status_message for errors (HTTP 400+)
         const errorMsg = jsonResponse?.status_message || jsonResponse?.message || response.statusText;
         throw new Error(`HTTP ${response.status}: ${errorMsg}`);
       }
 
+      // Success handling differs by version:
+      // - Froxlor 1.x: Uses status field (200 = success)
+      // - Froxlor 2.0+: Uses data field presence (HTTP 200 + data = success)
       return jsonResponse;
     } catch (error) {
       clearTimeout(timeoutId);
@@ -223,7 +279,13 @@ export class FroxlorClient {
       // Use a simple API call to test the connection
       const result = await this.request('Froxlor.listFunctions');
 
-      if (result.status === 200) {
+      // Check success based on API version
+      const isLegacyApi = this.config.version === '1.x';
+      const isSuccess = isLegacyApi
+        ? result.status === 200
+        : (result.data !== undefined && result.data !== null);
+
+      if (isSuccess) {
         return {
           success: true,
           message: 'Verbindung erfolgreich',
@@ -252,7 +314,7 @@ export class FroxlorClient {
       // Get all customers and search in-memory
       const result = await this.request<FroxlorListingPayload<FroxlorCustomer>>('Customers.listing');
 
-      if (result.status === 200 && result.data) {
+      if (result.data) {
         const customers = normalizeFroxlorList(result.data);
 
         const cleanNumber = customerNumber.trim().toUpperCase();
@@ -315,7 +377,7 @@ export class FroxlorClient {
         id: customerId,
       });
 
-      if (result.status === 200 && result.data) {
+      if (result.data) {
         return result.data;
       }
 
@@ -397,7 +459,7 @@ export class FroxlorClient {
 
       const result = await this.request<FroxlorCustomer>('Customers.add', apiParams);
 
-      if (result.status === 200 && result.data) {
+      if (result.data) {
         const customerId = result.data.customerid;
         const actualLoginname = result.data.loginname;
 
@@ -434,7 +496,7 @@ export class FroxlorClient {
         ...data,
       });
 
-      if (result.status === 200 && result.data) {
+      if (result.data) {
         return {
           success: true,
           message: 'Kunde erfolgreich aktualisiert',
@@ -461,7 +523,7 @@ export class FroxlorClient {
     try {
       const result = await this.request<FroxlorListingPayload<FroxlorPhpConfig>>('PhpSettings.listing');
 
-      if (result.status === 200 && result.data) {
+      if (result.data) {
         return normalizeFroxlorList(result.data);
       }
 
@@ -481,7 +543,7 @@ export class FroxlorClient {
         customerid: customerId,
       });
 
-      if (result.status === 200 && result.data) {
+      if (result.data) {
         return normalizeFroxlorList(result.data);
       }
 
@@ -503,7 +565,7 @@ export class FroxlorClient {
         customerid: targetId ?? customerId,
       });
 
-      if (result.status === 200 && result.data) {
+      if (result.data) {
         const domains = normalizeFroxlorList(result.data);
 
         if (targetId == null) {
@@ -552,7 +614,7 @@ export class FroxlorClient {
         ...data,
       });
 
-      if (result.status === 200 && result.data) {
+      if (result.data) {
         return {
           success: true,
           message: 'Domain erfolgreich angelegt',
@@ -592,7 +654,7 @@ export class FroxlorClient {
         ...data,
       });
 
-      if (result.status === 200 && result.data) {
+      if (result.data) {
         return {
           success: true,
           message: 'Domain erfolgreich aktualisiert',
@@ -621,7 +683,7 @@ export class FroxlorClient {
         customerid: customerId,
       });
 
-      if (result.status === 200 && result.data) {
+      if (result.data) {
         return normalizeFroxlorList(result.data);
       }
 
@@ -649,7 +711,7 @@ export class FroxlorClient {
         sendinfomail: 0, // Don't send email
       });
 
-      if (result.status === 200 && result.data) {
+      if (result.data) {
         return {
           success: true,
           message: 'Datenbank erfolgreich angelegt',
@@ -681,7 +743,7 @@ export class FroxlorClient {
       // This is the proven method that works with Froxlor
       const listResult = await this.request<FroxlorListingPayload<FroxlorDatabase>>('Mysqls.listing');
 
-      if (listResult.status !== 200 || !listResult.data) {
+      if (!listResult.data) {
         return {
           success: false,
           message: 'Fehler beim Abrufen der Datenbankliste',
@@ -704,7 +766,7 @@ export class FroxlorClient {
         customerid: database.customerid,
       });
 
-      if (result.status === 200) {
+      if (result.data !== undefined) {
         return {
           success: true,
           message: `Datenbank ${databaseName} erfolgreich gelöscht`,

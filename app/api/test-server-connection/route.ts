@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { froxlorUrl, froxlorApiKey, froxlorApiSecret } = body;
+    const { froxlorUrl, froxlorApiKey, froxlorApiSecret, froxlorVersion } = body;
 
     // If no Froxlor credentials provided, we can't test
     if (!froxlorUrl || !froxlorApiKey || !froxlorApiSecret) {
@@ -23,53 +23,76 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Determine API version (default to 2.0+)
+    const isLegacyApi = froxlorVersion === '1.x';
+
     // Test Froxlor API connection
     const froxlorTestUrl = `${froxlorUrl.replace(/\/$/, "")}/api.php`;
 
-    const response = await fetch(froxlorTestUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        header: {
-          apikey: froxlorApiKey,
-          secret: froxlorApiSecret,
-        },
-        body: {
-          command: "Froxlor.listFunctions",
-        },
-      }),
-    });
+    let response: Response;
 
-    if (!response.ok) {
-      return NextResponse.json({
-        success: false,
-        error: `HTTP Fehler: ${response.status} ${response.statusText}`,
+    if (isLegacyApi) {
+      // Legacy Froxlor 1.x: apikey/secret in request body
+      response = await fetch(froxlorTestUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          header: {
+            apikey: froxlorApiKey,
+            secret: froxlorApiSecret,
+          },
+          body: {
+            command: "Froxlor.listFunctions",
+          },
+        }),
+      });
+    } else {
+      // Modern Froxlor 2.0+: HTTP Basic Authentication
+      const authString = Buffer.from(`${froxlorApiKey}:${froxlorApiSecret}`).toString('base64');
+
+      response = await fetch(froxlorTestUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Basic ${authString}`,
+        },
+        body: JSON.stringify({
+          command: "Froxlor.listFunctions",
+        }),
       });
     }
 
     const data = await response.json();
 
-    // Check if Froxlor API returned an error
-    if (data.status === 403 || data.status === 401) {
+    // Check HTTP status codes for errors
+    if (!response.ok) {
+      // Both versions use status_message for errors
+      const errorMsg = data.status_message || data.message || response.statusText;
       return NextResponse.json({
         success: false,
-        error: "Authentifizierung fehlgeschlagen. Bitte API Key und Secret prüfen.",
+        error: `HTTP ${response.status}: ${errorMsg}`,
       });
     }
 
-    if (data.status !== 200) {
+    // Check success based on API version
+    const isSuccess = isLegacyApi
+      ? data.status === 200
+      : (data.data !== undefined && data.data !== null);
+
+    if (isSuccess) {
+      // Connection successful
       return NextResponse.json({
-        success: false,
-        error: data.message || `Froxlor API Fehler: Status ${data.status}`,
+        success: true,
+        message: `Verbindung erfolgreich! Froxlor ${froxlorVersion || '2.0+'} API ist erreichbar.`,
       });
     }
 
-    // Connection successful
+    // If no data and no error status, something unexpected happened
     return NextResponse.json({
-      success: true,
-      message: "Verbindung erfolgreich! Froxlor API ist erreichbar.",
+      success: false,
+      error: data.status_message || "Unerwartete API-Antwort",
     });
   } catch (error) {
     console.error("Server connection test error:", error);

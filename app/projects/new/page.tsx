@@ -96,12 +96,24 @@ export default async function NewProjectPage({ searchParams }: Props) {
               <input name="name" required className="rounded border p-2" placeholder="z. B. Muster GmbH" />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Kundennummer</span>
-              <input name="customerNo" className="rounded border p-2" placeholder="optional" />
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Kundennummer *</span>
+              <input name="customerNo" required className="rounded border p-2" placeholder="z. B. M12345" />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Ansprechpartner</span>
-              <input name="contact" className="rounded border p-2" placeholder="optional" />
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Anrede</span>
+              <select name="salutation" className="rounded border p-2">
+                <option value="">-- Bitte wählen --</option>
+                <option value="Herr">Herr</option>
+                <option value="Frau">Frau</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Vorname</span>
+              <input name="firstname" className="rounded border p-2" placeholder="optional" />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">Nachname</span>
+              <input name="lastname" className="rounded border p-2" placeholder="optional" />
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">E-Mail</span>

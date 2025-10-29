@@ -225,6 +225,7 @@ model Server {
   name                String
   ip                  String
   froxlorUrl          String?
+  froxlorVersion      String?              @default("2.0+") // "1.x" or "2.0+"
   mysqlUrl            String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -237,6 +238,23 @@ model Server {
   sshUsername         String?
   clients             Client[]
   joomlaInstallations JoomlaInstallation[]
+  databaseServers     DatabaseServer[]
+}
+
+model DatabaseServer {
+  id                  String               @id @default(cuid())
+  serverId            String
+  server              Server               @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  name                String               // e.g. "MariaDB 10.3" or "MariaDB 10.5"
+  version             String               // e.g. "10.3.39" or "10.5"
+  host                String               @default("localhost") // e.g. "localhost" or "127.0.0.1"
+  port                Int?                 @default(3306) // e.g. 3306 or 3307
+  isDefault           Boolean              @default(false) // Mark which one is default for new installations
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  joomlaInstallations JoomlaInstallation[]
+
+  @@index([serverId])
 }
 
 model MailServer {
@@ -416,25 +434,29 @@ model Feedback {
 }
 
 model JoomlaInstallation {
-  id                         String   @id @default(cuid())
+  id                         String          @id @default(cuid())
   clientId                   String
   serverId                   String
+  databaseServerId           String?         // Optional: Which database server was used
   customerNo                 String
   folderName                 String
   installPath                String
   installUrl                 String
   databaseName               String
   databasePassword           String
+  databaseHost               String?         // Store the actual host used (e.g. "localhost" or "127.0.0.1")
+  databasePort               Int?            // Store the actual port used (e.g. 3306 or 3307)
   standardDomain             String
   filesExtracted             Int?
   bytesProcessed             BigInt?
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  createdAt                  DateTime        @default(now())
+  updatedAt                  DateTime        @updatedAt
   projectId                  String?
-  projectAssignmentDismissed Boolean  @default(false)
-  client                     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  project                    Project? @relation(fields: [projectId], references: [id])
-  server                     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  projectAssignmentDismissed Boolean         @default(false)
+  client                     Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project                    Project?        @relation(fields: [projectId], references: [id])
+  server                     Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  databaseServer             DatabaseServer? @relation(fields: [databaseServerId], references: [id], onDelete: SetNull)
 
   @@index([clientId])
   @@index([serverId])
@@ -442,6 +464,7 @@ model JoomlaInstallation {
   @@index([customerNo])
   @@index([createdAt])
   @@index([projectAssignmentDismissed])
+  @@index([databaseServerId])
 }
 
 enum EmailTemplateCategory {

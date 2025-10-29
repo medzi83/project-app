@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createServer, updateServer, deleteServer, createMailServer, updateMailServer, deleteMailServer } from "./actions";
 import { TestConnectionButton } from "./TestConnectionButton";
 import { MailServerSection } from "./MailServerSection";
+import { DatabaseServerSection } from "./DatabaseServerSection";
 
 
 type Props = {
@@ -23,8 +24,10 @@ export default async function ServerAdminPage({ searchParams }: Props) {
   const ok = sp.ok === "1";
   const mailError = str(sp.mailError);
   const mailOk = sp.mailOk === "1";
+  const dbError = str(sp.dbError);
+  const dbOk = sp.dbOk === "1";
 
-  const [servers, mailServers, agencies] = await Promise.all([
+  const [servers, mailServers, agencies, databaseServers] = await Promise.all([
     prisma.server.findMany({
       orderBy: { name: "asc" },
     }),
@@ -37,6 +40,9 @@ export default async function ServerAdminPage({ searchParams }: Props) {
     prisma.agency.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
+    }),
+    prisma.databaseServer.findMany({
+      orderBy: [{ serverId: "asc" }, { name: "asc" }],
     }),
   ]);
 
@@ -66,6 +72,12 @@ export default async function ServerAdminPage({ searchParams }: Props) {
               </Field>
               <Field label="MySQL URL">
                 <input name="mysqlUrl" type="url" className="w-full rounded border p-2" placeholder="https://dbadmin.example.com" />
+              </Field>
+              <Field label="Froxlor Version">
+                <select name="froxlorVersion" defaultValue="2.0+" className="w-full rounded border p-2">
+                  <option value="2.0+">Froxlor 2.0+ (HTTP Basic Auth)</option>
+                  <option value="1.x">Froxlor 1.x (Legacy)</option>
+                </select>
               </Field>
               <Field label="Froxlor API Key">
                 <input name="froxlorApiKey" className="w-full rounded border p-2" placeholder="API Key" />
@@ -158,6 +170,15 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                     </td>
                     <td>
                       <div className="space-y-2">
+                        <select
+                          form={formId}
+                          name="froxlorVersion"
+                          defaultValue={server.froxlorVersion ?? "2.0+"}
+                          className="w-full rounded border p-1 text-xs"
+                        >
+                          <option value="2.0+">Froxlor 2.0+</option>
+                          <option value="1.x">Froxlor 1.x</option>
+                        </select>
                         <input
                           form={formId}
                           name="froxlorApiKey"
@@ -214,6 +235,7 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                         froxlorUrl={server.froxlorUrl}
                         froxlorApiKey={server.froxlorApiKey}
                         froxlorApiSecret={server.froxlorApiSecret}
+                        froxlorVersion={server.froxlorVersion}
                       />
                     </td>
                     <td className="whitespace-nowrap space-x-2">
@@ -236,6 +258,13 @@ export default async function ServerAdminPage({ searchParams }: Props) {
           </table>
         </div>
       </section>
+
+      <DatabaseServerSection
+        servers={servers}
+        databaseServers={databaseServers}
+        dbError={dbError}
+        dbOk={dbOk}
+      />
 
       <MailServerSection
         mailServers={mailServers}
