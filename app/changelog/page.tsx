@@ -18,6 +18,30 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "29.10.2024",
+    version: "2.2.0",
+    changes: [
+      {
+        title: "Froxlor 2.0+ Unterstützung",
+        description:
+          "Die Froxlor-API-Integration wurde komplett überarbeitet und unterstützt jetzt sowohl Froxlor 1.x (Legacy) als auch Froxlor 2.0+ (HTTP Basic Authentication). In der Serververwaltung kann für jeden Server die Froxlor-Version ausgewählt werden. Der Verbindungstest erkennt automatisch die korrekte Authentifizierungsmethode.",
+        type: "feature",
+      },
+      {
+        title: "Datenbank-Server-Verwaltung",
+        description:
+          "Neue Funktion zur Verwaltung mehrerer Datenbankversionen pro Server. Du kannst jetzt verschiedene MariaDB/MySQL-Versionen konfigurieren (z.B. MariaDB 10.3 auf localhost:3306 und MariaDB 10.5 auf 127.0.0.1:3307). Bei Joomla-Installationen kann die gewünschte Datenbankversion ausgewählt werden. Dies ist besonders wichtig für Server mit Froxlor 2.0+, die mehrere DB-Versionen anbieten.",
+        type: "feature",
+      },
+      {
+        title: "Kontaktpersonen mit strukturierten Daten",
+        description:
+          "Das alte 'Kontakt'-Feld wurde durch die neuen Felder 'Anrede', 'Vorname' und 'Nachname' ersetzt. Das Formular zur Kundenanlage unter /projects/new wurde entsprechend angepasst. Die Kundennummer ist jetzt ein Pflichtfeld, um die Datenqualität zu verbessern.",
+        type: "improvement",
+      },
+    ],
+  },
+  {
     date: "28.10.2025",
     version: "2.1.0",
     changes: [
