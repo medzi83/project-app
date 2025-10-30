@@ -57,7 +57,6 @@ model Client {
   name                String
   phone               String?
   notes               String?
-  uploadLinks         Json?                // Array of upload links
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   customerNo          String?              @unique
@@ -69,6 +68,7 @@ model Client {
   firstname           String?
   lastname            String?
   salutation          String?
+  uploadLinks         Json?
   agency              Agency?              @relation(fields: [agencyId], references: [id])
   server              Server?              @relation(fields: [serverId], references: [id])
   emailLogs           EmailLog[]
@@ -145,6 +145,7 @@ model ProjectWebsite {
   demoLink       String?
   materialStatus MaterialStatus         @default(ANGEFORDERT)
   isWTAssignment Boolean                @default(false)
+  isRelaunch     Boolean                @default(false)
   webterminType  WebterminType?
   domainHistory  ProjectDomainHistory[]
   project        Project                @relation(fields: [projectId], references: [id])
@@ -225,7 +226,6 @@ model Server {
   name                String
   ip                  String
   froxlorUrl          String?
-  froxlorVersion      String?              @default("2.0+") // "1.x" or "2.0+"
   mysqlUrl            String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -236,22 +236,23 @@ model Server {
   sshPassword         String?
   sshPort             Int?                 @default(22)
   sshUsername         String?
+  froxlorVersion      String?              @default("2.0+")
   clients             Client[]
-  joomlaInstallations JoomlaInstallation[]
   databaseServers     DatabaseServer[]
+  joomlaInstallations JoomlaInstallation[]
 }
 
 model DatabaseServer {
   id                  String               @id @default(cuid())
   serverId            String
-  server              Server               @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  name                String               // e.g. "MariaDB 10.3" or "MariaDB 10.5"
-  version             String               // e.g. "10.3.39" or "10.5"
-  host                String               @default("localhost") // e.g. "localhost" or "127.0.0.1"
-  port                Int?                 @default(3306) // e.g. 3306 or 3307
-  isDefault           Boolean              @default(false) // Mark which one is default for new installations
+  name                String
+  version             String
+  host                String               @default("localhost")
+  port                Int?                 @default(3306)
+  isDefault           Boolean              @default(false)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+  server              Server               @relation(fields: [serverId], references: [id], onDelete: Cascade)
   joomlaInstallations JoomlaInstallation[]
 
   @@index([serverId])
@@ -437,15 +438,12 @@ model JoomlaInstallation {
   id                         String          @id @default(cuid())
   clientId                   String
   serverId                   String
-  databaseServerId           String?         // Optional: Which database server was used
   customerNo                 String
   folderName                 String
   installPath                String
   installUrl                 String
   databaseName               String
   databasePassword           String
-  databaseHost               String?         // Store the actual host used (e.g. "localhost" or "127.0.0.1")
-  databasePort               Int?            // Store the actual port used (e.g. 3306 or 3307)
   standardDomain             String
   filesExtracted             Int?
   bytesProcessed             BigInt?
@@ -453,10 +451,13 @@ model JoomlaInstallation {
   updatedAt                  DateTime        @updatedAt
   projectId                  String?
   projectAssignmentDismissed Boolean         @default(false)
+  databaseServerId           String?
+  databaseHost               String?
+  databasePort               Int?
   client                     Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  databaseServer             DatabaseServer? @relation(fields: [databaseServerId], references: [id])
   project                    Project?        @relation(fields: [projectId], references: [id])
   server                     Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  databaseServer             DatabaseServer? @relation(fields: [databaseServerId], references: [id], onDelete: SetNull)
 
   @@index([clientId])
   @@index([serverId])

@@ -232,6 +232,14 @@ export default async function ProjectDetail({ params }: Props) {
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(displayStatus)}`}>
                 {statusLabel}
               </span>
+              {website?.isRelaunch && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-sm border border-orange-600">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  RELAUNCH
+                </span>
+              )}
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{getProjectDisplayName(project)}</h1>
             <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -343,6 +351,21 @@ export default async function ProjectDetail({ params }: Props) {
                   type="text"
                   display={website?.domain ?? "-"}
                   value={website?.domain ?? ""}
+                  canEdit={canEdit}
+                />
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Relaunch</dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                <InlineCell
+                  target="website"
+                  id={project.id}
+                  name="isRelaunch"
+                  type="tri"
+                  display={website?.isRelaunch ? "Ja" : "Nein"}
+                  value={website?.isRelaunch ?? false}
                   canEdit={canEdit}
                 />
               </dd>

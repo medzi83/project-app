@@ -587,7 +587,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
               <Th href={mkSort("lastMaterialAt")} active={sp.sort==="lastMaterialAt"} dir={sp.dir}>Letzter Materialeingang</Th>
               <Th href={mkSort("effortBuildMin")} active={sp.sort==="effortBuildMin"} dir={sp.dir}>Aufwand Umsetz.</Th>
               <Th href={mkSort("effortDemoMin")} active={sp.sort==="effortDemoMin"} dir={sp.dir}>Aufwand Demo</Th>
-              <Th>Arbeitstage</Th>
+              <Th href={mkSort("workdays")} active={sp.sort==="workdays"} dir={sp.dir}>Arbeitstage</Th>
               <Th href={mkSort("seo")} active={sp.sort==="seo"} dir={sp.dir}>SEO</Th>
               <Th href={mkSort("textit")} active={sp.sort==="textit"} dir={sp.dir}>Textit</Th>
               <Th href={mkSort("accessible")} active={sp.sort==="accessible"} dir={sp.dir}>Barrierefrei</Th>
@@ -658,7 +658,16 @@ export default async function ProjectsPage({ searchParams }: Props) {
                       )}
                     </div>
                   </td>
-                  <td className="max-w-[200px] truncate" title={p.client?.name ?? ""}>{p.client?.name ?? "-"}</td>
+                  <td className="max-w-[200px]" title={p.client?.name ?? ""}>
+                    <div className="flex items-center gap-2">
+                      <span className="truncate">{p.client?.name ?? "-"}</span>
+                      {p.website?.isRelaunch && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-orange-500 text-white flex-shrink-0" title="Relaunch-Projekt">
+                          RL
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="domain" type="text" display={p.website?.domain ?? "-"} value={p.website?.domain ?? ""} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="priority" type="select" display={labelForWebsitePriority(p.website?.priority)} value={p.website?.priority ?? "NONE"} options={priorityOptions} canEdit={canEdit} /></td>
                   <td><InlineCell target="website" id={p.id} name="pStatus" type="select" display={labelForProductionStatus(p.website?.pStatus)} value={p.website?.pStatus ?? "NONE"} options={pStatusOptions} canEdit={canEdit} /></td>
@@ -742,6 +751,7 @@ function mapOrderBy(sort: string, dir: "asc" | "desc"): Prisma.ProjectOrderByWit
     case "lastMaterialAt": return [{ website: { lastMaterialAt: direction } }, { updatedAt: updatedDesc }];
     case "effortBuildMin": return [{ website: { effortBuildMin: direction } }, { updatedAt: updatedDesc }];
     case "effortDemoMin": return [{ website: { effortDemoMin: direction } }, { updatedAt: updatedDesc }];
+    case "workdays": return [{ website: { lastMaterialAt: direction } }, { website: { demoDate: direction } }, { updatedAt: updatedDesc }];
     case "seo": return [{ website: { seo: direction } }, { updatedAt: updatedDesc }];
     case "textit": return [{ website: { textit: direction } }, { updatedAt: updatedDesc }];
     case "materialStatus": return [{ website: { materialStatus: direction } }, { updatedAt: updatedDesc }];

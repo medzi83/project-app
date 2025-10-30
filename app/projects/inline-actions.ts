@@ -22,7 +22,7 @@ const WebsiteKey = z.enum([
   "domain","priority","pStatus","cms",
   "webDate","demoDate","onlineDate","lastMaterialAt",
   "effortBuildMin","effortDemoMin",
-  "materialStatus","seo","textit","accessible","note",
+  "materialStatus","seo","textit","accessible","isRelaunch","note",
 ]);
 
 const FormSchema = z.object({
@@ -36,7 +36,7 @@ const FormSchema = z.object({
 const dateKeys = new Set(["demoDate","onlineDate","lastMaterialAt"]);
 const dateTimeKeys = new Set(["webDate"]); // webDate has time component
 const hourKeys  = new Set(["effortBuildMin","effortDemoMin"]);
-const triKeys  = new Set(["accessible"]);
+const triKeys  = new Set(["accessible","isRelaunch"]);
 const statusRelevantWebsiteKeys = new Set(["pStatus","webDate","demoDate","onlineDate","materialStatus"]);
 
 function coerce(key: string, v: string | undefined) {
@@ -203,6 +203,12 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
         const nextValue = typeof parsedValue === "boolean" ? parsedValue : null;
         updateData.accessible = nextValue;
         createData.accessible = nextValue;
+        break;
+      }
+      case "isRelaunch": {
+        const nextValue = typeof parsedValue === "boolean" ? parsedValue : false;
+        updateData.isRelaunch = nextValue;
+        createData.isRelaunch = nextValue;
         break;
       }
       case "note": {

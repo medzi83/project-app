@@ -18,6 +18,24 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "30.10.2024",
+    version: "2.2.1",
+    changes: [
+      {
+        title: "Relaunch-Kennzeichnung für Webseitenprojekte",
+        description:
+          "Webseitenprojekte können jetzt als 'Relaunch' markiert werden. Bei der Projekt-Anlage gibt es eine neue Checkbox 'Als Relaunch kennzeichnen'. In der Projekttabelle erscheint bei Relaunch-Projekten ein orange 'RL'-Badge neben dem Kundennamen. Auf der Detailseite wird ein prominentes 'RELAUNCH'-Badge mit Reload-Icon im Header angezeigt. Der Relaunch-Status kann jederzeit über Inline-Editing geändert werden.",
+        type: "feature",
+      },
+      {
+        title: "Arbeitstage-Spalte sortierbar",
+        description:
+          "Die 'Arbeitstage'-Spalte in der Projekttabelle kann jetzt per Klick auf die Spaltenüberschrift sortiert werden. Die Sortierung basiert auf dem letzten Materialeingang und Demo-Datum.",
+        type: "improvement",
+      },
+    ],
+  },
+  {
     date: "29.10.2024",
     version: "2.2.0",
     changes: [

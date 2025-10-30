@@ -58,6 +58,7 @@ const UnifiedProjectSchema = z.object({
   textit: TextitStatus.optional(),
   webDate: z.string().optional().transform(toDate),
   webterminType: z.string().optional().transform((v) => v && v.trim() ? v as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" : null),
+  isRelaunch: z.string().optional().transform((v) => v === "on"),
 
   // Film-spezifische Felder
   filmAgentId: z.string().optional().transform((v) => (v ? v : null)),
@@ -171,6 +172,7 @@ export async function POST(request: NextRequest) {
               note: data.websiteNote,
               demoLink: data.demoLink,
               isWTAssignment,
+              isRelaunch: data.isRelaunch ?? false,
             },
           },
         },

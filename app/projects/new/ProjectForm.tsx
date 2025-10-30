@@ -502,6 +502,13 @@ export function UnifiedProjectForm({
                       </div>
                       <SelectField name="webterminType" label="Art des Termins" options={WEBTERMIN_TYPES} defaultValue="" />
                     </div>
+                    <div className="pt-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="isRelaunch" className="h-4 w-4 rounded border-gray-300" />
+                        <span className="text-sm font-medium text-blue-900">Als Relaunch kennzeichnen</span>
+                      </label>
+                      <p className="text-xs text-blue-700 mt-1 ml-6">Relaunch-Projekte werden in der Tabelle mit einem "RL"-Badge markiert</p>
+                    </div>
                   </div>
                 )}
 
