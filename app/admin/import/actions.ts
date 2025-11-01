@@ -150,6 +150,10 @@ const toDate = (val: string | undefined) => {
 };
 
 export async function importProjects(formData: FormData): Promise<ImportResult> {
+  // SECURITY: Only ADMIN can import projects
+  const { requireRole } = await import("@/lib/authz");
+  await requireRole(["ADMIN"]);
+
   const file = formData.get("file") as File | null;
   if (!file) return { imported: 0, skipped: 0, errors: [{ row: 0, reason: "Keine Datei hochgeladen" }] };
   const text = await file.text();

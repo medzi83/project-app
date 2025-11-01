@@ -248,7 +248,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
   const scopeActive = sp.scope === "active";
 
   const role = session.user.role!;
-  const canEdit = ["ADMIN", "AGENT"].includes(role);
+  const canEdit = role === "ADMIN" || role === "AGENT";
   const clientId = session.user.clientId ?? undefined;
 
   const where: Prisma.ProjectWhereInput = {

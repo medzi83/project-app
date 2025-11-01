@@ -31,6 +31,7 @@ export async function testFroxlorConnection(serverId: string) {
     url: server.froxlorUrl,
     apiKey: server.froxlorApiKey,
     apiSecret: server.froxlorApiSecret,
+    version: server.froxlorVersion || undefined,
   });
 
   return await client.testConnection();
@@ -54,6 +55,7 @@ export async function getPhpConfigs(serverId: string) {
     url: server.froxlorUrl,
     apiKey: server.froxlorApiKey,
     apiSecret: server.froxlorApiSecret,
+    version: server.froxlorVersion || undefined,
   });
 
   const configs = await client.getPhpConfigs();
@@ -83,6 +85,7 @@ export async function getCustomerDomains(serverId: string, customerId: number) {
     url: server.froxlorUrl,
     apiKey: server.froxlorApiKey,
     apiSecret: server.froxlorApiSecret,
+    version: server.froxlorVersion || undefined,
   });
 
   const domains = await client.getCustomerDomains(customerId);
@@ -112,6 +115,7 @@ export async function getCustomerStandardDomain(serverId: string, customerId: nu
     url: server.froxlorUrl,
     apiKey: server.froxlorApiKey,
     apiSecret: server.froxlorApiSecret,
+    version: server.froxlorVersion || undefined,
   });
 
   const domain = await client.getCustomerStandardDomain(customerId, standardSubdomainId);
@@ -148,6 +152,7 @@ export async function updateStandardDomain(formData: FormData) {
     url: server.froxlorUrl,
     apiKey: server.froxlorApiKey,
     apiSecret: server.froxlorApiSecret,
+    version: server.froxlorVersion || undefined,
   });
 
   const result = await client.updateDomain(parseInt(domainId), {
@@ -178,6 +183,7 @@ export async function checkCustomerNumber(serverId: string, customerNumber: stri
     url: server.froxlorUrl,
     apiKey: server.froxlorApiKey,
     apiSecret: server.froxlorApiSecret,
+    version: server.froxlorVersion || undefined,
   });
 
   const customer = await client.findCustomerByNumber(customerNumber, debug);
@@ -289,6 +295,7 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
     url: server.froxlorUrl,
     apiKey: server.froxlorApiKey,
     apiSecret: server.froxlorApiSecret,
+    version: server.froxlorVersion || undefined,
   });
 
   // Update existing customer
@@ -408,6 +415,7 @@ export async function getCustomerDetails(serverId: string, customerNo: string) {
     url: server.froxlorUrl,
     apiKey: server.froxlorApiKey,
     apiSecret: server.froxlorApiSecret,
+    version: server.froxlorVersion || undefined,
   });
 
   const customer = await client.findCustomerByNumber(customerNo);
@@ -437,110 +445,6 @@ export async function getCustomerDetails(serverId: string, customerNo: string) {
     },
     standardDomain,
   };
-}
-
-export async function uploadJoomlaHtaccess(formData: FormData) {
-  const session = await getAuthSession();
-  if (!session || session.user.role !== "ADMIN") {
-    return { success: false, message: "Nicht autorisiert" };
-  }
-
-  const clientId = formData.get("clientId") as string;
-  const serverId = formData.get("serverId") as string;
-  const targetPath = formData.get("targetPath") as string; // e.g., /var/customers/webs/customer123/
-
-  if (!targetPath) {
-    return { success: false, message: "Zielpfad fehlt" };
-  }
-
-  const server = await prisma.server.findUnique({
-    where: { id: serverId },
-  });
-
-  if (!server) {
-    return { success: false, message: "Server nicht gefunden" };
-  }
-
-  if (!server.sshHost || !server.sshUsername || !server.sshPassword) {
-    return { success: false, message: "SSH-Zugangsdaten unvollständig" };
-  }
-
-  try {
-    const { Client } = await import('ssh2');
-    const { readFileSync } = await import('fs');
-    const { resolve } = await import('path');
-
-    // Read the .htaccess template
-    const htaccessPath = resolve(process.cwd(), 'storage', 'joomla', 'joomla.htaccess');
-    const htaccessContent = readFileSync(htaccessPath, 'utf8');
-
-    // Connect via SSH
-    const conn = new Client();
-
-    return new Promise<{ success: boolean; message: string }>((resolvePromise) => {
-      conn.on('ready', () => {
-        // Upload the .htaccess file
-        conn.sftp((err, sftp) => {
-          if (err) {
-            conn.end();
-            return resolvePromise({ success: false, message: `SFTP-Fehler: ${err.message}` });
-          }
-
-          const remotePath = `${targetPath}/.htaccess`;
-
-          // Write the file
-          const writeStream = sftp.createWriteStream(remotePath, {
-            mode: 0o644, // rw-r--r--
-          });
-
-          writeStream.on('close', () => {
-            // Set correct ownership (assuming the customer user from Froxlor)
-            conn.exec(`chown www-data:www-data "${remotePath}" && chmod 644 "${remotePath}"`, (err, stream) => {
-              if (err) {
-                conn.end();
-                return resolvePromise({
-                  success: true,
-                  message: 'Datei hochgeladen, Berechtigungen konnten nicht gesetzt werden'
-                });
-              }
-
-              stream.on('close', () => {
-                conn.end();
-                resolvePromise({
-                  success: true,
-                  message: '.htaccess erfolgreich hochgeladen und Berechtigungen gesetzt'
-                });
-              });
-            });
-          });
-
-          writeStream.on('error', (err: Error) => {
-            conn.end();
-            resolvePromise({ success: false, message: `Upload-Fehler: ${err.message}` });
-          });
-
-          writeStream.write(htaccessContent);
-          writeStream.end();
-        });
-      });
-
-      conn.on('error', (err: Error) => {
-        resolvePromise({ success: false, message: `SSH-Verbindungsfehler: ${err.message}` });
-      });
-
-      conn.connect({
-        host: server.sshHost ?? undefined,
-        port: server.sshPort || 22,
-        username: server.sshUsername ?? undefined,
-        password: server.sshPassword ?? undefined,
-      });
-    });
-  } catch (error) {
-    return {
-      success: false,
-      message: `Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
-    };
-  }
 }
 
 export async function installJoomla(formData: FormData) {

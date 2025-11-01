@@ -145,8 +145,8 @@ model ProjectWebsite {
   demoLink       String?
   materialStatus MaterialStatus         @default(ANGEFORDERT)
   isWTAssignment Boolean                @default(false)
-  isRelaunch     Boolean                @default(false)
   webterminType  WebterminType?
+  isRelaunch     Boolean                @default(false)
   domainHistory  ProjectDomainHistory[]
   project        Project                @relation(fields: [projectId], references: [id])
 }
@@ -479,6 +479,7 @@ enum Role {
   ADMIN
   AGENT
   CUSTOMER
+  SALES
 }
 
 enum ProjectType {

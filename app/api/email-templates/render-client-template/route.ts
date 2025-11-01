@@ -8,6 +8,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // SECURITY: Only ADMIN and AGENT can render templates
+  if (!["ADMIN", "AGENT"].includes(session.user.role || "")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
     const { templateId, clientId } = body;
@@ -87,7 +92,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Build subject and body with placeholders replaced
-    let renderedSubject = replacePlaceholders(template.subject);
+    const renderedSubject = replacePlaceholders(template.subject);
     let renderedBody = replacePlaceholders(template.body);
 
     // Append signature if available

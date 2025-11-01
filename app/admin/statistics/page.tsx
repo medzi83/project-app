@@ -161,20 +161,23 @@ function ensureMonthEntry(accumulators: Map<string, MonthAccumulator>, date: Dat
 export default async function AdminStatisticsPage({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[]>;
+  searchParams?: Promise<Record<string, string | string[]>>;
 }) {
   const session = await getAuthSession();
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/");
+
+  // Next.js 15: await searchParams
+  const params = await searchParams;
 
   const now = new Date();
   const today = startOfDay(now);
   const defaultEndMonth = startOfMonth(today);
   const defaultStartMonth = startOfMonth(new Date(defaultEndMonth.getFullYear(), defaultEndMonth.getMonth() - (MONTHS_TO_SHOW - 1), 1));
 
-  const startRawParam = Array.isArray(searchParams?.start) ? searchParams?.start[0] : searchParams?.start;
-  const endRawParam = Array.isArray(searchParams?.end) ? searchParams?.end[0] : searchParams?.end;
-  const agencyRawParam = Array.isArray(searchParams?.agency) ? searchParams?.agency[0] : searchParams?.agency;
+  const startRawParam = Array.isArray(params?.start) ? params?.start[0] : params?.start;
+  const endRawParam = Array.isArray(params?.end) ? params?.end[0] : params?.end;
+  const agencyRawParam = Array.isArray(params?.agency) ? params?.agency[0] : params?.agency;
   const agencyFilter = typeof agencyRawParam === "string" ? agencyRawParam : "";
 
   const startParam = parseDateParam(startRawParam ?? null);

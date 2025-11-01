@@ -53,7 +53,7 @@ export default function WorkStoppedProjectsAccordion({
                 Projekte mit Arbeitsstopp ({projects.length})
               </h2>
               <p className="text-sm text-orange-900 font-medium mt-1">
-                Diese Projekte befinden sich im Status „Arbeitsstopp". Bitte keine weiteren Arbeiten durchführen.
+                Diese Projekte befinden sich im Status &quot;Arbeitsstopp&quot;. Bitte keine weiteren Arbeiten durchführen.
               </p>
             </div>
             <div className="flex-shrink-0">

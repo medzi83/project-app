@@ -21,6 +21,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing clientId" }, { status: 400 });
   }
 
+  // SECURITY: Check authorization
+  if (session.user.role === "CUSTOMER") {
+    // Customers can only update their own client data
+    if (session.user.clientId !== clientId) {
+      return NextResponse.json({ error: "Forbidden: Cannot update other clients" }, { status: 403 });
+    }
+  } else if (!["ADMIN", "AGENT"].includes(session.user.role || "")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   // Validate email if provided
   if (email && typeof email === "string") {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

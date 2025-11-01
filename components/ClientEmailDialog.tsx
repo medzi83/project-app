@@ -237,7 +237,7 @@ export function ClientEmailDialog({
             )}
             {templates.length === 0 && !loadingTemplates && (
               <p className="text-xs text-yellow-600">
-                Keine allgemeinen E-Mail-Vorlagen vorhanden. Bitte erstellen Sie zuerst Vorlagen in der Kategorie "Allgemein".
+                Keine allgemeinen E-Mail-Vorlagen vorhanden. Bitte erstellen Sie zuerst Vorlagen in der Kategorie &quot;Allgemein&quot;.
               </p>
             )}
           </div>

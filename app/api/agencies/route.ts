@@ -14,6 +14,11 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // SECURITY: Only ADMIN and AGENT can access agencies list
+  if (!["ADMIN", "AGENT"].includes(session.user.role || "")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const agencies = await prisma.agency.findMany({
       select: {

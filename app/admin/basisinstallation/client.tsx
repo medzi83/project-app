@@ -395,7 +395,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <p>
-                      Wählen Sie einen bestehenden Kunden oder klicken Sie auf "Neuen Kunden anlegen"
+                      Wählen Sie einen bestehenden Kunden oder klicken Sie auf &quot;Neuen Kunden anlegen&quot;
                     </p>
                   </div>
 

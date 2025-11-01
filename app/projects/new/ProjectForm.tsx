@@ -507,7 +507,7 @@ export function UnifiedProjectForm({
                         <input type="checkbox" name="isRelaunch" className="h-4 w-4 rounded border-gray-300" />
                         <span className="text-sm font-medium text-blue-900">Als Relaunch kennzeichnen</span>
                       </label>
-                      <p className="text-xs text-blue-700 mt-1 ml-6">Relaunch-Projekte werden in der Tabelle mit einem "RL"-Badge markiert</p>
+                      <p className="text-xs text-blue-700 mt-1 ml-6">Relaunch-Projekte werden in der Tabelle mit einem &quot;RL&quot;-Badge markiert</p>
                     </div>
                   </div>
                 )}

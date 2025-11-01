@@ -132,7 +132,7 @@ const STATUS_LABELS = {
 export default async function FilmProjectDetailPage({ params }: Props) {
   const session = await getAuthSession();
   if (!session) redirect("/login");
-  if (!session.user.role || !["ADMIN", "AGENT"].includes(session.user.role)) {
+  if (!session.user.role || !["ADMIN", "AGENT", "SALES"].includes(session.user.role)) {
     redirect("/");
   }
 
@@ -234,9 +234,10 @@ export default async function FilmProjectDetailPage({ params }: Props) {
   }
 
   const film = project.film;
-  const isAdmin = session.user.role === "ADMIN";
-  const canEdit = session.user.role === "ADMIN" || session.user.role === "AGENT";
-  const canDeletePreview = session.user.role === "ADMIN" || session.user.role === "AGENT";
+  const role = session.user.role!;
+  const isAdmin = role === "ADMIN";
+  const canEdit = role === "ADMIN" || role === "AGENT";
+  const canDeletePreview = role === "ADMIN" || role === "AGENT";
   const finalLinkData = formatLink(film.finalLink, "Zum Video");
   const onlineLinkData = formatLink(film.onlineLink ?? (film.onlineDate ? film.finalLink : undefined), "Zum Video");
   const derivedStatus = deriveFilmStatus({

@@ -125,7 +125,7 @@ export default async function ProjectDetail({ params }: Props) {
 
   const website = project.website;
   const role = session.user.role!;
-  const canEdit = ["ADMIN", "AGENT"].includes(role);
+  const canEdit = role === "ADMIN" || role === "AGENT";
 
   // Prepare options for InlineCell selects (same as in projects list)
   const materialStatusOptions = MATERIAL_STATUS_VALUES.map((value) => ({ value, label: labelForMaterialStatus(value) }));

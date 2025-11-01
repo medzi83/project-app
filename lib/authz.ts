@@ -114,3 +114,29 @@ export async function requireAuthenticated(): Promise<AuthSession> {
   if (!session) throw new Error("UNAUTHORIZED");
   return session;
 }
+
+/**
+ * Check if user is authenticated. Returns boolean instead of throwing error.
+ * Useful for conditional rendering or logic without try-catch blocks.
+ */
+export async function isAuthenticated(): Promise<boolean> {
+  const session = await getAuthSession();
+  return !!session;
+}
+
+/**
+ * Check if user has a specific role. Returns boolean.
+ */
+export async function hasRole(role: Role): Promise<boolean> {
+  const session = await getAuthSession();
+  return session?.user?.role === role;
+}
+
+/**
+ * Check if user has any of the specified roles. Returns boolean.
+ */
+export async function hasAnyRole(roles: Role[]): Promise<boolean> {
+  const session = await getAuthSession();
+  const userRole = session?.user?.role;
+  return userRole ? roles.includes(userRole) : false;
+}

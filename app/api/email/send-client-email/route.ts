@@ -11,6 +11,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // SECURITY: Only ADMIN and AGENT can send emails
+  if (!["ADMIN", "AGENT"].includes(session.user.role || "")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
     const { clientId, toEmail, subject, body: emailBody } = body;

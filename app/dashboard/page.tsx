@@ -9,6 +9,7 @@ import { getEffectiveUser, getAuthSession } from "@/lib/authz";
 import { NoticeBoard, type NoticeBoardEntry } from "@/components/NoticeBoard";
 import { InstallationWarningsSlideout } from "./InstallationWarningsSlideout";
 import WorkStoppedProjectsAccordion from "./WorkStoppedProjectsAccordion";
+import { SalesDashboard } from "./SalesDashboard";
 
 export const metadata = { title: "Dashboard" };
 
@@ -183,8 +184,177 @@ export default async function DashboardPage({
     redirect("/login");
   }
 
-  const userRole = (session.user.role ?? "CUSTOMER") as "ADMIN" | "AGENT" | "CUSTOMER";
+  const userRole = (session.user.role ?? "CUSTOMER") as "ADMIN" | "AGENT" | "SALES" | "CUSTOMER";
   const sessionUserId = session.user.id ?? null;
+
+  // Special dashboard for SALES users
+  if (userRole === "SALES") {
+    // Fetch latest completed website projects
+    const latestWebsites = await prisma.project.findMany({
+      where: {
+        type: "WEBSITE",
+        website: {
+          is: {
+            onlineDate: { not: null },
+          },
+        },
+      },
+      include: {
+        client: {
+          select: {
+            name: true,
+            agency: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        website: {
+          select: {
+            domain: true,
+            onlineDate: true,
+          },
+        },
+      },
+      orderBy: {
+        website: {
+          onlineDate: "desc",
+        },
+      },
+      take: 10,
+    });
+
+    // Fetch latest completed film projects
+    const latestFilms = await prisma.project.findMany({
+      where: {
+        type: "FILM",
+        film: {
+          is: {
+            onlineDate: { not: null },
+          },
+        },
+      },
+      include: {
+        client: {
+          select: {
+            name: true,
+            agency: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        film: {
+          select: {
+            onlineLink: true,
+            finalLink: true,
+            onlineDate: true,
+          },
+        },
+      },
+      orderBy: {
+        film: {
+          onlineDate: "desc",
+        },
+      },
+      take: 10,
+    });
+
+    // Fetch all agencies for filter
+    const agencies = await prisma.agency.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        logoIconPath: true,
+      },
+    });
+
+    // Fetch notices for SALES (only active, not archived)
+    const notices = await prisma.notice.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { visibility: "GLOBAL" },
+          {
+            visibility: "TARGETED",
+            recipients: {
+              some: { userId: sessionUserId ?? undefined },
+            },
+          },
+        ],
+      },
+      include: {
+        recipients: {
+          include: {
+            user: {
+              select: { name: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    });
+
+    const noticeBoardEntries: NoticeBoardEntry[] = notices.map((n) => ({
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      createdAt: n.createdAt.toISOString(),
+      isPinned: false, // SALES users don't have pinning functionality
+      requireAcknowledgement: n.requireAcknowledgement,
+      visibility: n.visibility,
+      targetLabel: buildNoticeTargetLabel(n.visibility, "SALES", n.recipients),
+    }));
+
+    return (
+      <main className="p-6 space-y-6">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">
+          Dashboard - Vertrieb
+        </h1>
+
+        <section className="space-y-4 rounded-2xl border border-purple-100 bg-gradient-to-br from-white to-purple-50/30 p-5 sm:p-6 shadow-lg">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-bold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent">
+              Wichtige Hinweise
+            </h2>
+            <Link href="/notices" className="text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors">
+              Hinweis-Historie →
+            </Link>
+          </div>
+          <NoticeBoard notices={noticeBoardEntries} canAcknowledge={false} />
+        </section>
+
+        <SalesDashboard
+          websiteProjects={latestWebsites.map((p) => ({
+            id: p.id,
+            title: p.title,
+            clientName: p.client.name,
+            domain: p.website?.domain ?? null,
+            onlineDate: p.website?.onlineDate ?? null,
+            agencyId: p.client.agency?.id ?? null,
+            agencyName: p.client.agency?.name ?? null,
+          }))}
+          filmProjects={latestFilms.map((p) => ({
+            id: p.id,
+            title: p.title,
+            clientName: p.client.name,
+            onlineLink: p.film?.onlineLink ?? null,
+            finalLink: p.film?.finalLink ?? null,
+            onlineDate: p.film?.onlineDate ?? null,
+            agencyId: p.client.agency?.id ?? null,
+            agencyName: p.client.agency?.name ?? null,
+          }))}
+          agencies={agencies}
+        />
+      </main>
+    );
+  }
 
   // Get effective user (could be an agent in dev mode)
   const effectiveUser = await getEffectiveUser();

@@ -5,7 +5,7 @@ import { signOut } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap, Megaphone, MessageSquareHeart, ExternalLink, HardDrive, FileText } from "lucide-react";
+import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap, Megaphone, MessageSquareHeart, ExternalLink, HardDrive, FileText, Handshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -25,7 +25,7 @@ import { GlobalClientSearch } from "@/components/GlobalClientSearch";
 import { FeedbackNotificationBadge, FeedbackNotificationProvider } from "@/components/FeedbackNotificationBadge";
 import { PSNLogo } from "@/components/PSNLogo";
 
-export type Role = "ADMIN" | "AGENT";
+export type Role = "ADMIN" | "AGENT" | "SALES";
 
 type User = {
   name: string;
@@ -118,7 +118,7 @@ export default function AppShell({ user, counts, devMode, agencies, children }: 
 
           <div className="ml-auto flex items-center gap-2">
             {/* Global Client Search */}
-            {(navigationRole === "ADMIN" || navigationRole === "AGENT") && (
+            {(navigationRole === "ADMIN" || navigationRole === "AGENT" || navigationRole === "SALES") && (
               <GlobalClientSearch />
             )}
 
@@ -208,6 +208,7 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
     ? [
         { label: "Admins", href: "/admin/admins", icon: Shield },
         { label: "Agenten", href: "/admin/agents", icon: Users, badge: counts ? String(counts.agentsActive ?? 0) : undefined },
+        { label: "Vertrieb", href: "/admin/vertrieb", icon: Handshake },
         { label: "Agenturen", href: "/admin/agencies", icon: Landmark },
         { label: "Hinweise", href: "/admin/notices", icon: Megaphone },
         { label: "Kummerkasten", href: "/admin/kummerkasten", icon: MessageSquareHeart, badge: counts?.feedbackOpen ? String(counts.feedbackOpen) : undefined },
@@ -328,17 +329,20 @@ function SidebarLink({ item, activePath, onNavigate }: { item: NavItem; activePa
 }
 
 function RoleBadge({ role }: { role: Role }) {
+  const roleLabel = role === "ADMIN" ? "admin" : role === "AGENT" ? "agent" : "vertrieb";
   return (
     <Badge
       variant={role === "ADMIN" ? "default" : "secondary"}
       className={`uppercase font-semibold ${role === "ADMIN" ? "bg-gradient-to-r from-purple-600 to-pink-600 border-0" : ""}`}
     >
-      {role.toLowerCase()}
+      {roleLabel}
     </Badge>
   );
 }
 
 function UserPill({ user }: { user: User }) {
+  const roleLabel = user.role === "ADMIN" ? "admin" : user.role === "AGENT" ? "agent" : "vertrieb";
+
   const handleSignOut = React.useCallback(async () => {
     if (typeof window !== "undefined") {
       const globalAny = window as typeof window & { __NEXTAUTH?: { baseUrl?: string; basePath?: string } };
@@ -372,7 +376,7 @@ function UserPill({ user }: { user: User }) {
           </div>
           <div className="leading-tight">
             <div className="text-xs font-medium">{user.name}</div>
-            <div className="text-[10px] uppercase text-gray-500">{user.role}</div>
+            <div className="text-[10px] uppercase text-gray-500">{roleLabel}</div>
           </div>
           <ChevronDown className="h-3 w-3 text-gray-500" />
           <div className="absolute -top-1 -right-1">
@@ -384,7 +388,7 @@ function UserPill({ user }: { user: User }) {
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{user.name}</p>
-            <p className="text-xs leading-none text-muted-foreground uppercase">{user.role}</p>
+            <p className="text-xs leading-none text-muted-foreground uppercase">{roleLabel}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

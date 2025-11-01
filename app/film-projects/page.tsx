@@ -486,7 +486,7 @@ type Props = {
 export default async function FilmProjectsPage({ searchParams }: Props) {
   const session = await getAuthSession();
   if (!session || !session.user.id) redirect("/login");
-  if (!session.user.role || !["ADMIN", "AGENT"].includes(session.user.role)) {
+  if (!session.user.role || !["ADMIN", "AGENT", "SALES"].includes(session.user.role)) {
     redirect("/");
   }
 
@@ -717,8 +717,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
   ];
 
   const rows = buildRows(filmProjects);
-  const canEdit = ["ADMIN", "AGENT"].includes(session.user.role || "");
-  const canDelete = session.user.role === "ADMIN";
+  const canEdit = role === "ADMIN" || role === "AGENT";
+  const canDelete = role === "ADMIN";
   const mkSort = (key: string) => makeSortHref({ current: sp, key });
   const mkPageHref = (p: number) => makePageHref({ current: sp, page: p });
   const mkPageSizeHref = (s: number) => makePageSizeHref({ current: sp, size: s });

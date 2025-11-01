@@ -482,7 +482,9 @@ export default async function ClientDetailPage({ params }: Props) {
     }
   }
 
-  const isAdmin = session.user.role === "ADMIN";
+  const role = session.user.role!;
+  const isAdmin = role === "ADMIN";
+  const canSendEmail = role === "ADMIN" || role === "AGENT";
 
   // Collect all email logs from all projects
   const allEmailLogs = client.projects.flatMap((project) =>
@@ -521,6 +523,7 @@ export default async function ClientDetailPage({ params }: Props) {
           finished: client.finished,
         }}
         isAdmin={isAdmin}
+        canSendEmail={canSendEmail}
       />
 
       {/* Info-Cards oben */}
@@ -593,7 +596,7 @@ export default async function ClientDetailPage({ params }: Props) {
                 </svg>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-orange-900">
-                    Projekte im Status "Umsetzung" ohne Installation
+                    Projekte im Status &quot;Umsetzung&quot; ohne Installation
                   </p>
                   <p className="text-xs text-orange-700 mt-1">
                     Bitte ordnen Sie den Projekten eine Installation zu oder erstellen Sie eine neue.

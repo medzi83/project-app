@@ -18,6 +18,54 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "01.11.2024",
+    version: "2.3.0",
+    changes: [
+      {
+        title: "Vertrieb-Bereich mit SALES-Rolle",
+        description:
+          "Neuer Bereich für Vertriebsmitarbeiter: Admin kann unter /admin/vertrieb SALES-Benutzer anlegen und verwalten (Name, E-Mail, Passwort). SALES-Benutzer haben Lesezugriff auf alle Projekte, Filmprojekte und Kundendaten, können aber nichts bearbeiten. Separate Dashboard-Ansicht mit 'Neueste Webseiten' und 'Neueste Filmprojekte' (jeweils die letzten 10 online gegangenen Projekte) inklusive Filter nach Agentur mit Icons.",
+        type: "feature",
+      },
+      {
+        title: "Read-Only Zugriff für Vertrieb",
+        description:
+          "SALES-Benutzer sehen alle Projekt- und Filmprojektlisten sowie Detailseiten im Read-Only-Modus: Inline-Bearbeitungsfelder sind deaktiviert, 'Mail an Kunden'-Button ausgeblendet, keine Bearbeitung von Kunden-Basisdaten oder Froxlor-Daten möglich, Kundensuchfunktion verfügbar.",
+        type: "feature",
+      },
+      {
+        title: "Dashboard-Verbesserungen für Vertrieb",
+        description:
+          "Spezielles SALES-Dashboard mit Agentur-Filter (Buttons mit Logos statt Dropdown), intelligente Projekt-Anzeige (Kundenname immer als Hauptüberschrift, Projekttitel nur wenn vorhanden darunter), 'Onlinestellung am:' Label vor Datum, nur aktive (nicht archivierte) Hinweise werden angezeigt.",
+        type: "improvement",
+      },
+    ],
+  },
+  {
+    date: "31.10.2024",
+    version: "2.2.2",
+    changes: [
+      {
+        title: "Sicherheitslücken geschlossen",
+        description:
+          "7 kritische Sicherheitslücken behoben: IDOR-Schwachstelle (Zugriff auf fremde Daten), unbefugter E-Mail-Versand, ungeschützte Template- und Import-Funktionen. Alle API-Routes und Server Actions sind jetzt mit Role-Checks abgesichert.",
+        type: "fix",
+      },
+      {
+        title: "Auth-Verbesserungen",
+        description:
+          "Middleware schützt jetzt alle Routen. Neue Helper-Funktionen (isAuthenticated, hasRole, hasAnyRole) für bessere Code-Qualität. Auto-Redirect von Login zu Dashboard für eingeloggte User.",
+        type: "improvement",
+      },
+      {
+        title: "Veraltete .htaccess Upload-Funktion entfernt",
+        description:
+          "Die nicht mehr verwendete uploadJoomlaHtaccess-Funktion wurde entfernt. Die Umbenennung von htaccess.bak zu .htaccess während der Joomla-Installation bleibt erhalten.",
+        type: "improvement",
+      },
+    ],
+  },
+  {
     date: "30.10.2024",
     version: "2.2.1",
     changes: [

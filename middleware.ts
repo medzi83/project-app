@@ -3,13 +3,28 @@ import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
-    // This function is called for protected routes only
+    const token = req.nextauth.token;
+    const pathname = req.nextUrl.pathname;
+
+    // If user is authenticated and tries to access login page, redirect to dashboard
+    if (token && pathname === "/login") {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+
+    // For all other protected routes, let them through if authenticated
     return NextResponse.next();
   },
   {
     callbacks: {
-      authorized: ({ token }) => {
-        // Return true if user is authenticated
+      authorized: ({ token, req }) => {
+        const pathname = req.nextUrl.pathname;
+
+        // Allow access to login page without authentication
+        if (pathname === "/login") {
+          return true;
+        }
+
+        // For all other routes, require authentication
         return !!token;
       },
     },
@@ -19,7 +34,7 @@ export default withAuth(
   }
 );
 
-// Protect all routes except login and public API routes
+// Protect all routes including login (we handle login separately in the middleware)
 export const config = {
   matcher: [
     /*
@@ -28,8 +43,7 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - login (login page)
      */
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|login).*)",
+    "/((?!api/auth|_next/static|_next/image|favicon.ico).*)",
   ],
 };
