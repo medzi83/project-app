@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { serverId, customerNo, folderName, installUrl, databaseName, databasePassword, clientId, projectId } = body;
+    const { serverId, customerNo, folderName, installUrl, databaseName, databasePassword, clientId, projectId, mysqlServerId } = body;
 
     if (!serverId || !customerNo || !folderName || !installUrl || !databaseName || !databasePassword) {
       return NextResponse.json(
@@ -48,9 +48,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get server details
+    console.log('[DEBUG joomla-extract] Received mysqlServerId:', mysqlServerId);
+
+    // Get server details with default database server
     const server = await prisma.server.findUnique({
       where: { id: serverId },
+      include: {
+        databaseServers: {
+          where: { isDefault: true },
+          take: 1,
+        },
+      },
     });
 
     if (!server || !server.froxlorUrl || !server.froxlorApiKey || !server.froxlorApiSecret) {
@@ -59,6 +67,44 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    // Determine which MySQL server to use
+    // Priority: 1. User selection (mysqlServerId), 2. Default server, 3. localhost fallback
+    let mysqlHost = "localhost";
+    let mysqlPort = 3306;
+
+    if (mysqlServerId !== undefined && mysqlServerId !== null) {
+      // User selected a specific MySQL server - get its details from Froxlor
+      console.log('[DEBUG joomla-extract] Fetching MySQL server details from Froxlor for ID:', mysqlServerId);
+      const froxlorClient = new FroxlorClient({
+        url: server.froxlorUrl,
+        apiKey: server.froxlorApiKey,
+        apiSecret: server.froxlorApiSecret,
+      });
+
+      const allMysqlServers = await froxlorClient.getMysqlServers();
+      const selectedServer = allMysqlServers.find(s => s.id === mysqlServerId);
+
+      if (selectedServer) {
+        // Froxlor API returns "host" and "port", not "dbserver" and "dbport"
+        mysqlHost = selectedServer.host || selectedServer.dbserver || "localhost";
+        mysqlPort = (selectedServer.port ? parseInt(selectedServer.port) : selectedServer.dbport) || 3306;
+        console.log('[DEBUG joomla-extract] Using user-selected MySQL server:', { mysqlHost, mysqlPort, server: selectedServer });
+      } else {
+        console.warn('[DEBUG joomla-extract] Selected MySQL server not found, falling back to default');
+        const defaultDbServer = server.databaseServers[0];
+        mysqlHost = defaultDbServer?.host || "localhost";
+        mysqlPort = defaultDbServer?.port || 3306;
+      }
+    } else {
+      // Fall back to default database server
+      console.log('[DEBUG joomla-extract] No mysqlServerId provided, using default database server');
+      const defaultDbServer = server.databaseServers[0];
+      mysqlHost = defaultDbServer?.host || "localhost";
+      mysqlPort = defaultDbServer?.port || 3306;
+    }
+
+    console.log('[DEBUG joomla-extract] Final MySQL connection:', { mysqlHost, mysqlPort });
 
     // Get customer details from Froxlor
     const froxlorClient = new FroxlorClient({
@@ -153,8 +199,8 @@ export async function POST(request: NextRequest) {
     // Normalize documentroot to remove trailing slashes
     const normalizedDocRoot = customer.documentroot.replace(/\/+$/, '');
     const targetPath = `${normalizedDocRoot}/${folderName}`;
-    // Always use localhost for MySQL since the script runs ON the server via SSH
-    const mysqlHost = "localhost";
+    // MySQL host and port from server's default database configuration
+    // (already defined above from server.databaseServers)
 
     // Wait a bit for the extraction to fully finish
     await new Promise(resolve => setTimeout(resolve, 3000));
@@ -180,7 +226,16 @@ export async function POST(request: NextRequest) {
             // Escape special characters for sed
             const escapedPassword = databasePassword.replace(/[\/&']/g, '\\$&');
             const escapedDbName = databaseName.replace(/[\/&']/g, '\\$&');
-            const escapedHost = mysqlHost.replace(/[\/&']/g, '\\$&');
+
+            // Format host for Joomla configuration.php
+            // - For non-default port (not 3306): include port in host string (e.g., '127.0.0.1:3307')
+            // - For localhost or default port: use just the hostname (e.g., 'localhost')
+            let hostForConfig = mysqlHost;
+            if (mysqlPort !== 3306 && mysqlHost !== 'localhost') {
+              hostForConfig = `${mysqlHost}:${mysqlPort}`;
+            }
+            const escapedHost = hostForConfig.replace(/[\/&']/g, '\\$&');
+            const escapedPort = String(mysqlPort);
 
             // Single bash script to do all post-processing
             const postProcessScript = `
@@ -246,9 +301,14 @@ if [ -d installation/sql ]; then
     sed -i "s/#__/\$DB_PREFIX/g" /tmp/combined_${escapedDbName}.sql
     echo "Replaced #__ with \$DB_PREFIX in SQL dump"
 
-    # Import combined SQL (always use socket connection for local MySQL)
-    # Don't use -h flag at all for localhost
-    mysql -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < /tmp/combined_${escapedDbName}.sql 2>&1
+    # Import combined SQL with proper host and port
+    if [ "${escapedHost}" = "localhost" ] && [ "${escapedPort}" = "3306" ]; then
+      # Use socket connection for default localhost:3306
+      mysql -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < /tmp/combined_${escapedDbName}.sql 2>&1
+    else
+      # Use TCP connection for non-standard hosts/ports
+      mysql -h ${escapedHost} -P ${escapedPort} -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < /tmp/combined_${escapedDbName}.sql 2>&1
+    fi
     if [ $? -eq 0 ]; then
       echo "✓ Imported multi-part database (site.sql + parts)"
       rm -f /tmp/combined_${escapedDbName}.sql
@@ -258,10 +318,12 @@ if [ -d installation/sql ]; then
     fi
   # Standard single-file SQL dump
   elif [ -f mysql/joomla.sql ]; then
-    if [ "${escapedHost}" = "localhost" ] || [ "${escapedHost}" = "127.0.0.1" ]; then
+    if [ "${escapedHost}" = "localhost" ] && [ "${escapedPort}" = "3306" ]; then
+      # Use socket connection for default localhost:3306
       mysql -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < mysql/joomla.sql 2>&1
     else
-      mysql -h ${escapedHost} -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < mysql/joomla.sql 2>&1
+      # Use TCP connection for non-standard hosts/ports
+      mysql -h ${escapedHost} -P ${escapedPort} -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < mysql/joomla.sql 2>&1
     fi
     if [ $? -eq 0 ]; then
       echo "✓ Imported database from mysql/joomla.sql"
@@ -272,10 +334,12 @@ if [ -d installation/sql ]; then
     # Try to find any .sql file (not .s## parts)
     SQLFILE=$(find . -name "*.sql" -type f ! -name "*.s[0-9]*" | head -n 1)
     if [ -n "$SQLFILE" ]; then
-      if [ "${escapedHost}" = "localhost" ] || [ "${escapedHost}" = "127.0.0.1" ]; then
+      if [ "${escapedHost}" = "localhost" ] && [ "${escapedPort}" = "3306" ]; then
+        # Use socket connection for default localhost:3306
         mysql -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < "$SQLFILE" 2>&1
       else
-        mysql -h ${escapedHost} -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < "$SQLFILE" 2>&1
+        # Use TCP connection for non-standard hosts/ports
+        mysql -h ${escapedHost} -P ${escapedPort} -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < "$SQLFILE" 2>&1
       fi
       if [ $? -eq 0 ]; then
         echo "✓ Imported database from $SQLFILE"

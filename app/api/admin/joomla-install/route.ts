@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { serverId, customerNo, folderName, dbPassword } = body;
+    const { serverId, customerNo, folderName, dbPassword, mysqlServerId } = body;
 
     if (!serverId || !customerNo || !folderName || !dbPassword) {
       return NextResponse.json(
@@ -35,9 +35,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get server
+    // Get server with default database server
     const server = await prisma.server.findUnique({
       where: { id: serverId },
+      include: {
+        databaseServers: {
+          where: { isDefault: true },
+          take: 1,
+        },
+      },
     });
 
     if (!server) {
@@ -164,11 +170,30 @@ export async function POST(request: NextRequest) {
     const protocol = useHttps ? "https" : "http";
     const installUrl = `${protocol}://${standardDomain}/${folderName}/kickstart.php`;
 
+    // Determine which MySQL server to use
+    // Priority: 1. User selection, 2. Default server, 3. undefined (Froxlor default)
+    let froxlorDbServerId: number | undefined;
+
+    if (mysqlServerId) {
+      // User selected a specific MySQL server
+      froxlorDbServerId = mysqlServerId;
+      console.log(`[DEBUG] Using user-selected MySQL server ID: ${froxlorDbServerId}`);
+    } else {
+      // Fall back to server's default database server (if configured)
+      const defaultDbServer = server.databaseServers?.[0];
+      froxlorDbServerId = (defaultDbServer as any)?.froxlorDbServerId as number | undefined;
+      console.log(`[DEBUG] Using default MySQL server ID: ${froxlorDbServerId}`);
+    }
+
+    console.log(`[DEBUG] Request body mysqlServerId:`, mysqlServerId);
+    console.log(`[DEBUG] Final froxlorDbServerId to be used:`, froxlorDbServerId);
+
     // Create MySQL database in Froxlor
     const dbResult = await froxlorClient.createDatabase(
       customer.customerid,
       dbPassword,
-      `Joomla Database for ${folderName}`
+      `Joomla Database for ${folderName}`,
+      froxlorDbServerId // Pass the Froxlor database server ID
     );
 
     if (!dbResult.success) {
@@ -279,13 +304,16 @@ export async function POST(request: NextRequest) {
         console.log(`✓ Different servers - streaming files via SFTP`);
 
         // Download kickstart.php from Vautron 6 (small file - can use buffer)
+        console.log(`Downloading kickstart.php...`);
         const kickstartBuffer = await sftpStorage.get(`${BACKUP_PATH}/kickstart.php`) as Buffer;
+        console.log(`Uploading kickstart.php to target...`);
         await sftpTarget.put(kickstartBuffer, `${targetPath}/kickstart.php`);
         console.log(`✓ Uploaded kickstart.php`);
 
         // Stream large backup file using Node.js pipeline for reliable transfer
         // NOTE: .htaccess comes from the backup (htaccess.bak), not from Vautron 6
         console.log(`Starting transfer of ${backupFileName}...`);
+        const transferStartTime = Date.now();
 
         try {
           // Start reading from source
@@ -302,10 +330,17 @@ export async function POST(request: NextRequest) {
 
           // Add progress tracking
           let bytesTransferred = 0;
+          let lastLogTime = Date.now();
           readStream.on('data', (chunk: Buffer) => {
             bytesTransferred += chunk.length;
-            if (bytesTransferred % (10 * 1024 * 1024) === 0) {
-              console.log(`Transferred ${Math.round(bytesTransferred / (1024 * 1024))} MB...`);
+            const now = Date.now();
+            // Log every 10MB or every 5 seconds
+            if (bytesTransferred % (10 * 1024 * 1024) < chunk.length || now - lastLogTime > 5000) {
+              const elapsedSeconds = (now - transferStartTime) / 1000;
+              const mbTransferred = Math.round(bytesTransferred / (1024 * 1024));
+              const speed = mbTransferred / elapsedSeconds;
+              console.log(`Transferred ${mbTransferred} MB (${speed.toFixed(2)} MB/s)...`);
+              lastLogTime = now;
             }
           });
 
@@ -319,15 +354,63 @@ export async function POST(request: NextRequest) {
 
           // Pipe directly without PassThrough (simpler and faster)
           await new Promise<void>((resolve, reject) => {
+            let resolved = false;
+
+            const doResolve = (source: string) => {
+              if (resolved) return;
+              resolved = true;
+              clearTimeout(transferTimeout);
+              const transferDuration = (Date.now() - transferStartTime) / 1000;
+              const mbTransferred = Math.round(bytesTransferred / (1024 * 1024));
+              console.log(`✓ Transfer of ${backupFileName} completed via ${source} (${mbTransferred} MB in ${transferDuration.toFixed(1)}s)`);
+              resolve();
+            };
+
+            // Add timeout for the entire transfer (5 minutes)
+            const transferTimeout = setTimeout(() => {
+              console.error('⚠️ Transfer timeout after 5 minutes - forcing resolve');
+              console.log(`Last known: ${Math.round(bytesTransferred / (1024 * 1024))} MB transferred`);
+              doResolve('timeout');
+            }, 5 * 60 * 1000);
+
             readStream.pipe(writeStream);
 
-            writeStream.on('finish', () => {
-              console.log(`✓ Transfer of ${backupFileName} completed (${Math.round(bytesTransferred / (1024 * 1024))} MB)`);
-              resolve();
+            // SFTP streams don't always fire 'finish' - use 'close' as primary completion signal
+            writeStream.on('close', () => {
+              console.log(`[writeStream] close event fired - ${Math.round(bytesTransferred / (1024 * 1024))} MB transferred`);
+              // Wait a bit to ensure all data is flushed
+              setTimeout(() => doResolve('writeStream.close'), 100);
             });
 
-            readStream.on('error', reject);
-            writeStream.on('error', reject);
+            writeStream.on('finish', () => {
+              console.log(`[writeStream] finish event fired - ${Math.round(bytesTransferred / (1024 * 1024))} MB transferred`);
+              doResolve('writeStream.finish');
+            });
+
+            readStream.on('end', () => {
+              console.log(`[readStream] end event fired - ${Math.round(bytesTransferred / (1024 * 1024))} MB transferred`);
+            });
+
+            readStream.on('close', () => {
+              console.log(`[readStream] close event fired - ${Math.round(bytesTransferred / (1024 * 1024))} MB transferred`);
+            });
+
+            readStream.on('error', (err: Error) => {
+              console.error('[readStream] error:', err);
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(transferTimeout);
+                reject(err);
+              }
+            });
+            writeStream.on('error', (err: Error) => {
+              console.error('[writeStream] error:', err);
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(transferTimeout);
+                reject(err);
+              }
+            });
           });
         } catch (streamError) {
           console.error(`Stream transfer failed:`, streamError);
@@ -337,6 +420,7 @@ export async function POST(request: NextRequest) {
 
       // Close storage connection, keep target connection open
       await sftpStorage.end();
+      console.log(`✓ Storage connection closed`);
 
       // Step 2: Set ownership and permissions using target server's SSH connection
       // Use the underlying SSH2 connection from sftpTarget
@@ -355,37 +439,64 @@ export async function POST(request: NextRequest) {
         `chmod 664 ${targetPath}/*.php ${targetPath}/*.jpa ${targetPath}/*.zip 2>/dev/null || true`,
       ].join(" && ");
 
+      console.log(`Setting permissions for ${customerUsername}...`);
+      const permStartTime = Date.now();
+
       await new Promise<void>((resolve, reject) => {
+        // Add timeout for permission setting (2 minutes for large installations)
+        const timeout = setTimeout(() => {
+          console.error(`⚠️ Permission setting timeout after 2 minutes`);
+          reject(new Error("Timeout setting permissions after 2 minutes"));
+        }, 120000);
+
         sshClient.exec(commands, (err: Error, stream: any) => {
           if (err) {
+            clearTimeout(timeout);
+            console.error(`❌ SSH exec error:`, err);
             reject(err);
             return;
           }
+
+          console.log(`⏳ chmod command started, waiting for completion...`);
 
           let stdout = "";
           let stderr = "";
 
           stream
             .on("close", (code: number) => {
+              clearTimeout(timeout);
+              const permDuration = ((Date.now() - permStartTime) / 1000).toFixed(1);
+              console.log(`⏱️ chmod completed in ${permDuration}s with code ${code}`);
+
               if (code !== 0) {
+                console.error(`❌ chown/chmod failed with code ${code}: ${stderr}`);
                 reject(new Error(`chown/chmod failed with code ${code}: ${stderr}`));
               } else {
+                console.log(`✓ Permissions set successfully in ${permDuration}s`);
                 resolve();
               }
             })
             .on("data", (data: Buffer) => {
-              stdout += data.toString();
+              const output = data.toString();
+              stdout += output;
+              if (output.trim()) console.log(`[chmod stdout]: ${output.trim()}`);
             })
             .stderr.on("data", (data: Buffer) => {
-              stderr += data.toString();
+              const output = data.toString();
+              stderr += output;
+              if (output.trim()) console.log(`[chmod stderr]: ${output.trim()}`);
             });
         });
       });
 
       // Now close the SFTP connection
+      console.log(`Closing target SFTP connection...`);
       await sftpTarget.end();
+      console.log(`✓ Target connection closed`);
 
-      return NextResponse.json({
+      console.log(`✓✓✓ Installation completed successfully, sending response...`);
+
+      const response = NextResponse.json({
         success: true,
         message: `Joomla-Installation erfolgreich vorbereitet in ${folderName}`,
         installUrl,
@@ -401,6 +512,9 @@ export async function POST(request: NextRequest) {
           databaseName,
         },
       });
+
+      console.log(`✓✓✓ Response object created, returning to client...`);
+      return response;
     } catch (error) {
       // Clean up connections
       try {

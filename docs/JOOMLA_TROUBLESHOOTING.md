@@ -70,22 +70,39 @@ await sftp.put(buffer, remotePath);
 
 ## Datenbank-Probleme
 
+### Problem: Error 500 nach erfolgreicher Installation
+
+**Symptom**: Installation erfolgreich abgeschlossen, Datenbank gefüllt, aber Webseite zeigt Error 500
+
+**Ursache**: Falsches MySQL Host-Format in `configuration.php` für non-default MySQL Ports
+
+**Lösung**: Seit v2.2.6 automatisch behoben. Der Host wird nun korrekt formatiert:
+
+```php
+// ✅ RICHTIG für MariaDB 10.5 (Port 3307)
+public $host = '127.0.0.1:3307';
+
+// ✅ RICHTIG für Default MySQL (Port 3306)
+public $host = 'localhost';  // KEIN Port für default 3306
+```
+
+**Manuelle Korrektur** (falls alte Installation):
+1. SSH auf Server: `ssh kunde@server.de`
+2. Datei bearbeiten: `nano /var/customers/webs/KUNDE/ordner/configuration.php`
+3. Zeile ändern: `public $host = '127.0.0.1:3307';` (für MariaDB 10.5)
+4. Speichern und Seite neu laden
+
+**Code-Referenz**: `app/api/admin/joomla-extract/route.ts:230-237`
+
+---
+
 ### Problem: MySQL Import schlägt fehl
 
 **Symptom**: Datenbank leer nach Installation
 
 **Mögliche Ursachen**:
 
-#### 1. Falscher MySQL Host
-```php
-// ❌ FALSCH
-public $host = '127.0.0.1';
-
-// ✅ RICHTIG (nutzt Unix Socket)
-public $host = 'localhost';
-```
-
-#### 2. Multi-Part SQL nicht kombiniert
+#### 1. Multi-Part SQL nicht kombiniert
 Akeeba erstellt `site.sql + site.s01 + site.s02 + ...`. Diese müssen kombiniert werden:
 
 ```bash
@@ -94,12 +111,22 @@ sed -i "s/#__/${DB_PREFIX}/g" /tmp/combined.sql
 mysql -u dbname -p'password' dbname < /tmp/combined.sql
 ```
 
-#### 3. Tabellenprefix falsch
+#### 2. Tabellenprefix falsch
 ```bash
 DB_PREFIX=$(grep -oP '"prefix"\s*:\s*"\K[^"]+' databases.json)
 ```
 
-**Code**: `app/api/admin/joomla-extract/route.ts:210-284`
+#### 3. Falsche MySQL-Verbindungsparameter
+Für MariaDB 10.5 muss `-h` und `-P` explizit angegeben werden:
+```bash
+# ✅ RICHTIG für MariaDB 10.5
+mysql -h 127.0.0.1 -P 3307 -u dbname -p'password' dbname < dump.sql
+
+# ✅ RICHTIG für Default (nutzt Unix Socket)
+mysql -u dbname -p'password' dbname < dump.sql
+```
+
+**Code**: `app/api/admin/joomla-extract/route.ts:296-344`
 
 ---
 

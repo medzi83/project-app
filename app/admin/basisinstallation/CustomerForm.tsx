@@ -5,10 +5,11 @@ import {
   checkCustomerNumber,
   createOrUpdateFroxlorCustomer,
   getPhpConfigs,
+  getMysqlServers,
   getCustomerDomains,
   updateStandardDomain,
 } from "./actions";
-import type { FroxlorCustomer, FroxlorPhpConfig, FroxlorDomain } from "@/lib/froxlor";
+import type { FroxlorCustomer, FroxlorPhpConfig, FroxlorMysqlServer, FroxlorDomain } from "@/lib/froxlor";
 
 type DomainFormValues = {
   documentroot: string;
@@ -30,6 +31,8 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
   const [existingCustomer, setExistingCustomer] = useState<FroxlorCustomer | null>(null);
   const [phpConfigs, setPhpConfigs] = useState<FroxlorPhpConfig[]>([]);
   const [selectedPhpConfigs, setSelectedPhpConfigs] = useState<number[]>([1]);
+  const [mysqlServers, setMysqlServers] = useState<FroxlorMysqlServer[]>([]);
+  const [selectedMysqlServers, setSelectedMysqlServers] = useState<number[]>([]);
   const [allDomains, setAllDomains] = useState<FroxlorDomain[]>([]);
   const [loadingDomains, setLoadingDomains] = useState(false);
   const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set());
@@ -78,9 +81,19 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
   // Load PHP configurations on mount
   useEffect(() => {
     if (serverId) {
+      // Fetch PHP configs
       getPhpConfigs(serverId).then((response) => {
         if (response.success && response.configs) {
           setPhpConfigs(response.configs);
+        }
+      });
+
+      // Fetch MySQL servers
+      getMysqlServers(serverId).then((response) => {
+        if (response.success && response.servers) {
+          setMysqlServers(response.servers);
+          // Pre-select all MySQL servers by default
+          setSelectedMysqlServers(response.servers.map(s => s.id));
         }
       });
     }
@@ -210,6 +223,19 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Validate that at least one PHP config is selected
+    if (selectedPhpConfigs.length === 0) {
+      setResult({ success: false, message: "Bitte wählen Sie mindestens eine PHP-Konfiguration aus" });
+      return;
+    }
+
+    // Validate that at least one MySQL server is selected
+    if (selectedMysqlServers.length === 0) {
+      setResult({ success: false, message: "Bitte wählen Sie mindestens einen MySQL-Server aus" });
+      return;
+    }
+
     setSubmitting(true);
     setResult(null);
 
@@ -458,8 +484,15 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
 
           <div className="space-y-2">
             <label className="text-xs uppercase tracking-wide text-gray-500">
-              PHP Konfiguration für Standard-Subdomain
+              PHP Konfiguration für Standard-Subdomain {selectedPhpConfigs.length === 0 && <span className="text-red-500">*</span>}
             </label>
+            {selectedPhpConfigs.length === 0 && (
+              <div className="text-xs text-red-600">Bitte mindestens eine PHP-Konfiguration auswählen</div>
+            )}
+            {/* Hidden inputs for actual form submission */}
+            {selectedPhpConfigs.map((configId) => (
+              <input key={`hidden-${configId}`} type="hidden" name={`phpconfig_${configId}`} value="on" />
+            ))}
             {phpConfigs.length === 0 ? (
               <div className="text-sm text-gray-500">Lade PHP-Konfigurationen...</div>
             ) : (
@@ -467,10 +500,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
                 {phpConfigs.map((config) => {
                   const configId = typeof config.id === 'string' ? parseInt(config.id) : config.id;
                   return (
-                    <label key={config.id} className="flex items-start gap-2 rounded border p-2 hover:bg-gray-50">
+                    <label key={config.id} className="flex items-start gap-2 rounded border p-2 hover:bg-gray-50 cursor-pointer">
                       <input
                         type="checkbox"
-                        name={`phpconfig_${config.id}`}
                         checked={selectedPhpConfigs.includes(configId)}
                         onChange={(e) => {
                           if (e.target.checked) {
@@ -484,6 +516,50 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
                       <div className="flex-1">
                         <div className="text-sm font-medium">{config.description}</div>
                         <div className="text-xs text-gray-500">{config.binary}</div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs uppercase tracking-wide text-gray-500">
+              Erlaubte MySQL-Server {selectedMysqlServers.length === 0 && <span className="text-red-500">*</span>}
+            </label>
+            {selectedMysqlServers.length === 0 && (
+              <div className="text-xs text-red-600">Bitte mindestens einen MySQL-Server auswählen</div>
+            )}
+            {/* Hidden inputs for actual form submission */}
+            {selectedMysqlServers.map((serverId) => (
+              <input key={`hidden-mysql-${serverId}`} type="hidden" name={`mysqlserver_${serverId}`} value="on" />
+            ))}
+            {mysqlServers.length === 0 ? (
+              <div className="text-sm text-gray-500">Lade MySQL-Server...</div>
+            ) : (
+              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                {mysqlServers.map((server) => {
+                  const serverId = typeof server.id === 'string' ? parseInt(server.id) : server.id;
+                  return (
+                    <label key={server.id} className="flex items-start gap-2 rounded border p-2 hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedMysqlServers.includes(serverId)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedMysqlServers([...selectedMysqlServers, serverId]);
+                          } else {
+                            setSelectedMysqlServers(selectedMysqlServers.filter(id => id !== serverId));
+                          }
+                        }}
+                        className="mt-1 rounded border"
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">{server.caption}</div>
+                        <div className="text-xs text-gray-500">
+                          {server.host || server.dbserver}{(server.port || server.dbport) ? ` Port ${server.port || server.dbport}` : ''}
+                        </div>
                       </div>
                     </label>
                   );

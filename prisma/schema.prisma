@@ -249,6 +249,7 @@ model DatabaseServer {
   version             String
   host                String               @default("localhost")
   port                Int?                 @default(3306)
+  froxlorDbServerId   Int?                 // Froxlor database server ID
   isDefault           Boolean              @default(false)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt

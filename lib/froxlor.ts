@@ -58,6 +58,7 @@ export type FroxlorCustomer = {
   ftps?: number;
   documentroot?: string;
   allowed_phpconfigs?: string;
+  allowed_mysqlserver?: number[]; // Froxlor 2.x: Array of allowed MySQL server IDs
   leregistered?: number;
   // Add more fields as needed
 };
@@ -70,6 +71,21 @@ export type FroxlorPhpConfig = {
   mod_fcgid_starter: number;
   mod_fcgid_maxrequests: number;
   phpsettings: string;
+};
+
+export type FroxlorMysqlServer = {
+  id: number;
+  caption: string;
+  host: string;      // Froxlor API returns "host", not "dbserver"
+  dbserver?: string; // Keep for backwards compatibility
+  port?: string;     // Froxlor API returns "port" as string
+  dbport?: number;   // Keep for backwards compatibility
+  user?: string;     // Froxlor API returns "user"
+  privileged_user?: string; // Keep for backwards compatibility
+  ssl?: {
+    caFile?: string;
+    verifyServerCertificate?: string;
+  };
 };
 
 export type FroxlorDomain = {
@@ -163,7 +179,8 @@ export type FroxlorCustomerCreateInput = {
   subdomains?: number;
   deactivated: number;
   documentroot?: string;
-  allowed_phpconfigs?: string;
+  allowed_phpconfigs?: number[]; // Froxlor 2.x expects array of PHP config IDs
+  allowed_mysqlserver?: number[]; // Froxlor 2.x expects array of MySQL server IDs
   phpenabled?: number;
   perlenabled?: number;
   dnsenabled?: number;
@@ -171,10 +188,10 @@ export type FroxlorCustomerCreateInput = {
   leregistered?: number;
 };
 
-export type FroxlorCustomerUpdateInput = Partial<Omit<FroxlorCustomerCreateInput, 'password' | 'loginname' | 'allowed_phpconfigs'>> & {
+export type FroxlorCustomerUpdateInput = Partial<Omit<FroxlorCustomerCreateInput, 'password' | 'loginname'>> & {
   password?: string;
   loginname?: string;
-  phpsettings?: string; // Use phpsettings for update instead of allowed_phpconfigs
+  // Note: allowed_phpconfigs is now included from FroxlorCustomerCreateInput (Froxlor 2.x uses same parameter for update)
 };
 
 export class FroxlorClient {
@@ -441,9 +458,15 @@ export class FroxlorClient {
       };
 
       // Add allowed PHP configs if provided
-      // Froxlor expects this as a JSON array string like "[1,10]"
+      // Froxlor 2.x expects this as 'allowed_phpconfigs' (array of IDs)
       if (data.allowed_phpconfigs) {
-        apiParams.phpsettings = data.allowed_phpconfigs; // Use 'phpsettings' instead of 'allowed_phpconfigs'
+        apiParams.allowed_phpconfigs = data.allowed_phpconfigs;
+      }
+
+      // Add allowed MySQL servers if provided
+      // Froxlor 2.x expects this as 'allowed_mysqlserver' (array of IDs)
+      if (data.allowed_mysqlserver) {
+        apiParams.allowed_mysqlserver = data.allowed_mysqlserver;
       }
 
       // Add documentroot if provided
@@ -530,6 +553,24 @@ export class FroxlorClient {
       return [];
     } catch (error) {
       console.error('Error getting PHP configs:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all available MySQL servers from Froxlor
+   */
+  async getMysqlServers(): Promise<FroxlorMysqlServer[]> {
+    try {
+      const result = await this.request<FroxlorListingPayload<FroxlorMysqlServer>>('MysqlServer.listing');
+
+      if (result.data) {
+        return normalizeFroxlorList(result.data);
+      }
+
+      return [];
+    } catch (error) {
+      console.error('Error getting MySQL servers:', error);
       return [];
     }
   }
@@ -701,15 +742,28 @@ export class FroxlorClient {
   async createDatabase(
     customerId: number,
     password: string,
-    description?: string
+    description?: string,
+    dbServerId?: number
   ): Promise<{ success: boolean; message: string; database?: FroxlorDatabase; databaseName?: string }> {
     try {
-      const result = await this.request<FroxlorDatabase>('Mysqls.add', {
+      const params: Record<string, unknown> = {
         customerid: customerId,
         mysql_password: password,
         description: description || 'Joomla Database',
         sendinfomail: 0, // Don't send email
-      });
+      };
+
+      // Add mysql_server parameter if specified (Froxlor 2.x uses 'mysql_server' not 'dbserver')
+      if (dbServerId !== undefined) {
+        params.mysql_server = dbServerId;
+        console.log(`[DEBUG FroxlorClient.createDatabase] mysql_server parameter set to: ${dbServerId}`);
+      } else {
+        console.log(`[DEBUG FroxlorClient.createDatabase] No mysql_server specified, using Froxlor default`);
+      }
+
+      console.log(`[DEBUG FroxlorClient.createDatabase] Final params:`, JSON.stringify(params, null, 2));
+
+      const result = await this.request<FroxlorDatabase>('Mysqls.add', params);
 
       if (result.data) {
         return {

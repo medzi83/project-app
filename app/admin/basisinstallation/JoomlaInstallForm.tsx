@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { getCustomerMysqlServers } from "./actions";
+import type { FroxlorMysqlServer } from "@/lib/froxlor";
 
 type Props = {
   serverId: string;
@@ -72,6 +74,8 @@ export default function JoomlaInstallForm({
   const [folderName, setFolderName] = useState("");
   const [dbPassword, setDbPassword] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [mysqlServers, setMysqlServers] = useState<FroxlorMysqlServer[]>([]);
+  const [selectedMysqlServerId, setSelectedMysqlServerId] = useState<number | null>(null);
   const [installing, setInstalling] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [currentStep, setCurrentStep] = useState<string>("");
@@ -85,10 +89,21 @@ export default function JoomlaInstallForm({
     bytesProcessed?: number;
   } | null>(null);
 
-  // Generate password on mount
+  // Generate password and fetch MySQL servers on mount
   useEffect(() => {
     setDbPassword(generatePassword());
-  }, []);
+
+    // Fetch customer's allowed MySQL servers
+    getCustomerMysqlServers(serverId, customerNo).then((response) => {
+      if (response.success && response.servers) {
+        console.log('[DEBUG JoomlaInstallForm] Available MySQL servers:', response.servers);
+        setMysqlServers(response.servers);
+        // Don't auto-select any server - user must choose explicitly
+        // This prevents accidentally using the wrong database server
+        console.log('[DEBUG JoomlaInstallForm] No auto-selection - user must choose');
+      }
+    });
+  }, [serverId, customerNo]);
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return "0 Bytes";
@@ -117,6 +132,14 @@ export default function JoomlaInstallForm({
       return;
     }
 
+    if (selectedMysqlServerId === null) {
+      setResult({
+        success: false,
+        message: "Bitte MySQL-Server auswählen",
+      });
+      return;
+    }
+
     // Validate folder name (alphanumeric, dash, underscore only)
     if (!/^[a-zA-Z0-9_-]+$/.test(folderName)) {
       setResult({
@@ -134,6 +157,10 @@ export default function JoomlaInstallForm({
     try {
       // Step 1: Upload files and create database
       setCurrentStep("Lade Dateien hoch und erstelle Datenbank...");
+
+      console.log('[DEBUG JoomlaInstallForm] Sending request with mysqlServerId:', selectedMysqlServerId);
+      console.log('[DEBUG JoomlaInstallForm] Selected server details:', mysqlServers.find(s => s.id === selectedMysqlServerId));
+
       const uploadRes = await fetch("/api/admin/joomla-install", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -142,6 +169,7 @@ export default function JoomlaInstallForm({
           customerNo,
           folderName,
           dbPassword,
+          mysqlServerId: selectedMysqlServerId,
         }),
       });
 
@@ -171,6 +199,7 @@ export default function JoomlaInstallForm({
           databasePassword: dbPassword,
           clientId,
           projectId: selectedProjectId || null,
+          mysqlServerId: selectedMysqlServerId, // Pass selected MySQL server ID
         }),
       });
 
@@ -272,6 +301,34 @@ export default function JoomlaInstallForm({
         </div>
 
         <div>
+          <label htmlFor="mysqlServer" className="block text-sm font-medium mb-2">
+            MySQL-Server für die Datenbank {selectedMysqlServerId === null && <span className="text-red-500">*</span>}
+          </label>
+          {mysqlServers.length === 0 ? (
+            <div className="text-sm text-gray-500">Lade MySQL-Server...</div>
+          ) : (
+            <select
+              id="mysqlServer"
+              value={selectedMysqlServerId !== null ? selectedMysqlServerId : ""}
+              onChange={(e) => setSelectedMysqlServerId(parseInt(e.target.value))}
+              className="w-full rounded border p-2"
+              disabled={installing || extracting}
+              required
+            >
+              <option value="">Bitte auswählen...</option>
+              {mysqlServers.map((server) => (
+                <option key={server.id} value={server.id}>
+                  {server.caption} ({server.host || server.dbserver}{(server.port || server.dbport) ? ` Port ${server.port || server.dbport}` : ''})
+                </option>
+              ))}
+            </select>
+          )}
+          <p className="mt-1 text-xs text-gray-500">
+            Wählen Sie den MySQL-Server aus, auf dem die Joomla-Datenbank erstellt werden soll.
+          </p>
+        </div>
+
+        <div>
           <label htmlFor="dbPassword" className="block text-sm font-medium mb-2">
             Datenbank-Passwort
           </label>
@@ -362,7 +419,7 @@ export default function JoomlaInstallForm({
         )}
 
         <div className="flex gap-3">
-          <Button type="submit" disabled={installing || extracting || !folderName || !dbPassword}>
+          <Button type="submit" disabled={installing || extracting || !folderName || !dbPassword || selectedMysqlServerId === null}>
             {installing || extracting ? "Installation läuft..." : "Joomla automatisch installieren"}
           </Button>
         </div>

@@ -6,6 +6,15 @@ export const metadata: Metadata = {
   description: "Übersicht über alle Änderungen und Verbesserungen",
 };
 
+/**
+ * HINWEIS für neue Changelog-Einträge:
+ * - Schreibe für End-User, nicht für Entwickler
+ * - Vermeide technische Details (API-Parameter, Code-Referenzen, etc.)
+ * - Fokus auf: Was kann der User jetzt machen? Was wurde verbessert?
+ * - Verwende einfache, verständliche Sprache
+ * - Beschreibe den Nutzen, nicht die technische Umsetzung
+ */
+
 type ChangelogEntry = {
   date: string;
   version?: string;
@@ -17,6 +26,24 @@ type ChangelogEntry = {
 };
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "03.11.2024",
+    version: "2.2.6",
+    changes: [
+      {
+        title: "MySQL-Server-Auswahl bei Joomla-Installation",
+        description:
+          "Bei der Joomla-Installation musst du jetzt auswählen, welche MySQL-Version verwendet werden soll (Standard oder MariaDB 10.5). So kannst du sicherstellen, dass die Datenbank auf dem richtigen Server angelegt wird. Die Konfiguration wird automatisch angepasst.",
+        type: "feature",
+      },
+      {
+        title: "Joomla-Installation mit MariaDB 10.5 funktioniert jetzt korrekt",
+        description:
+          "Wenn du bei der Joomla-Installation MariaDB 10.5 auswählst, wird die Datenbank jetzt auch wirklich dort erstellt (vorher landete sie trotzdem auf dem Standard-Server). Die installierten Joomla-Seiten funktionieren direkt ohne Fehlermeldungen.",
+        type: "fix",
+      },
+    ],
+  },
   {
     date: "01.11.2024",
     version: "2.3.0",

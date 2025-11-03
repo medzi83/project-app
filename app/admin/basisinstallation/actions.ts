@@ -37,6 +37,92 @@ export async function testFroxlorConnection(serverId: string) {
   return await client.testConnection();
 }
 
+export async function getMysqlServers(serverId: string) {
+  const session = await getAuthSession();
+  if (!session || session.user.role !== "ADMIN") {
+    return { success: false, message: "Nicht autorisiert", servers: [] };
+  }
+
+  const server = await prisma.server.findUnique({
+    where: { id: serverId },
+  });
+
+  if (!server || !server.froxlorUrl || !server.froxlorApiKey || !server.froxlorApiSecret) {
+    return { success: false, message: "Server nicht konfiguriert", servers: [] };
+  }
+
+  const client = new FroxlorClient({
+    url: server.froxlorUrl,
+    apiKey: server.froxlorApiKey,
+    apiSecret: server.froxlorApiSecret,
+    version: server.froxlorVersion || undefined,
+  });
+
+  try {
+    const servers = await client.getMysqlServers();
+    return { success: true, message: "Erfolgreich", servers };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Fehler beim Abrufen der MySQL-Server",
+      servers: [],
+    };
+  }
+}
+
+export async function getCustomerMysqlServers(serverId: string, customerNo: string) {
+  const session = await getAuthSession();
+  if (!session || session.user.role !== "ADMIN") {
+    return { success: false, message: "Nicht autorisiert", servers: [] };
+  }
+
+  const server = await prisma.server.findUnique({
+    where: { id: serverId },
+  });
+
+  if (!server || !server.froxlorUrl || !server.froxlorApiKey || !server.froxlorApiSecret) {
+    return { success: false, message: "Server nicht konfiguriert", servers: [] };
+  }
+
+  const client = new FroxlorClient({
+    url: server.froxlorUrl,
+    apiKey: server.froxlorApiKey,
+    apiSecret: server.froxlorApiSecret,
+    version: server.froxlorVersion || undefined,
+  });
+
+  try {
+    // Get customer data to find allowed MySQL servers
+    const customer = await client.findCustomerByNumber(customerNo);
+    if (!customer) {
+      return { success: false, message: "Kunde nicht gefunden", servers: [] };
+    }
+
+    // Get all available MySQL servers
+    const allServers = await client.getMysqlServers();
+    console.log('[DEBUG getCustomerMysqlServers] All MySQL servers from Froxlor:', JSON.stringify(allServers, null, 2));
+
+    // Filter to only show servers the customer is allowed to use
+    // If customer.allowed_mysqlserver is not set or empty, return all servers (backward compatibility)
+    const allowedServerIds = customer.allowed_mysqlserver || [];
+    console.log('[DEBUG getCustomerMysqlServers] Customer allowed_mysqlserver:', allowedServerIds);
+
+    const filteredServers = allowedServerIds.length > 0
+      ? allServers.filter(s => allowedServerIds.includes(s.id))
+      : allServers;
+
+    console.log('[DEBUG getCustomerMysqlServers] Filtered servers for customer:', JSON.stringify(filteredServers, null, 2));
+
+    return { success: true, message: "Erfolgreich", servers: filteredServers };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Fehler beim Abrufen der MySQL-Server",
+      servers: [],
+    };
+  }
+}
+
 export async function getPhpConfigs(serverId: string) {
   const session = await getAuthSession();
   if (!session || session.user.role !== "ADMIN") {
@@ -276,7 +362,18 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
       phpConfigIds.push(key.replace("phpconfig_", ""));
     }
   });
-  const allowed_phpconfigs = phpConfigIds.length > 0 ? `[${phpConfigIds.join(",")}]` : "[1]";
+  // Froxlor 2.x expects an array of numbers, not a JSON string
+  const allowed_phpconfigs = phpConfigIds.length > 0 ? phpConfigIds.map(id => parseInt(id)) : [1];
+
+  // Get all selected MySQL servers (checkboxes)
+  const mysqlServerIds: string[] = [];
+  formData.forEach((value, key) => {
+    if (key.startsWith("mysqlserver_") && value === "on") {
+      mysqlServerIds.push(key.replace("mysqlserver_", ""));
+    }
+  });
+  // Froxlor 2.x expects an array of numbers
+  const allowed_mysqlserver = mysqlServerIds.length > 0 ? mysqlServerIds.map(id => parseInt(id)) : [];
 
   // Convert GB to MB for Froxlor API
   // 1 GB input = 1000 MB (decimal, not binary)
@@ -310,7 +407,9 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
       mysqls: Number.parseInt(mysqls, 10) || 0,
       ftps: Number.parseInt(ftps, 10) || 0,
       deactivated: deactivated ? 1 : 0,
-      phpsettings: allowed_phpconfigs,
+      allowed_phpconfigs, // Fixed: Use allowed_phpconfigs for Froxlor 2.x
+      allowed_mysqlserver, // Assign all available MySQL servers (Default + MariaDB 10.5, etc.)
+      phpenabled: 1, // Enable PHP explicitly
       leregistered: leregistered ? 1 : 0,
     };
 
@@ -337,6 +436,8 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
     ftps: Number.parseInt(ftps, 10) || 0,
     deactivated: deactivated ? 1 : 0,
     allowed_phpconfigs,
+    allowed_mysqlserver, // Assign all available MySQL servers (Default + MariaDB 10.5, etc.)
+    phpenabled: 1, // Enable PHP explicitly
     leregistered: leregistered ? 1 : 0,
   };
 
