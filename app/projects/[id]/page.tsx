@@ -4,6 +4,7 @@ import { getAuthSession } from "@/lib/authz";
 import { deriveProjectStatus, labelForProjectStatus, labelForWebsitePriority, labelForProductionStatus, labelForMaterialStatus, labelForSeoStatus, labelForTextitStatus, MATERIAL_STATUS_VALUES, getProjectDisplayName } from "@/lib/project-status";
 import { notFound, redirect } from "next/navigation";
 import InlineCell from "@/components/InlineCell";
+import ClientReassignment from "@/components/ClientReassignment";
 import type { WebsitePriority, ProductionStatus, MaterialStatus, SEOStatus, TextitStatus, CMS as PrismaCMS } from "@prisma/client";
 
 const fmtDate = (d?: Date | string | null) =>
@@ -151,6 +152,14 @@ export default async function ProjectDetail({ params }: Props) {
     select: { id: true, name: true, email: true, categories: true, color: true }
   });
 
+  // Get all clients for reassignment (Admin only)
+  const allClients = role === "ADMIN"
+    ? await prisma.client.findMany({
+        select: { id: true, name: true, customerNo: true },
+        orderBy: { name: "asc" },
+      })
+    : [];
+
   // Nur aktive Agenten mit Kategorie WEBSEITE für die Dropdown-Auswahl
   const websiteAgentsForDropdown = agentsAll.filter(a => a.categories.includes("WEBSEITE") && agentsActive.some(active => active.id === a.id));
 
@@ -295,6 +304,19 @@ export default async function ProjectDetail({ params }: Props) {
           </div>
         )}
       </div>
+
+      {/* Client Reassignment (Admin Only) */}
+      {role === "ADMIN" && project.client && (
+        <ClientReassignment
+          projectId={project.id}
+          currentClient={{
+            id: project.client.id,
+            name: project.client.name,
+            customerNo: project.client.customerNo,
+          }}
+          allClients={allClients}
+        />
+      )}
 
       {/* Quick Links */}
       {filmProjects.length > 0 && (

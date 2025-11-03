@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { updateSalesAgentName, updateSalesAgentEmail } from "./actions";
+import { updateSalesAgent, updateSalesAgentEmail } from "./actions";
 
 type SalesAgent = {
   id: string;
   name: string | null;
+  fullName: string | null;
+  roleTitle: string | null;
   email: string | null;
 };
 
@@ -31,17 +33,33 @@ export default function SalesAgentEditModal({ agent }: { agent: SalesAgent }) {
             </div>
 
             <div className="space-y-4">
-              <form action={updateSalesAgentName} className="space-y-3">
+              <form action={updateSalesAgent} className="space-y-3">
                 <input type="hidden" name="userId" value={agent.id} />
-                <Field label="Name">
+                <Field label="Name (Kurzname)">
                   <input
                     name="name"
                     defaultValue={agent.name ?? ""}
                     className="w-full rounded border p-2"
-                    placeholder="Name"
+                    placeholder="z. B. Max"
                   />
                 </Field>
-                <button className="w-full rounded bg-black px-4 py-2 text-white text-sm">Name speichern</button>
+                <Field label="Voller Name">
+                  <input
+                    name="fullName"
+                    defaultValue={agent.fullName ?? ""}
+                    className="w-full rounded border p-2"
+                    placeholder="z. B. Max Mustermann"
+                  />
+                </Field>
+                <Field label="Rollenbezeichnung">
+                  <input
+                    name="roleTitle"
+                    defaultValue={agent.roleTitle ?? ""}
+                    className="w-full rounded border p-2"
+                    placeholder="z. B. Vertriebsmitarbeiter"
+                  />
+                </Field>
+                <button className="w-full rounded bg-black px-4 py-2 text-white text-sm">Daten speichern</button>
               </form>
 
               <form action={updateSalesAgentEmail} className="space-y-3">

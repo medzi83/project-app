@@ -57,3 +57,27 @@ export async function deleteAllFilmProjects() {
   revalidatePath("/projects");
   redirect("/film-projects");
 }
+
+export async function reassignFilmProjectClient(formData: FormData) {
+  const session = await getAuthSession();
+  if (!session?.user || session.user.role !== "ADMIN") {
+    throw new Error("FORBIDDEN");
+  }
+
+  const projectId = String(formData.get("projectId") ?? "").trim();
+  const newClientId = String(formData.get("clientId") ?? "").trim();
+
+  if (!projectId || !newClientId) {
+    throw new Error("Projekt-ID und Kunden-ID sind erforderlich");
+  }
+
+  await prisma.project.update({
+    where: { id: projectId },
+    data: { clientId: newClientId },
+  });
+
+  revalidatePath("/film-projects");
+  revalidatePath(`/film-projects/${projectId}`);
+  revalidatePath(`/clients/${newClientId}`);
+  revalidatePath("/dashboard");
+}

@@ -37,7 +37,9 @@ const EmailField = z
   .transform((value) => (value === "" ? null : value.toLowerCase()));
 
 const CreateSalesAgentSchema = z.object({
-  name: z.string().min(1, "Name ist erforderlich").transform(v => v.trim()),
+  name: z.string().optional().transform(v => v?.trim() || null),
+  fullName: z.string().optional().transform(v => v?.trim() || null),
+  roleTitle: z.string().optional().transform(v => v?.trim() || null),
   email: EmailField,
   password: z.string().min(8, "Mind. 8 Zeichen"),
 });
@@ -53,12 +55,14 @@ export async function createSalesAgent(formData: FormData) {
     redirect(`/admin/vertrieb?error=${encodeURIComponent(msg)}`);
   }
 
-  const { name, email, password } = parsed.data;
+  const { name, fullName, roleTitle, email, password } = parsed.data;
 
   try {
     await prisma.user.create({
       data: {
-        name,
+        name: name ?? undefined,
+        fullName: fullName ?? undefined,
+        roleTitle: roleTitle ?? undefined,
         email: email ?? undefined,
         password: bcrypt.hashSync(password, 10),
         role: "SALES",
@@ -156,26 +160,32 @@ export async function deleteSalesAgent(formData: FormData) {
   redirect(`/admin/vertrieb?delOk=1`);
 }
 
-/* ---------- Vertriebsagent-Name aktualisieren ---------- */
-const UpdateSalesAgentNameSchema = z.object({
+/* ---------- Vertriebsagent-Daten aktualisieren ---------- */
+const UpdateSalesAgentSchema = z.object({
   userId: z.string().min(1),
-  name: z.string().min(1, "Name ist erforderlich").transform(v => v.trim()),
+  name: z.string().optional().transform(v => v?.trim() || null),
+  fullName: z.string().optional().transform(v => v?.trim() || null),
+  roleTitle: z.string().optional().transform(v => v?.trim() || null),
 });
 
-export async function updateSalesAgentName(formData: FormData) {
+export async function updateSalesAgent(formData: FormData) {
   await requireAdmin();
 
   const raw = Object.fromEntries(formData.entries());
-  const parsed = UpdateSalesAgentNameSchema.safeParse(raw);
+  const parsed = UpdateSalesAgentSchema.safeParse(raw);
 
   if (!parsed.success) {
     redirect(`/admin/vertrieb`);
   }
 
-  const { userId, name } = parsed.data;
+  const { userId, name, fullName, roleTitle } = parsed.data;
   await prisma.user.update({
     where: { id: userId, role: "SALES" },
-    data: { name },
+    data: {
+      name: name ?? undefined,
+      fullName: fullName ?? undefined,
+      roleTitle: roleTitle ?? undefined,
+    },
   });
 
   revalidatePath("/admin/vertrieb");

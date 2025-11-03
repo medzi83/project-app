@@ -55,6 +55,26 @@ export async function deleteProject(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function reassignProjectClient(formData: FormData) {
+  await requireAdmin();
+  const projectId = String(formData.get("projectId") ?? "").trim();
+  const newClientId = String(formData.get("clientId") ?? "").trim();
+
+  if (!projectId || !newClientId) {
+    throw new Error("Projekt-ID und Kunden-ID sind erforderlich");
+  }
+
+  await prisma.project.update({
+    where: { id: projectId },
+    data: { clientId: newClientId },
+  });
+
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/clients/${newClientId}`);
+  revalidatePath("/dashboard");
+}
+
 
 
 

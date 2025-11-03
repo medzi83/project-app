@@ -7,6 +7,7 @@ import { PreviewVersionItem } from "@/components/PreviewVersionItem";
 import { AddPreviewVersionButton } from "@/components/AddPreviewVersionButton";
 import { getProjectDisplayName } from "@/lib/project-status";
 import FilmInlineCell from "@/components/FilmInlineCell";
+import ClientReassignmentFilm from "@/components/ClientReassignmentFilm";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -186,6 +187,15 @@ export default async function FilmProjectDetailPage({ params }: Props) {
   });
   const agents = allAgents.filter(a => a.categories.includes("FILM"));
 
+  // Get all clients for reassignment (Admin only)
+  const role = session.user.role!;
+  const allClients = role === "ADMIN"
+    ? await prisma.client.findMany({
+        select: { id: true, name: true, customerNo: true },
+        orderBy: { name: "asc" },
+      })
+    : [];
+
   // Helper to derive website status
   const deriveWebsiteStatusForLink = (website: any) => {
     if (!website) return "WEBTERMIN";
@@ -234,7 +244,6 @@ export default async function FilmProjectDetailPage({ params }: Props) {
   }
 
   const film = project.film;
-  const role = session.user.role!;
   const isAdmin = role === "ADMIN";
   const canEdit = role === "ADMIN" || role === "AGENT";
   const canDeletePreview = role === "ADMIN" || role === "AGENT";
@@ -361,6 +370,19 @@ export default async function FilmProjectDetailPage({ params }: Props) {
           </div>
         )}
       </div>
+
+      {/* Client Reassignment (Admin Only) */}
+      {role === "ADMIN" && project.client && (
+        <ClientReassignmentFilm
+          projectId={project.id}
+          currentClient={{
+            id: project.client.id,
+            name: project.client.name,
+            customerNo: project.client.customerNo,
+          }}
+          allClients={allClients}
+        />
+      )}
 
       {/* Quick Links to Website Projects */}
       {websiteProjects.length > 0 && (

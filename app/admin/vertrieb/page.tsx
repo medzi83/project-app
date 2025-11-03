@@ -31,6 +31,8 @@ export default async function VertriebAdminPage({ searchParams }: Props) {
     select: {
       id: true,
       name: true,
+      fullName: true,
+      roleTitle: true,
       email: true,
       active: true,
       createdAt: true,
@@ -53,8 +55,14 @@ export default async function VertriebAdminPage({ searchParams }: Props) {
             {error && <p className="text-sm text-red-600">{error}</p>}
             {ok && <p className="text-sm text-green-700">Vertriebsagent wurde angelegt.</p>}
             <form action={createSalesAgent} className="space-y-3">
-              <Field label="Name *">
-                <input name="name" required className="w-full rounded border p-2" placeholder="z. B. Max Mustermann" />
+              <Field label="Name (Kurzname)">
+                <input name="name" className="w-full rounded border p-2" placeholder="z. B. Max" />
+              </Field>
+              <Field label="Voller Name">
+                <input name="fullName" className="w-full rounded border p-2" placeholder="z. B. Max Mustermann" />
+              </Field>
+              <Field label="Rollenbezeichnung">
+                <input name="roleTitle" className="w-full rounded border p-2" placeholder="z. B. Vertriebsmitarbeiter" />
               </Field>
               <Field label="E-Mail">
                 <input name="email" type="email" className="w-full rounded border p-2" placeholder="vertrieb@example.com" />
@@ -88,6 +96,8 @@ export default async function VertriebAdminPage({ searchParams }: Props) {
             <thead className="bg-gray-50">
               <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
                 <th>Name</th>
+                <th>Voller Name</th>
+                <th>Rollenbezeichnung</th>
                 <th>E-Mail</th>
                 <th>Erstellt</th>
                 <th>Aktionen</th>
@@ -102,6 +112,8 @@ export default async function VertriebAdminPage({ searchParams }: Props) {
                       {!sa.active && <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">inaktiv</span>}
                     </div>
                   </td>
+                  <td className="whitespace-nowrap">{sa.fullName ?? "-"}</td>
+                  <td className="whitespace-nowrap">{sa.roleTitle ?? "-"}</td>
                   <td className="whitespace-nowrap">{sa.email ?? "-"}</td>
                   <td className="whitespace-nowrap">{fmtDate(sa.createdAt)}</td>
                   <td>
@@ -109,6 +121,8 @@ export default async function VertriebAdminPage({ searchParams }: Props) {
                       <SalesAgentEditModal agent={{
                         id: sa.id,
                         name: sa.name,
+                        fullName: sa.fullName,
+                        roleTitle: sa.roleTitle,
                         email: sa.email,
                       }} />
                       <form action={resetSalesAgentPassword} className="flex items-center gap-1">
@@ -138,7 +152,7 @@ export default async function VertriebAdminPage({ searchParams }: Props) {
                 </tr>
               ))}
               {salesAgents.length === 0 && (
-                <tr><td colSpan={4} className="py-8 text-center opacity-60">Keine Vertriebsagenten vorhanden.</td></tr>
+                <tr><td colSpan={6} className="py-8 text-center opacity-60">Keine Vertriebsagenten vorhanden.</td></tr>
               )}
             </tbody>
           </table>
