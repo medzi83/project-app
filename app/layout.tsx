@@ -44,7 +44,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="de">
       <body>
-        <AuthSessionProvider session={session}>
+        <AuthSessionProvider session={session as any}>
           <SessionTimeout />
           {isPrivileged && <InstallationCheckHandler />}
           {/*

@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import { deleteSelectedClients } from "./actions";
 import SelectAllCheckbox from "./SelectAllCheckbox";
+import { FavoriteToggle } from "@/components/FavoriteToggle";
+import { isFavoriteClient } from "@/app/actions/favorites";
 
 const SERVICE_DEFS = [
   { key: "website", label: "Webseite" },
@@ -39,10 +41,11 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 export default async function ClientsPage({ searchParams }: Props) {
   const session = await getAuthSession();
   if (!session) redirect("/login");
-  if (!session.user.role || !["ADMIN", "AGENT"].includes(session.user.role)) {
+  if (!session.user.role || !["ADMIN", "AGENT", "SALES"].includes(session.user.role)) {
     redirect("/");
   }
   const isAdmin = session.user.role === "ADMIN";
+  const isSales = session.user.role === "SALES";
 
   const spRaw = await searchParams;
   const page = Math.max(1, parseInt(typeof spRaw.page === "string" ? spRaw.page : "1") || 1);
@@ -64,6 +67,14 @@ export default async function ClientsPage({ searchParams }: Props) {
   }
 
   const whereClause = Object.keys(filters).length > 0 ? filters : undefined;
+
+  // Fetch all favorite client IDs for the current user (SALES only)
+  const favoriteClientIds = session.user.id && isSales
+    ? await prisma.favoriteClient.findMany({
+        where: { userId: session.user.id },
+        select: { clientId: true },
+      }).then((favorites) => new Set(favorites.map((f) => f.clientId)))
+    : new Set<string>();
 
   const [clients, total, agencies] = await Promise.all([
     prisma.client.findMany({
@@ -162,6 +173,7 @@ export default async function ClientsPage({ searchParams }: Props) {
                     <SelectAllCheckbox />
                   </th>
                 )}
+                {isSales && <th className="w-10"></th>}
                 <th>Kd.-Nr.</th>
                 <th>Kunde</th>
                 <th>Agentur</th>
@@ -200,11 +212,22 @@ export default async function ClientsPage({ searchParams }: Props) {
                   shop: "bg-gradient-to-r from-orange-500 to-red-600 text-white",
                 };
 
+                const isFavorite = favoriteClientIds.has(client.id);
+
                 return (
                   <tr key={client.id} className="border-t">
                     {isAdmin && (
                       <td>
                         <input type="checkbox" name="ids" value={client.id} />
+                      </td>
+                    )}
+                    {isSales && (
+                      <td>
+                        <FavoriteToggle
+                          clientId={client.id}
+                          initialIsFavorite={isFavorite}
+                          size="sm"
+                        />
                       </td>
                     )}
                     <td className="font-mono text-xs">
@@ -324,7 +347,7 @@ export default async function ClientsPage({ searchParams }: Props) {
               })}
               {clients.length === 0 && (
                 <tr>
-                  <td colSpan={isAdmin ? 12 : 11} className="py-8 text-center text-sm text-gray-500">
+                  <td colSpan={isAdmin && isSales ? 13 : isAdmin || isSales ? 12 : 11} className="py-8 text-center text-sm text-gray-500">
                     Keine Kunden gefunden.
                   </td>
                 </tr>

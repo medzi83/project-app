@@ -10,6 +10,7 @@ import { NoticeBoard, type NoticeBoardEntry } from "@/components/NoticeBoard";
 import { InstallationWarningsSlideout } from "./InstallationWarningsSlideout";
 import WorkStoppedProjectsAccordion from "./WorkStoppedProjectsAccordion";
 import { SalesDashboard } from "./SalesDashboard";
+import { getFavoriteClients } from "@/app/actions/favorites";
 
 export const metadata = { title: "Dashboard" };
 
@@ -189,6 +190,9 @@ export default async function DashboardPage({
 
   // Special dashboard for SALES users
   if (userRole === "SALES") {
+    // Fetch favorite clients
+    const favoriteClients = await getFavoriteClients();
+
     // Fetch latest completed website projects
     const latestWebsites = await prisma.project.findMany({
       where: {
@@ -351,6 +355,18 @@ export default async function DashboardPage({
             agencyName: p.client.agency?.name ?? null,
           }))}
           agencies={agencies}
+          favoriteClients={favoriteClients.map((client) => ({
+            id: client.id,
+            name: client.name,
+            customerNo: client.customerNo,
+            agencyId: client.agency?.id ?? null,
+            agencyName: client.agency?.name ?? null,
+            agencyLogoIconPath: client.agency?.logoIconPath ?? null,
+            projectsCount: client.projects.length,
+            websiteProjectsCount: client.projects.filter(p => p.type === "WEBSITE").length,
+            filmProjectsCount: client.projects.filter(p => p.type === "FILM").length,
+            activeProjectsCount: client.projects.filter(p => p.status !== "ONLINE").length,
+          }))}
         />
       </main>
     );

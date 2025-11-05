@@ -27,6 +27,42 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "05.11.2024",
+    version: "2.2.8",
+    changes: [
+      {
+        title: "Favoriten-Funktion für SALES",
+        description:
+          "SALES-Benutzer können jetzt Kunden als Favoriten markieren! Der Stern-Button erscheint in der Kundenliste und auf jeder Kunden-Detailseite. Deine Favoriten siehst du prominent in einer eigenen Box auf dem Dashboard mit Kundenname, Kundennummer, Agentur und Projektanzahl. In allen Listen (Kunden, Projekte, Filmprojekte) werden deine favorisierten Kunden mit einem gelben Stern gekennzeichnet. Jeder SALES-Benutzer hat seine eigenen Favoriten - perfekt um wichtige Kunden schnell wiederzufinden! Die Favoriten-Funktion ist exklusiv für SALES-Benutzer verfügbar.",
+        type: "feature",
+      },
+    ],
+  },
+  {
+    date: "04.11.2024",
+    version: "2.2.7",
+    changes: [
+      {
+        title: "Filter-Speicherung für Projekt- und Filmprojekt-Listen",
+        description:
+          "Du kannst jetzt deine Filter in beiden Listen dauerhaft speichern! Nach dem Setzen deiner gewünschten Filter (Status, Prio, CMS, Agent etc.) klickst du auf 'Filter speichern'. Beim nächsten Besuch werden deine gespeicherten Filter automatisch angewendet. Mit 'Zurücksetzen' kannst du sowohl die aktuellen als auch die gespeicherten Filter löschen. Die Sortierung wird bewusst nicht gespeichert, damit du flexibel bleiben kannst.",
+        type: "feature",
+      },
+      {
+        title: "Login-Felder jetzt ohne Vorbelegung",
+        description:
+          "Die E-Mail- und Passwort-Felder auf der Login-Seite sind jetzt beim Öffnen leer. Du musst die vorausgefüllten Test-Zugangsdaten nicht mehr erst löschen, bevor du deine eigenen Daten eingeben kannst. Der Browser speichert auch keine Zugangsdaten mehr automatisch.",
+        type: "improvement",
+      },
+      {
+        title: "Cutter-Filter entfernt aus Filmprojekten",
+        description:
+          "Der nicht mehr benötigte Cutter-Filter wurde aus der Filmprojekt-Liste entfernt, da die Cutter-Spalte nicht mehr angezeigt wird. Die Liste ist jetzt aufgeräumter und die Filter-Optionen konzentrieren sich auf die relevanten Kriterien.",
+        type: "improvement",
+      },
+    ],
+  },
+  {
     date: "03.11.2024",
     version: "2.2.6",
     changes: [

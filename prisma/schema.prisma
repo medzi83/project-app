@@ -32,6 +32,7 @@ model User {
   notesAuthored           ProjectNote[]           @relation("NoteAuthor")
   client                  Client?                 @relation(fields: [clientId], references: [id])
   preferences             UserPreferences?
+  favoriteClients         FavoriteClient[]
 
   @@index([clientId])
 }
@@ -39,12 +40,14 @@ model User {
 model UserPreferences {
   id                        String   @id @default(cuid())
   userId                    String   @unique
-  projectsSort              String?
-  projectsSortDir           String?
-  filmProjectsSort          String?
-  filmProjectsSortDir       String?
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
+  // Projects filter preferences
+  projectsStatusFilter      Json?
+  projectsPriorityFilter    Json?
+  projectsCmsFilter         Json?
+  projectsAgentFilter       Json?
+  // Film projects filter preferences
   filmProjectsAgentFilter   Json?
   filmProjectsPStatusFilter Json?
   filmProjectsScopeFilter   Json?
@@ -75,6 +78,7 @@ model Client {
   joomlaInstallations JoomlaInstallation[]
   projects            Project[]
   users               User[]
+  favoritedBy         FavoriteClient[]
 
   @@index([name])
   @@index([agencyId])
@@ -618,4 +622,17 @@ enum FeedbackStatus {
   IN_PROGRESS
   RESOLVED
   DISMISSED
+}
+
+model FavoriteClient {
+  id        String   @id @default(cuid())
+  userId    String
+  clientId  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clientId])
+  @@index([userId])
+  @@index([clientId])
 }

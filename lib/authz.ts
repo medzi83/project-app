@@ -3,7 +3,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
-type Role = "ADMIN" | "AGENT" | "CUSTOMER";
+type Role = "ADMIN" | "AGENT" | "CUSTOMER" | "SALES";
 
 export type AuthSession = NonNullable<Awaited<ReturnType<typeof getServerSession>>> & {
   user: {

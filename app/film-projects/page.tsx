@@ -19,7 +19,6 @@ type Search = {
   dir?: "asc" | "desc";
   q?: string;
   agent?: string[];
-  cutter?: string[];
   status?: string[];
   pstatus?: string[];
   scope?: string[];
@@ -323,7 +322,6 @@ const buildRows = (projects: Awaited<ReturnType<typeof loadFilmProjects>>): Film
 async function loadFilmProjects(
   searchQuery?: string,
   agents?: string[],
-  cutters?: string[],
   filmStatuses?: string[],
   pStatuses?: string[],
   scopes?: string[],
@@ -354,17 +352,6 @@ async function loadFilmProjects(
     const orParts: Prisma.ProjectWhereInput[] = [];
     if (ids.length > 0) orParts.push({ film: { is: { filmerId: { in: ids } } } });
     if (hasNone) orParts.push({ film: { is: { filmerId: null } } });
-    if (orParts.length > 0) {
-      whereConditions.push({ OR: orParts });
-    }
-  }
-
-  if (cutters && cutters.length > 0) {
-    const hasNone = cutters.includes("none");
-    const ids = cutters.filter((c) => c !== "none");
-    const orParts: Prisma.ProjectWhereInput[] = [];
-    if (ids.length > 0) orParts.push({ film: { is: { cutterId: { in: ids } } } });
-    if (hasNone) orParts.push({ film: { is: { cutterId: null } } });
     if (orParts.length > 0) {
       whereConditions.push({ OR: orParts });
     }
@@ -542,7 +529,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
   const statusParam = arr(spRaw.status);
   const pstatusParam = arr(spRaw.pstatus);
   const scopeParam = arr(spRaw.scope);
-  const cutterParam = arr(spRaw.cutter);
   const qParam = str(spRaw.q);
 
   // Only use saved filters if:
@@ -554,7 +540,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
     statusParam.length > 0 ||
     pstatusParam.length > 0 ||
     scopeParam.length > 0 ||
-    cutterParam.length > 0 ||
     qParam;
 
   const useSavedFilters = !formSubmitted && !resetFilters && !hasAnyParams;
@@ -566,7 +551,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
     dir: (str(spRaw.dir) as "asc" | "desc") ?? "desc",
     q: resetFilters ? "" : (qParam ?? ""),
     agent: resetFilters ? [] : (useSavedFilters ? savedAgentFilter : agentParam),
-    cutter: resetFilters ? [] : cutterParam,
     status: resetFilters ? [] : (useSavedFilters ? savedStatusFilter : statusParam),
     pstatus: resetFilters ? [] : (useSavedFilters ? savedPStatusFilter : pstatusParam),
     scope: resetFilters ? [] : (useSavedFilters ? savedScopeFilter : scopeParam),
@@ -585,16 +569,21 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
   }
 
   const role = session.user.role!;
+  const isSales = role === "SALES";
   const orderBy = mapOrderBy(sp.sort!, sp.dir!);
 
   // Load all matching film projects (with status filter applied)
-  const [loadedProjects, allAgents] = await Promise.all([
-    loadFilmProjects(sp.q, sp.agent, sp.cutter, sp.status, sp.pstatus, sp.scope, orderBy),
+  const [loadedProjects, allAgents, favoriteClientIds] = await Promise.all([
+    loadFilmProjects(sp.q, sp.agent, sp.status, sp.pstatus, sp.scope, orderBy),
     prisma.user.findMany({
       where: { role: "AGENT", active: true },
       orderBy: { name: "asc" },
       select: { id: true, name: true, email: true, categories: true }
     }),
+    isSales ? prisma.favoriteClient.findMany({
+      where: { userId: session.user.id },
+      select: { clientId: true },
+    }).then((favorites) => new Set(favorites.map((f) => f.clientId))) : Promise.resolve(new Set<string>()),
   ]);
 
   // Apply in-memory sorting for "standard" sort to account for preview versions
@@ -843,6 +832,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
             <div className="flex flex-wrap gap-2">
               <button type="submit" className="px-4 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-colors shadow-sm">Anwenden</button>
               <SaveFilterButton
+                type="film-projects"
                 currentAgent={sp.agent}
                 currentStatus={sp.status}
                 currentPStatus={sp.pstatus}
@@ -929,6 +919,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                   statusBadgeClasses += " bg-gray-100 text-gray-900";
                 }
 
+                const isFavoriteClient = project.client?.id && favoriteClientIds.has(project.client.id);
+
                 const rowClasses = ["border-t", "border-gray-200", "transition-colors", "hover:bg-gray-50"];
                 // Don't show stale background for ONLINE projects
                 if (row.isStale && !isOnline) rowClasses.push("bg-red-50", "hover:bg-red-100/50");
@@ -975,7 +967,16 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         )}
                       </div>
                     </td>
-                    <td className="font-medium text-gray-900 client-name-cell cursor-pointer select-none">{row.clientName}</td>
+                    <td className="font-medium text-gray-900 client-name-cell cursor-pointer select-none">
+                      <div className="flex items-center gap-2">
+                        {isSales && isFavoriteClient && (
+                          <svg className="w-3.5 h-3.5 text-yellow-500 fill-current flex-shrink-0" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                          </svg>
+                        )}
+                        <span>{row.clientName}</span>
+                      </div>
+                    </td>
                     <td className="text-center w-12">
                       <Link href={`/film-projects/${project.id}`} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Details anzeigen">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1191,7 +1192,6 @@ function makeSortHref({ current, key }: { current: Search; key: string }) {
   p.set("dir", nextDir);
   if (current.q) p.set("q", current.q);
   if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);
-  if (current.cutter && current.cutter.length) for (const v of current.cutter) p.append("cutter", v);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
   if (current.pstatus && current.pstatus.length) for (const v of current.pstatus) p.append("pstatus", v);
   if (current.scope && current.scope.length) for (const v of current.scope) p.append("scope", v);
@@ -1206,7 +1206,6 @@ function makePageHref({ current, page }: { current: Search; page: number }) {
   if (current.dir) p.set("dir", current.dir);
   if (current.q) p.set("q", current.q);
   if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);
-  if (current.cutter && current.cutter.length) for (const v of current.cutter) p.append("cutter", v);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
   if (current.pstatus && current.pstatus.length) for (const v of current.pstatus) p.append("pstatus", v);
   if (current.scope && current.scope.length) for (const v of current.scope) p.append("scope", v);
@@ -1221,7 +1220,6 @@ function makePageSizeHref({ current, size }: { current: Search; size: number }) 
   if (current.dir) p.set("dir", current.dir);
   if (current.q) p.set("q", current.q);
   if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);
-  if (current.cutter && current.cutter.length) for (const v of current.cutter) p.append("cutter", v);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
   if (current.pstatus && current.pstatus.length) for (const v of current.pstatus) p.append("pstatus", v);
   if (current.scope && current.scope.length) for (const v of current.scope) p.append("scope", v);

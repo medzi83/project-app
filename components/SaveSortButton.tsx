@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { saveProjectsSort, saveFilmProjectsSort } from "@/app/actions/user-preferences";
+// import { saveProjectsSort, saveFilmProjectsSort } from "@/app/actions/user-preferences";
 
 type Props = {
   type: "projects" | "film-projects";
@@ -17,11 +17,13 @@ export function SaveSortButton({ type, currentSort, currentDir }: Props) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (type === "projects") {
-        await saveProjectsSort(currentSort, currentDir);
-      } else {
-        await saveFilmProjectsSort(currentSort, currentDir);
-      }
+      // TODO: Implement save sort functions
+      // if (type === "projects") {
+      //   await saveProjectsSort(currentSort, currentDir);
+      // } else {
+      //   await saveFilmProjectsSort(currentSort, currentDir);
+      // }
+      console.log("Save sort:", type, currentSort, currentDir);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (error) {

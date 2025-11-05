@@ -2,23 +2,48 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { saveFilmProjectsFilter } from "@/app/actions/user-preferences";
+import { saveProjectsFilter, saveFilmProjectsFilter } from "@/app/actions/user-preferences";
 
-type Props = {
+type ProjectsProps = {
+  type: "projects";
+  currentStatus?: string[];
+  currentPriority?: string[];
+  currentCms?: string[];
+  currentAgent?: string[];
+};
+
+type FilmProjectsProps = {
+  type: "film-projects";
   currentAgent?: string[];
   currentStatus?: string[];
   currentPStatus?: string[];
   currentScope?: string[];
 };
 
-export function SaveFilterButton({ currentAgent, currentStatus, currentPStatus, currentScope }: Props) {
+type Props = ProjectsProps | FilmProjectsProps;
+
+export function SaveFilterButton(props: Props) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await saveFilmProjectsFilter(currentAgent, currentStatus, currentPStatus, currentScope);
+      if (props.type === "projects") {
+        await saveProjectsFilter(
+          props.currentStatus,
+          props.currentPriority,
+          props.currentCms,
+          props.currentAgent
+        );
+      } else {
+        await saveFilmProjectsFilter(
+          props.currentAgent,
+          props.currentStatus,
+          props.currentPStatus,
+          props.currentScope
+        );
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (error) {

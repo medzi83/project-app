@@ -18,6 +18,7 @@ import { ClientDataEditor } from "./ClientDataEditor";
 import { ProjectDomainAssignment } from "./ProjectDomainAssignment";
 import { DomainProjectAssignment } from "./DomainProjectAssignment";
 import { DeleteInstallationButton } from "./DeleteInstallationButton";
+import { isFavoriteClient } from "@/app/actions/favorites";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -484,7 +485,11 @@ export default async function ClientDetailPage({ params }: Props) {
 
   const role = session.user.role!;
   const isAdmin = role === "ADMIN";
+  const isSales = role === "SALES";
   const canSendEmail = role === "ADMIN" || role === "AGENT";
+
+  // Check if client is favorited by current user
+  const isFavorite = await isFavoriteClient(client.id);
 
   // Collect all email logs from all projects
   const allEmailLogs = client.projects.flatMap((project) =>
@@ -524,6 +529,8 @@ export default async function ClientDetailPage({ params }: Props) {
         }}
         isAdmin={isAdmin}
         canSendEmail={canSendEmail}
+        isSales={isSales}
+        initialIsFavorite={isFavorite}
       />
 
       {/* Info-Cards oben */}

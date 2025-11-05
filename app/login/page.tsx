@@ -12,8 +12,8 @@ interface Particle {
 }
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("admin@example.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -243,7 +243,7 @@ export default function LoginPage() {
               onFocus={() => setFocusedField("email")}
               onBlur={() => setFocusedField(null)}
               placeholder="ihre@email.de"
-              autoComplete="email"
+              autoComplete="off"
             />
             <label
               htmlFor="email"
@@ -267,7 +267,7 @@ export default function LoginPage() {
               onFocus={() => setFocusedField("password")}
               onBlur={() => setFocusedField(null)}
               placeholder="••••••••"
-              autoComplete="current-password"
+              autoComplete="off"
             />
             <label
               htmlFor="password"

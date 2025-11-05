@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ClientStatusToggles } from "./ClientStatusToggles";
 import { ClientDataDialog } from "./ClientDataDialog";
 import { ClientEmailDialog } from "./ClientEmailDialog";
+import { FavoriteToggle } from "./FavoriteToggle";
 
 type ClientDetailHeaderProps = {
   client: {
@@ -25,9 +26,11 @@ type ClientDetailHeaderProps = {
   };
   isAdmin: boolean;
   canSendEmail?: boolean;
+  isSales?: boolean;
+  initialIsFavorite?: boolean;
 };
 
-export function ClientDetailHeader({ client, isAdmin, canSendEmail = true }: ClientDetailHeaderProps) {
+export function ClientDetailHeader({ client, isAdmin, canSendEmail = true, isSales = false, initialIsFavorite = false }: ClientDetailHeaderProps) {
   const [showClientDataDialog, setShowClientDataDialog] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
 
@@ -67,7 +70,16 @@ export function ClientDetailHeader({ client, isAdmin, canSendEmail = true }: Cli
             </Link>
           </div>
           <div className="flex items-center gap-4 mt-2">
-            <h1 className="text-2xl font-semibold">{client.name}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold">{client.name}</h1>
+              {isSales && (
+                <FavoriteToggle
+                  clientId={client.id}
+                  initialIsFavorite={initialIsFavorite}
+                  size="md"
+                />
+              )}
+            </div>
             {canSendEmail && (
               <button
                 onClick={handleMailButtonClick}

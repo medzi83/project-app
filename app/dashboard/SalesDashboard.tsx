@@ -30,10 +30,24 @@ type FilmProject = {
   agencyName: string | null;
 };
 
+type FavoriteClient = {
+  id: string;
+  name: string;
+  customerNo: string | null;
+  agencyId: string | null;
+  agencyName: string | null;
+  agencyLogoIconPath: string | null;
+  projectsCount: number;
+  websiteProjectsCount: number;
+  filmProjectsCount: number;
+  activeProjectsCount: number;
+};
+
 type Props = {
   websiteProjects: WebsiteProject[];
   filmProjects: FilmProject[];
   agencies: Agency[];
+  favoriteClients: FavoriteClient[];
 };
 
 const formatDate = (d: Date | null) => {
@@ -49,7 +63,7 @@ const formatDate = (d: Date | null) => {
   }
 };
 
-export function SalesDashboard({ websiteProjects, filmProjects, agencies }: Props) {
+export function SalesDashboard({ websiteProjects, filmProjects, agencies, favoriteClients }: Props) {
   const [websiteAgencyFilter, setWebsiteAgencyFilter] = useState<string>("all");
   const [filmAgencyFilter, setFilmAgencyFilter] = useState<string>("all");
 
@@ -98,6 +112,88 @@ export function SalesDashboard({ websiteProjects, filmProjects, agencies }: Prop
 
   return (
     <div className="space-y-6">
+      {/* Favoriten */}
+      {favoriteClients.length > 0 && (
+        <section className="rounded-2xl border border-yellow-200 bg-white shadow-lg overflow-hidden">
+          <div className="px-5 py-4 border-b border-yellow-200 bg-gradient-to-r from-yellow-50 to-amber-50">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-yellow-500 fill-current" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              <h2 className="font-bold text-lg bg-gradient-to-r from-yellow-700 to-amber-600 bg-clip-text text-transparent">
+                Meine Favoriten ({favoriteClients.length})
+              </h2>
+            </div>
+          </div>
+          <div className="p-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {favoriteClients.map((client) => (
+                <Link
+                  key={client.id}
+                  href={`/clients/${client.id}`}
+                  className="group rounded-xl border-2 border-yellow-200 bg-gradient-to-br from-white to-yellow-50 p-4 shadow-sm hover:shadow-md hover:border-yellow-400 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        {client.customerNo && (
+                          <span className="text-xs font-mono text-gray-500">{client.customerNo}</span>
+                        )}
+                        <svg className="w-4 h-4 text-yellow-500 fill-current flex-shrink-0" viewBox="0 0 24 24">
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                      </div>
+                      <h3 className="font-semibold text-gray-900 text-sm mt-1 line-clamp-2">
+                        {client.name}
+                      </h3>
+                    </div>
+                  </div>
+                  <div className="space-y-1 text-xs text-gray-600">
+                    {client.agencyName && (
+                      <div className="flex items-center gap-1">
+                        {client.agencyLogoIconPath && (
+                          <img
+                            src={client.agencyLogoIconPath}
+                            alt={client.agencyName}
+                            className="w-3 h-3 object-contain"
+                          />
+                        )}
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <span className="truncate">{client.agencyName}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>{client.projectsCount} Projekte</span>
+                      </div>
+                      {client.activeProjectsCount > 0 && (
+                        <div className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 bg-blue-100 rounded">
+                          {client.activeProjectsCount} aktiv
+                        </div>
+                      )}
+                    </div>
+                    {(client.websiteProjectsCount > 0 || client.filmProjectsCount > 0) && (
+                      <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                        {client.websiteProjectsCount > 0 && <span>{client.websiteProjectsCount} Web</span>}
+                        {client.filmProjectsCount > 0 && <span>{client.filmProjectsCount} Film</span>}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-3 text-xs text-yellow-600 group-hover:text-yellow-800 font-medium">
+                    Details ansehen →
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Neueste Webseiten */}
       <section className="rounded-2xl border border-purple-200 bg-white shadow-lg overflow-hidden">
         <div className="px-5 py-4 border-b border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">

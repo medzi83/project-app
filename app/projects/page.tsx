@@ -8,7 +8,7 @@ import InlineCell from "@/components/InlineCell";
 import DangerActionButton from "@/components/DangerActionButton";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import CheckboxFilterGroup from "@/components/CheckboxFilterGroup";
-import { SaveSortButton } from "@/components/SaveSortButton";
+import { SaveFilterButton } from "@/components/SaveFilterButton";
 import { deleteAllProjects, deleteProject } from "./actions";
 import {
   buildWebsiteStatusWhere,
@@ -215,19 +215,81 @@ export default async function ProjectsPage({ searchParams }: Props) {
 
   const spRaw = await searchParams;
 
-  // Load user preferences for default sorting
+  // Check if user explicitly wants to reset all filters
+  const resetFilters = str(spRaw.reset) === "1";
+
+  // If reset is requested, clear saved filter preferences in database
+  if (resetFilters && session.user.id) {
+    await prisma.userPreferences.upsert({
+      where: { userId: session.user.id },
+      update: {
+        projectsStatusFilter: [],
+        projectsPriorityFilter: [],
+        projectsCmsFilter: [],
+        projectsAgentFilter: [],
+      },
+      create: {
+        userId: session.user.id,
+        projectsStatusFilter: [],
+        projectsPriorityFilter: [],
+        projectsCmsFilter: [],
+        projectsAgentFilter: [],
+      },
+    });
+  }
+
+  // Load user preferences for default filters (AFTER potentially resetting them)
   const userPreferences = await prisma.userPreferences.findUnique({
     where: { userId: session.user.id },
   });
 
+  // Parse saved filters from JSON
+  const savedStatusFilter = userPreferences?.projectsStatusFilter
+    ? (Array.isArray(userPreferences.projectsStatusFilter) ? userPreferences.projectsStatusFilter as string[] : [])
+    : undefined;
+  const savedPriorityFilter = userPreferences?.projectsPriorityFilter
+    ? (Array.isArray(userPreferences.projectsPriorityFilter) ? userPreferences.projectsPriorityFilter as string[] : [])
+    : undefined;
+  const savedCmsFilter = userPreferences?.projectsCmsFilter
+    ? (Array.isArray(userPreferences.projectsCmsFilter) ? userPreferences.projectsCmsFilter as string[] : [])
+    : undefined;
+  const savedAgentFilter = userPreferences?.projectsAgentFilter
+    ? (Array.isArray(userPreferences.projectsAgentFilter) ? userPreferences.projectsAgentFilter as string[] : [])
+    : undefined;
+
+  // Check if form was submitted (this hidden field is present when user clicks Apply button)
+  const formSubmitted = str(spRaw.submitted) === "1";
+
+  // Parse URL parameters
+  const statusParam = arr(spRaw.status);
+  const priorityParam = arr(spRaw.priority);
+  const cmsParam = arr(spRaw.cms);
+  const agentParam = arr(spRaw.agent);
+  const qParam = str(spRaw.q);
+
+  // Only use saved filters if:
+  // 1. Form was NOT submitted (user didn't click Apply button)
+  // 2. User didn't click reset
+  // 3. No other parameters present
+  const hasAnyParams =
+    statusParam.length > 0 ||
+    priorityParam.length > 0 ||
+    cmsParam.length > 0 ||
+    agentParam.length > 0 ||
+    qParam;
+
+  const useSavedFilters = !formSubmitted && !resetFilters && !hasAnyParams;
+
+  // When reset is triggered, ensure filters are cleared by using empty arrays
+  // When form is submitted without params, also use empty arrays (not saved filters)
   let sp: Search = {
-    sort: str(spRaw.sort) ?? userPreferences?.projectsSort ?? "standard",
-    dir: (str(spRaw.dir) as "asc" | "desc") ?? (userPreferences?.projectsSortDir as "asc" | "desc") ?? "desc",
-    q: str(spRaw.q) ?? "",
-    status: arr(spRaw.status),
-    priority: arr(spRaw.priority),
-    cms: arr(spRaw.cms),
-    agent: arr(spRaw.agent),
+    sort: str(spRaw.sort) ?? "standard",
+    dir: (str(spRaw.dir) as "asc" | "desc") ?? "desc",
+    q: resetFilters ? "" : (qParam ?? ""),
+    status: resetFilters ? [] : (useSavedFilters ? savedStatusFilter : statusParam),
+    priority: resetFilters ? [] : (useSavedFilters ? savedPriorityFilter : priorityParam),
+    cms: resetFilters ? [] : (useSavedFilters ? savedCmsFilter : cmsParam),
+    agent: resetFilters ? [] : (useSavedFilters ? savedAgentFilter : agentParam),
     page: str(spRaw.page) ?? "1",
     ps: str(spRaw.ps) ?? "50",
     scope: str(spRaw.scope) ?? undefined,
@@ -249,6 +311,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
 
   const role = session.user.role!;
   const canEdit = role === "ADMIN" || role === "AGENT";
+  const isSales = role === "SALES";
   const clientId = session.user.clientId ?? undefined;
 
   const where: Prisma.ProjectWhereInput = {
@@ -407,7 +470,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
   const page = Math.max(1, Number.parseInt(sp.page || "1") || 1);
   const skip = (page - 1) * pageSize;
 
-  const [projects, agentsAll, agentsActive, total] = await Promise.all([
+  const [projects, agentsAll, agentsActive, total, favoriteClientIds] = await Promise.all([
     prisma.project.findMany({ where, include: { client: true, website: true, agent: true }, orderBy, skip, take: pageSize }),
     prisma.user.findMany({
       where: { role: "AGENT" },
@@ -420,6 +483,10 @@ export default async function ProjectsPage({ searchParams }: Props) {
       select: { id: true, name: true, email: true, categories: true, color: true }
     }),
     prisma.project.count({ where }),
+    isSales ? prisma.favoriteClient.findMany({
+      where: { userId: session.user.id },
+      select: { clientId: true },
+    }).then((favorites) => new Set(favorites.map((f) => f.clientId))) : Promise.resolve(new Set<string>()),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -498,6 +565,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
     <div className="p-6">
     <form method="get" className="flex flex-wrap items-end gap-3">
       <input type="hidden" name="sort" value={sp.sort} />
+      <input type="hidden" name="submitted" value="1" />
       {scopeActive && <input type="hidden" name="scope" value="active" />}
       {sp.client && <input type="hidden" name="client" value={sp.client} />}
       {sp.overdue === "1" && <input type="hidden" name="overdue" value="1" />}
@@ -559,9 +627,15 @@ export default async function ProjectsPage({ searchParams }: Props) {
 
       <div className="flex flex-wrap gap-2">
         <button className="px-4 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-colors shadow-sm" type="submit">Anwenden</button>
-        <Link href="/projects" className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">Zurücksetzen</Link>
+        <SaveFilterButton
+          type="projects"
+          currentStatus={sp.status}
+          currentPriority={sp.priority}
+          currentCms={sp.cms}
+          currentAgent={sp.agent}
+        />
+        <Link href="/projects?reset=1" className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">Zurücksetzen</Link>
         <button type="submit" name="standardSort" value="1" className="px-4 py-2 text-xs font-medium rounded-lg border border-purple-200 bg-white text-purple-700 hover:bg-purple-50 transition-colors">Standardsortierung</button>
-        <SaveSortButton type="projects" currentSort={sp.sort!} currentDir={sp.dir!} />
       </div>
     </form>
   </div>
@@ -634,6 +708,8 @@ export default async function ProjectsPage({ searchParams }: Props) {
               const seoReady = p.website?.seo === "NEIN" || p.website?.seo === "JA_NEIN" || p.website?.seo === "JA_JA";
               const statusGreen = isUmsetzung && textitReady && seoReady;
 
+              const isFavoriteClient = p.clientId && favoriteClientIds.has(p.clientId);
+
               const rowClasses = ["border-t", "border-purple-100", "transition-colors", "hover:bg-purple-50/50"];
               if (isStale) rowClasses.push("bg-red-50", "hover:bg-red-100/50");
               if (ended) rowClasses.push("opacity-60");
@@ -660,6 +736,11 @@ export default async function ProjectsPage({ searchParams }: Props) {
                   </td>
                   <td className="max-w-[200px]" title={p.client?.name ?? ""}>
                     <div className="flex items-center gap-2">
+                      {isSales && isFavoriteClient && (
+                        <svg className="w-3.5 h-3.5 text-yellow-500 fill-current flex-shrink-0" viewBox="0 0 24 24">
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                      )}
                       <span className="truncate">{p.client?.name ?? "-"}</span>
                       {p.website?.isRelaunch && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-orange-500 text-white flex-shrink-0" title="Relaunch-Projekt">

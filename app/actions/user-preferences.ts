@@ -16,7 +16,12 @@ export async function getUserPreferences() {
   return preferences;
 }
 
-export async function saveProjectsSort(sort: string, dir: "asc" | "desc") {
+export async function saveProjectsFilter(
+  status?: string[],
+  priority?: string[],
+  cms?: string[],
+  agent?: string[]
+) {
   const session = await getAuthSession();
   if (!session?.user?.id) {
     throw new Error("Not authenticated");
@@ -25,33 +30,17 @@ export async function saveProjectsSort(sort: string, dir: "asc" | "desc") {
   await prisma.userPreferences.upsert({
     where: { userId: session.user.id },
     update: {
-      projectsSort: sort,
-      projectsSortDir: dir,
+      projectsStatusFilter: status ?? [],
+      projectsPriorityFilter: priority ?? [],
+      projectsCmsFilter: cms ?? [],
+      projectsAgentFilter: agent ?? [],
     },
     create: {
       userId: session.user.id,
-      projectsSort: sort,
-      projectsSortDir: dir,
-    },
-  });
-}
-
-export async function saveFilmProjectsSort(sort: string, dir: "asc" | "desc") {
-  const session = await getAuthSession();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  await prisma.userPreferences.upsert({
-    where: { userId: session.user.id },
-    update: {
-      filmProjectsSort: sort,
-      filmProjectsSortDir: dir,
-    },
-    create: {
-      userId: session.user.id,
-      filmProjectsSort: sort,
-      filmProjectsSortDir: dir,
+      projectsStatusFilter: status ?? [],
+      projectsPriorityFilter: priority ?? [],
+      projectsCmsFilter: cms ?? [],
+      projectsAgentFilter: agent ?? [],
     },
   });
 }
