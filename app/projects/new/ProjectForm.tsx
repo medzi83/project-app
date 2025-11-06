@@ -9,8 +9,8 @@ type Option = { value: string; label: string };
 const PRIORITIES = ["NONE", "PRIO_1", "PRIO_2", "PRIO_3"] as const;
 const CMS = ["SHOPWARE", "JOOMLA", "LOGO", "PRINT", "OTHER"] as const;
 const PRODUCTION = ["NONE", "BEENDET", "MMW", "VOLLST_A_K"] as const;
-const SEO = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"] as const;
-const TEXTIT = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"] as const;
+const SEO = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"] as const;
+const TEXTIT = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"] as const;
 const WEBTERMIN_TYPES: Option[] = [
   { value: "", label: "(nicht gesetzt)" },
   { value: "TELEFONISCH", label: "Telefonisch" },
@@ -51,14 +51,20 @@ const PRODUCTION_OPTIONS: Option[] = PRODUCTION.map((value) => ({
   value,
   label: labelForProductionStatus(value),
 }));
-const SEO_OPTIONS: Option[] = SEO.map((value) => ({
-  value,
-  label: labelForSeoStatus(value),
-}));
-const TEXTIT_OPTIONS: Option[] = TEXTIT.map((value) => ({
-  value,
-  label: labelForTextitStatus(value),
-}));
+const SEO_OPTIONS: Option[] = [
+  { value: "", label: "(leer)" },
+  ...SEO.map((value) => ({
+    value,
+    label: labelForSeoStatus(value),
+  }))
+];
+const TEXTIT_OPTIONS: Option[] = [
+  { value: "", label: "(leer)" },
+  ...TEXTIT.map((value) => ({
+    value,
+    label: labelForTextitStatus(value),
+  }))
+];
 
 const FILM_SCOPE_LABELS: Record<FilmScope, string> = {
   FILM: "Film",
@@ -495,7 +501,7 @@ export function UnifiedProjectForm({
                     <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
                       <SelectField name="websiteAgentId" label="Agent" options={websiteAgentOptions} defaultValue="" />
                       <SelectField name="cms" label="CMS *" options={CMS_OPTIONS} defaultValue="JOOMLA" />
-                      <SelectField name="textit" label="Texte vorhanden?" options={TEXTIT_OPTIONS} defaultValue="NEIN" />
+                      <SelectField name="textit" label="Texte vorhanden?" options={TEXTIT_OPTIONS} defaultValue="" />
                       <div className="flex flex-col gap-1">
                         <span className="text-xs uppercase tracking-wide text-muted-foreground">Webtermin (Datum + Zeit)</span>
                         <input type="datetime-local" name="webDate" className="rounded border p-2" />
@@ -585,7 +591,7 @@ export function UnifiedProjectForm({
                       options={MATERIAL_STATUS_OPTIONS}
                       defaultValue="ANGEFORDERT"
                     />
-                    <SelectField name="seo" label="SEO" options={SEO_OPTIONS} defaultValue="NEIN" />
+                    <SelectField name="seo" label="SEO" options={SEO_OPTIONS} defaultValue="" />
                     <SelectField name="accessible" label="Barrierefrei" options={TRI} defaultValue="unknown" />
                   </div>
 

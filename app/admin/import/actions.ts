@@ -112,8 +112,9 @@ const mapYN4 = (val: string | undefined) => {
   if (["NEIN/NEIN", "NEIN_NEIN", "NEINNEIN", "N/N", "NN"].includes(v)) return "NEIN_NEIN" as const;
   if (["JA/NEIN", "JA_NEIN", "JANEIN", "J/N", "JN", "FRAGEBOGEN"].includes(v)) return "JA_NEIN" as const;
   if (["JA/JA", "JA_JA", "JAJA", "J/J", "JJ", "ANALYSE", "FERTIG"].includes(v)) return "JA_JA" as const;
-  if (!v) return undefined;
-  return undefined;
+  if (["JA", "J", "YES", "Y"].includes(v)) return "JA" as const;
+  if (!v) return undefined; // undefined for empty/missing values - don't update existing data
+  return undefined; // undefined for unrecognized values
 };
 const mapMaterial = (val: string | undefined) => normalizeMaterialStatus(val);
 
@@ -160,6 +161,7 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
   const { headers, rows } = parseCSV(text);
   // Normalize header names: replace newlines and multiple spaces with single space
   const normalizedHeaders = headers.map(h => h.replace(/\s+/g, ' ').trim());
+
   const col = (name: string) => {
     const normalized = name.replace(/\s+/g, ' ').trim().toLowerCase();
     return normalizedHeaders.findIndex((h) => h.toLowerCase() === normalized);
@@ -181,7 +183,8 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
     lastMat: col("4. letzter Materialeingang"),
     arbeitstage: col("Arbeitstage"),
     seo: (() => {
-      let idx = col("SEO (Fragebogen /Analyse)");
+      let idx = col("SEO (Fragebogen/Analyse)");
+      if (idx === -1) idx = col("SEO (Fragebogen /Analyse)");
       if (idx === -1) idx = col("SEO");
       return idx;
     })(),
@@ -193,6 +196,7 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
     })(),
     note: col("Hinweis"),
   };
+
   const requiredCols: (keyof typeof idx)[] = ["status", "partner", "nameFirma"];
   for (const key of requiredCols) {
     if (idx[key] === -1) {
@@ -266,8 +270,11 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
     const effortBuildMin = parseHoursToMinutes(row[idx.effortBuild]);
     const effortDemoMin = parseHoursToMinutes(row[idx.effortDemo]);
     const materialStatus = mapMaterial(row[idx.material]);
-    const seo = mapYN4(row[idx.seo]);
-    const textit = mapYN4(row[idx.textit]);
+    const seoRaw = row[idx.seo];
+    const textitRaw = row[idx.textit];
+    const seo = mapYN4(seoRaw);
+    const textit = mapYN4(textitRaw);
+
     const accessible = (() => {
       const v = normUC(row[idx.accessible]);
       if (!v) return undefined;
@@ -348,17 +355,15 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
         }
         agentId = agent.id;
       }
-      // Try to find existing website project based on clientId + agentId + webDate + demoDate
-      // Use Agent (Umsetzer), Webtermin and Demo an Kunden as unique identifiers
+      // Try to find existing website project based on clientId (Kundennummer) + webDate (Webtermin)
+      // Use customer number and web date as unique identifiers for matching
       // This allows updating existing projects instead of creating duplicates
       const existingProject = await prisma.project.findFirst({
         where: {
           clientId: client.id,
           type: "WEBSITE",
-          agentId: agentId ?? null,
           website: {
             webDate: webDate ?? null,
-            demoDate: demoDate ?? null,
           },
         },
         select: { id: true },
@@ -376,26 +381,37 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
           select: { id: true },
         });
 
-        // Update website details
+        // Update website details - only update fields that have values
+        // For textit and seo: only update if value is not null or undefined
+        const updateData: any = {
+          priority: prio,
+          pStatus,
+          cms,
+          cmsOther: cmsOther,
+          webDate: webDate ?? null,
+          demoDate: demoDate ?? null,
+          onlineDate: onlineDate ?? null,
+          lastMaterialAt: lastMaterialAt ?? null,
+          effortBuildMin: Number.isFinite(effortBuildMin) ? effortBuildMin : null,
+          effortDemoMin: Number.isFinite(effortDemoMin) ? effortDemoMin : null,
+          accessible: accessible ?? null,
+          note: note || null,
+          materialStatus: materialStatus ?? undefined,
+        };
+
+        // Only update textit if a value was provided in the import
+        if (textit !== undefined) {
+          updateData.textit = textit;
+        }
+
+        // Only update seo if a value was provided in the import
+        if (seo !== undefined) {
+          updateData.seo = seo;
+        }
+
         await prisma.projectWebsite.update({
           where: { projectId: project.id },
-          data: {
-            priority: prio,
-            pStatus,
-            cms,
-            cmsOther: cmsOther,
-            webDate: webDate ?? null,
-            demoDate: demoDate ?? null,
-            onlineDate: onlineDate ?? null,
-            lastMaterialAt: lastMaterialAt ?? null,
-            effortBuildMin: Number.isFinite(effortBuildMin) ? effortBuildMin : null,
-            effortDemoMin: Number.isFinite(effortDemoMin) ? effortDemoMin : null,
-            seo: seo ?? "NEIN",
-            textit: textit ?? "NEIN",
-            accessible: accessible ?? null,
-            note: note || null,
-            materialStatus: materialStatus ?? undefined,
-          },
+          data: updateData,
         });
       } else {
         // Create new project
@@ -424,8 +440,8 @@ export async function importProjects(formData: FormData): Promise<ImportResult> 
             lastMaterialAt: lastMaterialAt ?? null,
             effortBuildMin: Number.isFinite(effortBuildMin) ? effortBuildMin : null,
             effortDemoMin: Number.isFinite(effortDemoMin) ? effortDemoMin : null,
-            seo: seo ?? "NEIN",
-            textit: textit ?? "NEIN",
+            seo: seo ?? null,
+            textit: textit ?? null,
             accessible: accessible ?? null,
             note: note || null,
             materialStatus: materialStatus ?? undefined,

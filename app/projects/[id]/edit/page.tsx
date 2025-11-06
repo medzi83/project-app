@@ -162,14 +162,16 @@ export default async function EditProjectPage({ params }: Props) {
           </Field>
 
           <Field label="SEO (Fragebogen/Analyse)">
-            <select name="seo" defaultValue={w?.seo ?? "NEIN"} className="w-full p-2 border rounded">
-              {["NEIN","NEIN_NEIN","JA_NEIN","JA_JA"].map(v=> <option key={v} value={v}>{v}</option>)}
+            <select name="seo" defaultValue={w?.seo ?? ""} className="w-full p-2 border rounded">
+              <option value="">(leer)</option>
+              {["NEIN","NEIN_NEIN","JA_NEIN","JA_JA","JA"].map(v=> <option key={v} value={v}>{v}</option>)}
             </select>
           </Field>
 
           <Field label="Textit">
-            <select name="textit" defaultValue={w?.textit ?? "NEIN"} className="w-full p-2 border rounded">
-              {["NEIN","NEIN_NEIN","JA_NEIN","JA_JA"].map(v=> <option key={v} value={v}>{v}</option>)}
+            <select name="textit" defaultValue={w?.textit ?? ""} className="w-full p-2 border rounded">
+              <option value="">(leer)</option>
+              {["NEIN","NEIN_NEIN","JA_NEIN","JA_JA","JA"].map(v=> <option key={v} value={v}>{v}</option>)}
             </select>
           </Field>
 

@@ -27,8 +27,18 @@ const MaterialStatus = z.enum(["ANGEFORDERT", "TEILWEISE", "VOLLSTAENDIG", "NV"]
 const WebsitePriority = z.enum(["NONE", "PRIO_1", "PRIO_2", "PRIO_3"]);
 const CMS = z.enum(["SHOPWARE", "WORDPRESS", "JOOMLA", "LOGO", "PRINT", "CUSTOM", "OTHER"]);
 const ProductionStatus = z.enum(["NONE", "BEENDET", "MMW", "VOLLST_A_K"]);
-const SEOStatus = z.enum(["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"]);
-const TextitStatus = z.enum(["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"]);
+const SEOStatus = z.string().transform((v) => {
+  if (!v || v.trim() === "") return null;
+  const val = v.trim();
+  if (["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"].includes(val)) return val as "NEIN" | "NEIN_NEIN" | "JA_NEIN" | "JA_JA" | "JA";
+  return null;
+});
+const TextitStatus = z.string().transform((v) => {
+  if (!v || v.trim() === "") return null;
+  const val = v.trim();
+  if (["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"].includes(val)) return val as "NEIN" | "NEIN_NEIN" | "JA_NEIN" | "JA_JA" | "JA";
+  return null;
+});
 const WebterminType = z.enum(["TELEFONISCH", "BEIM_KUNDEN", "IN_DER_AGENTUR"]).nullable();
 const FilmScope = z.enum(["FILM", "DROHNE", "NACHDREH", "FILM_UND_DROHNE"]);
 const FilmPriority = z.enum(["NONE", "FILM_SOLO", "PRIO_1", "PRIO_2"]);

@@ -303,17 +303,19 @@ const PRODUCTION_STATUS_LABELS: Record<ProductionStatus, string> = {
 };
 
 const SEO_STATUS_LABELS: Record<SEOStatus, string> = {
-  NEIN: "NEIN",
-  NEIN_NEIN: "NEIN/NEIN",
-  JA_NEIN: "JA/NEIN",
-  JA_JA: "JA/JA",
+  NEIN: "nein",
+  NEIN_NEIN: "nein/nein",
+  JA_NEIN: "ja/nein",
+  JA_JA: "ja/ja",
+  JA: "ja",
 };
 
 const TEXTIT_STATUS_LABELS: Record<TextitStatus, string> = {
-  NEIN: "NEIN",
-  NEIN_NEIN: "NEIN/NEIN",
-  JA_NEIN: "JA/NEIN",
-  JA_JA: "JA/JA",
+  NEIN: "nein",
+  NEIN_NEIN: "nein/nein",
+  JA_NEIN: "ja/nein",
+  JA_JA: "ja/ja",
+  JA: "ja",
 };
 
 export function labelForWebsitePriority(value?: WebsitePriorityValue): string {

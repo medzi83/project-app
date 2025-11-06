@@ -5,7 +5,7 @@ import { signOut } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap, Megaphone, MessageSquareHeart, ExternalLink, HardDrive, FileText, Handshake } from "lucide-react";
+import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap, Megaphone, MessageSquareHeart, ExternalLink, HardDrive, FileText, Handshake, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -218,6 +218,7 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
         { label: "E-Mail Trigger", href: "/admin/email-triggers", icon: Zap },
         { label: "Basisinstallation", href: "/admin/basisinstallation", icon: Package },
         { label: "Joomla Backup", href: "/admin/joomla-backup", icon: HardDrive },
+        { label: "Orgamax ERP", href: "/admin/orgamax", icon: Database },
       ]
     : [];
 

@@ -142,8 +142,8 @@ model ProjectWebsite {
   lastMaterialAt DateTime?
   effortBuildMin Int?
   effortDemoMin  Int?
-  seo            SEOStatus              @default(NEIN)
-  textit         TextitStatus           @default(NEIN)
+  seo            SEOStatus?
+  textit         TextitStatus?
   accessible     Boolean?
   note           String?
   demoLink       String?
@@ -555,6 +555,7 @@ enum SEOStatus {
   NEIN_NEIN
   JA_NEIN
   JA_JA
+  JA
 }
 
 enum TextitStatus {
@@ -562,6 +563,7 @@ enum TextitStatus {
   NEIN_NEIN
   JA_NEIN
   JA_JA
+  JA
 }
 
 enum MaterialStatus {
