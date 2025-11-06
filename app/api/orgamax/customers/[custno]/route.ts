@@ -9,7 +9,7 @@ import { createOrgamaxClient, ORGAMAX_MANDANTEN, type OrgamaxMandant } from '@/l
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { custno: string } }
+  { params }: { params: Promise<{ custno: string }> }
 ) {
   try {
     // Check authentication
@@ -18,8 +18,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Await params (Next.js 15 requirement)
+    const { custno: custnoParam } = await params;
+
     // Get customer number from params
-    const custno = Number(params.custno);
+    const custno = Number(custnoParam);
     if (isNaN(custno)) {
       return NextResponse.json({ error: 'Invalid customer number' }, { status: 400 });
     }
