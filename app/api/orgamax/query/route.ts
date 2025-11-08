@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: result.data || [],
-      count: result.data?.length || 0,
+      count: Array.isArray(result.data) ? result.data.length : 0,
       mandant,
     });
   } catch (error) {

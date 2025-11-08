@@ -26,11 +26,11 @@ const buildTargetLabel = (
 
 export default async function NoticesPage() {
   const session = await getAuthSession();
-  if (!session?.user?.id) {
+  if (!session?.user) {
     redirect("/login");
   }
 
-  const userId = session.user.id!;
+  const userId = session.user.id;
   const role = session.user.role ?? "CUSTOMER";
   const isAdmin = role === "ADMIN";
 

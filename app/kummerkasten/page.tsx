@@ -27,7 +27,7 @@ const feedbackStatusVariant: Record<string, "default" | "secondary" | "outline" 
 
 export default async function UserKummerkastenPage() {
   const session = await getAuthSession();
-  if (!session?.user?.id) {
+  if (!session?.user) {
     redirect("/login");
   }
 

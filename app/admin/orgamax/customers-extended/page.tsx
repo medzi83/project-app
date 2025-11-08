@@ -322,7 +322,7 @@ export default function ExtendedCustomersPage() {
       });
       setEditTitle('');
       setEditText('');
-      setEditEmployee(session?.user?.id ? parseInt(session.user.id) : -102); // Default to current user or Michael Medzech
+      setEditEmployee(session?.user && 'id' in session.user ? parseInt(session.user.id as string) : -102); // Default to current user or Michael Medzech
       setEditDate(dateString);
       setEditDuration('00:00:00');
       setSaveSuccess(false);
