@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { OrgamaxCustomersTable } from './customers-table';
 import { ConnectionTestButton } from './connection-test-button';
+import { OrgamaxNav } from '@/components/orgamax-nav';
 
 async function checkOrgamaxConnection() {
   const apiUrl = process.env.ORGAMAX_API_URL;
@@ -104,6 +105,9 @@ export default async function OrgamaxPage() {
           </div>
         </div>
 
+        {/* Navigation */}
+        <OrgamaxNav />
+
         {/* Connection Status */}
         <Card>
           <CardHeader>
@@ -178,7 +182,7 @@ export default async function OrgamaxPage() {
         {/* Features */}
         {connectionStatus.connected && (
           <>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
@@ -188,7 +192,7 @@ export default async function OrgamaxPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Zugriff auf alle Kundendaten aus dem Orgamax System
+                    Zugriff auf alle Kundendaten aus dem Orgamax System. Durchsuche und filtere Kunden nach Namen, Kundennummer, Stadt oder E-Mail.
                   </p>
                   <Button asChild className="w-full">
                     <Link href="/admin/orgamax/customers">Kunden anzeigen</Link>
@@ -200,32 +204,15 @@ export default async function OrgamaxPage() {
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <Database className="h-5 w-5 text-indigo-600" />
-                    <CardTitle className="text-lg">Datenabfragen</CardTitle>
+                    <CardTitle className="text-lg">API Explorer</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Freie SQL-Abfragen auf die Orgamax Datenbank
+                    Teste alle API-Endpoints, führe SQL-Abfragen aus und erkunde die Datenstruktur der Orgamax-Datenbank.
                   </p>
                   <Button asChild variant="outline" className="w-full">
-                    <Link href="/admin/orgamax/query">SQL Abfragen</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Server className="h-5 w-5 text-purple-600" />
-                    <CardTitle className="text-lg">Mandanten</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Verwaltung der verfügbaren Orgamax Mandanten
-                  </p>
-                  <Button asChild variant="outline" className="w-full">
-                    <Link href="/admin/orgamax/mandanten">Mandanten</Link>
+                    <Link href="/admin/orgamax/api-explorer">API Explorer öffnen</Link>
                   </Button>
                 </CardContent>
               </Card>

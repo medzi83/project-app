@@ -12,11 +12,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Users, Search, RefreshCw, Mail, Phone, MapPin, Building, AlertCircle, Loader2 } from 'lucide-react';
 import type { OrgamaxCustomer } from '@/lib/orgamax-api';
+import { OrgamaxNav } from '@/components/orgamax-nav';
 
 export default function OrgamaxCustomersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [mandant, setMandant] = useState<1 | 2 | 4>(1);
+  const [mandant, setMandant] = useState<1 | 2 | 4>(4);
   const [customers, setCustomers] = useState<OrgamaxCustomer[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +44,14 @@ export default function OrgamaxCustomersPage() {
       }
 
       if (data.success && data.customers) {
-        setCustomers(data.customers);
+        // Remove duplicates by CUSTNO (keep first occurrence)
+        const uniqueCustomers = data.customers.reduce((acc: OrgamaxCustomer[], customer: OrgamaxCustomer) => {
+          if (!acc.find(c => c.CUSTNO === customer.CUSTNO)) {
+            acc.push(customer);
+          }
+          return acc;
+        }, []);
+        setCustomers(uniqueCustomers);
       } else {
         throw new Error(data.error || 'Keine Daten erhalten');
       }
@@ -87,22 +95,20 @@ export default function OrgamaxCustomersPage() {
   return (
     <div className="container mx-auto space-y-6 py-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg">
-            <Users className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Orgamax Kunden</h1>
-            <p className="text-sm text-muted-foreground">
-              {filteredCustomers.length} Kunden in Mandant {mandant}
-            </p>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg">
+          <Users className="h-6 w-6" />
         </div>
-        <Button onClick={() => router.back()} variant="outline">
-          Zurück
-        </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Orgamax Kunden</h1>
+          <p className="text-sm text-muted-foreground">
+            {filteredCustomers.length} Kunden in Mandant {mandant}
+          </p>
+        </div>
       </div>
+
+      {/* Navigation */}
+      <OrgamaxNav />
 
       {/* Controls */}
       <Card>

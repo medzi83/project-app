@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/authz';
-import { createOrgamaxClient, ORGAMAX_MANDANTEN, type OrgamaxMandant } from '@/lib/orgamax-api';
+import { createOrgamaxClient, ORGAMAX_MANDANTEN, type OrgamaxMandant, fixCustomerEncoding } from '@/lib/orgamax-api';
 
 /**
  * GET /api/orgamax/customers
@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     const mandant = Number(mandantParam);
+
     if (!ORGAMAX_MANDANTEN.includes(mandant as OrgamaxMandant)) {
       return NextResponse.json(
         { error: `Invalid mandant. Must be one of: ${ORGAMAX_MANDANTEN.join(', ')}` },
@@ -50,13 +51,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Normalize phone numbers (fix special dash characters)
+    const customersWithNormalizedData = (result.customers || []).map(fixCustomerEncoding);
+
     return NextResponse.json({
       success: true,
-      customers: result.customers || [],
+      customers: customersWithNormalizedData,
       mandant,
     });
   } catch (error) {
-    console.error('Error in /api/orgamax/customers:', error);
+    console.error('[customers-route] Exception caught:', error);
+    console.error('[customers-route] Error stack:', error instanceof Error ? error.stack : 'No stack');
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }

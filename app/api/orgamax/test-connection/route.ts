@@ -8,16 +8,22 @@ import { createOrgamaxClient } from '@/lib/orgamax-api';
  * This is a safe way to test from the client without exposing the API key
  */
 export async function GET() {
+  console.log('[test-connection] Request received');
+
   try {
     // Check authentication
     const session = await getAuthSession();
     if (!session) {
+      console.log('[test-connection] No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    console.log('[test-connection] Session valid');
 
     // Create Orgamax client
     const client = createOrgamaxClient();
     if (!client) {
+      console.log('[test-connection] Client creation failed - API not configured');
       return NextResponse.json(
         {
           success: false,
@@ -27,8 +33,12 @@ export async function GET() {
       );
     }
 
+    console.log('[test-connection] Client created, testing connection...');
+
     // Test connection
     const result = await client.testConnection();
+
+    console.log('[test-connection] Test result:', result);
 
     if (result.success) {
       return NextResponse.json({
@@ -45,11 +55,12 @@ export async function GET() {
       { status: 500 }
     );
   } catch (error) {
-    console.error('Error in /api/orgamax/test-connection:', error);
+    console.error('[test-connection] Exception caught:', error);
+    console.error('[test-connection] Error stack:', error instanceof Error ? error.stack : 'No stack');
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unbekannter Fehler',
       },
       { status: 500 }
     );

@@ -145,9 +145,21 @@ export class OrgamaxClient {
    */
   async testConnection(): Promise<{ success: boolean; message: string }> {
     try {
-      const result = await this.request('/api/health');
+      console.log('[OrgamaxClient] testConnection: Starting request to /api/health');
+      const result = await this.request<{ status?: string; service?: string; mandanten?: number[] }>('/api/health');
 
-      if (result.success) {
+      console.log('[OrgamaxClient] testConnection: Result received:', JSON.stringify(result, null, 2));
+
+      // Check if we have an error response from our wrapper
+      if (result.success === false) {
+        return {
+          success: false,
+          message: result.error || 'Verbindungsfehler',
+        };
+      }
+
+      // Check if we have the expected Orgamax API response
+      if (result.data?.status === 'OK' || (result as any).status === 'OK') {
         return {
           success: true,
           message: 'Verbindung erfolgreich',
@@ -156,9 +168,10 @@ export class OrgamaxClient {
 
       return {
         success: false,
-        message: result.error || 'Unbekannter Fehler',
+        message: `Unerwartete API-Antwort: ${JSON.stringify(result)}`,
       };
     } catch (error) {
+      console.error('[OrgamaxClient] testConnection: Exception caught:', error);
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Verbindungsfehler',
@@ -236,10 +249,22 @@ export class OrgamaxClient {
     error?: string;
   }> {
     try {
+      console.log('[OrgamaxClient] getCustomers: Starting request to /api/customers with mandant', mandant);
       const result = await this.request<OrgamaxCustomer[]>('/api/customers', {
         params: { mandant },
       });
 
+      console.log('[OrgamaxClient] getCustomers: Result received:', JSON.stringify(result, null, 2));
+
+      // Check if we have an error response from our wrapper
+      if (result.success === false) {
+        return {
+          success: false,
+          error: result.error || 'Fehler beim Abrufen der Kunden',
+        };
+      }
+
+      // Check if we have the expected wrapped response with data
       if (result.success && result.data) {
         return {
           success: true,
@@ -247,11 +272,28 @@ export class OrgamaxClient {
         };
       }
 
+      // Check if the response is directly an array of customers (Orgamax API format)
+      if (Array.isArray(result)) {
+        return {
+          success: true,
+          customers: result as unknown as OrgamaxCustomer[],
+        };
+      }
+
+      // Check if we have a data property that is an array
+      if ((result as any).data && Array.isArray((result as any).data)) {
+        return {
+          success: true,
+          customers: (result as any).data,
+        };
+      }
+
       return {
         success: false,
-        error: result.error || 'Fehler beim Abrufen der Kunden',
+        error: `Unerwartete API-Antwort: ${JSON.stringify(result)}`,
       };
     } catch (error) {
+      console.error('[OrgamaxClient] getCustomers: Exception caught:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Fehler beim Abrufen der Kunden',
@@ -342,6 +384,88 @@ export function createOrgamaxClient(): OrgamaxClient | null {
     apiUrl,
     apiKey,
   });
+}
+
+/**
+ * Fix encoding issues with German umlauts and special characters
+ * The data is ISO-8859-1/Windows-1252 encoded but contains the replacement character �
+ * This means bytes were lost/corrupted. We need a different approach.
+ */
+export function fixEncoding(text: string | null | undefined): string | null {
+  if (!text) return text || null;
+
+  // If there's no replacement character, the text is probably fine
+  if (!text.includes('�')) return text;
+
+  // Simple replacement mapping for common corrupted characters
+  // Since we're getting � for umlauts, we need context or user feedback
+  // For now, let's not modify anything and just return as-is
+  // The real fix needs to be on the ODBC side
+  return text;
+}
+
+/**
+ * Normalize phone numbers by replacing special dashes and multiple spaces with regular hyphens
+ */
+export function normalizePhoneNumber(phone: string | null | undefined): string | null {
+  if (!phone) return phone || null;
+
+  // Replace various dash types and multiple spaces with regular hyphen
+  return phone
+    .replace(/–/g, '-')        // En dash (U+2013)
+    .replace(/—/g, '-')        // Em dash (U+2014)
+    .replace(/‐/g, '-')        // Hyphen (U+2010)
+    .replace(/‑/g, '-')        // Non-breaking hyphen (U+2011)
+    .replace(/\u0096/g, '-')   // Windows-1252 control character (0x96) misinterpreted as UTF-8
+    .replace(/\s{2,}/g, ' -'); // Two or more spaces → space + hyphen
+}
+
+/**
+ * Fix encoding for a complete customer object
+ * Applies both encoding fixes for umlauts and phone number normalization
+ */
+export function fixCustomerEncoding(customer: OrgamaxCustomer): OrgamaxCustomer {
+  return {
+    ...customer,
+    // Fix encoding for text fields
+    KUNDENNAME: fixEncoding(customer.KUNDENNAME),
+    VORNAME: fixEncoding(customer.VORNAME),
+    NACHNAME: fixEncoding(customer.NACHNAME),
+    NAMENSZUSATZ: fixEncoding(customer.NAMENSZUSATZ),
+    STREET: fixEncoding(customer.STREET),
+    CITY: fixEncoding(customer.CITY),
+    EMAIL: fixEncoding(customer.EMAIL),
+    // Normalize phone numbers (replace special dashes)
+    PHONE1: normalizePhoneNumber(customer.PHONE1),
+    PHONE2: normalizePhoneNumber(customer.PHONE2),
+    FAX: normalizePhoneNumber(customer.FAX),
+    MOBILE: normalizePhoneNumber(customer.MOBILE),
+  };
+}
+
+/**
+ * Fix encoding for any data object with string fields
+ * Applies encoding fixes and phone number normalization to all string fields
+ */
+export function fixDataEncoding<T extends Record<string, any>>(data: T): T {
+  const fixed = { ...data };
+
+  for (const key in fixed) {
+    const value = fixed[key];
+
+    // Apply fixEncoding to all string fields
+    if (typeof value === 'string') {
+      // Check if it's a phone/fax field
+      if (key.includes('PHONE') || key.includes('FAX') || key.includes('MOBILE')) {
+        fixed[key] = normalizePhoneNumber(value) as any;
+      } else {
+        // Apply encoding fix to all other string fields
+        fixed[key] = fixEncoding(value) as any;
+      }
+    }
+  }
+
+  return fixed;
 }
 
 /**
