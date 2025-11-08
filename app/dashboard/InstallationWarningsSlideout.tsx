@@ -67,28 +67,28 @@ export function InstallationWarningsSlideout({
 
       {/* Slideout Panel */}
       <div
-        className={`fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col ${
+        className={`fixed inset-y-0 right-0 w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-orange-50">
+        <div className="flex items-center justify-between p-4 border-b dark:border-slate-700 bg-orange-50 dark:bg-orange-950/30">
           <div className="flex items-center gap-3">
             <div className="text-2xl">⚙️</div>
             <div>
-              <h2 className="text-lg font-semibold text-orange-900">
+              <h2 className="text-lg font-semibold text-orange-900 dark:text-orange-300">
                 Projekte ohne Installation
               </h2>
-              <p className="text-xs text-orange-700">
+              <p className="text-xs text-orange-700 dark:text-orange-400">
                 {totalCount} Projekt{totalCount !== 1 ? 'e' : ''} benötigt{totalCount === 1 ? '' : 'en'} Installation
               </p>
             </div>
           </div>
           <button
             onClick={() => setIsOpen(false)}
-            className="p-2 hover:bg-orange-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
           >
-            <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-6 h-6 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -101,21 +101,21 @@ export function InstallationWarningsSlideout({
               const customerLabel = [project.client?.customerNo, project.client?.name].filter(Boolean).join(" - ") || "Kunde unbekannt";
 
               return (
-                <div key={project.id} className="rounded-lg border border-orange-200 bg-orange-50/30 p-3 hover:border-orange-300 transition-colors">
+                <div key={project.id} className="rounded-lg border border-orange-200 dark:border-orange-900/50 bg-orange-50/30 dark:bg-orange-950/20 p-3 hover:border-orange-300 dark:hover:border-orange-700 transition-colors">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <Link
                         href={`/projects/${project.id}`}
-                        className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline block truncate"
+                        className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline block truncate"
                         onClick={() => setIsOpen(false)}
                       >
                         {project.title}
                       </Link>
-                      <p className="text-xs text-gray-600 mt-0.5 truncate">{customerLabel}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 truncate">{customerLabel}</p>
                     </div>
                     <Link
                       href={`/clients/${project.client?.id}`}
-                      className="text-xs px-3 py-1.5 bg-orange-600 text-white rounded hover:bg-orange-700 whitespace-nowrap flex-shrink-0"
+                      className="text-xs px-3 py-1.5 bg-orange-600 dark:bg-orange-700 text-white rounded hover:bg-orange-700 dark:hover:bg-orange-600 whitespace-nowrap flex-shrink-0"
                       onClick={() => setIsOpen(false)}
                     >
                       Installation erstellen →

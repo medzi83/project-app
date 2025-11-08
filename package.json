@@ -29,6 +29,7 @@
     "lucide-react": "^0.544.0",
     "next": "^15.5.6",
     "next-auth": "^4.24.11",
+    "next-themes": "^0.4.6",
     "nodemailer": "^6.10.1",
     "odbc": "^2.4.9",
     "react": "19.1.0",

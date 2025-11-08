@@ -27,6 +27,24 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "09.11.2024",
+    version: "2.2.9",
+    changes: [
+      {
+        title: "Dark Mode - Dunkles Design für die gesamte App",
+        description:
+          "Die Projektverwaltung unterstützt jetzt einen vollständigen Dark Mode! Wechsle zwischen hellem und dunklem Design über dein Account-Menü in der Topbar unter 'Design'. Du kannst zwischen drei Optionen wählen: Hell (helles Design), Dunkel (dunkles Design) oder System (folgt automatisch deinen Systemeinstellungen). Deine Auswahl wird gespeichert und bleibt auch nach einem Neustart erhalten. Alle Bereiche der App - Dashboard, Topbar, Navigation, Formulare und Listen - passen sich dem gewählten Theme an.",
+        type: "feature",
+      },
+      {
+        title: "Browser-Autovervollständigung auf Login-Seite aktiviert",
+        description:
+          "Der Browser kann jetzt wieder gespeicherte Zugangsdaten auf der Login-Seite vorschlagen und automatisch ausfüllen. Das macht den Login-Vorgang schneller und bequemer, da du deine E-Mail und dein Passwort nicht jedes Mal manuell eingeben musst.",
+        type: "improvement",
+      },
+    ],
+  },
+  {
     date: "05.11.2024",
     version: "2.2.8",
     changes: [

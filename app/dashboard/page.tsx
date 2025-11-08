@@ -318,11 +318,11 @@ export default async function DashboardPage({
 
     return (
       <main className="p-6 space-y-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 dark:from-gray-100 dark:via-blue-100 dark:to-indigo-100 bg-clip-text text-transparent">
           Dashboard - Vertrieb
         </h1>
 
-        <section className="space-y-4 rounded-2xl border border-purple-100 bg-gradient-to-br from-white to-purple-50/30 p-5 sm:p-6 shadow-lg">
+        <section className="space-y-4 rounded-2xl border border-purple-100 dark:border-purple-900/50 bg-gradient-to-br from-white to-purple-50/30 dark:from-slate-800 dark:to-purple-950/30 p-5 sm:p-6 shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-bold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent">
               Wichtige Hinweise
@@ -1533,7 +1533,7 @@ export default async function DashboardPage({
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent">Dashboard</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 dark:from-gray-100 dark:via-blue-100 dark:to-indigo-100 bg-clip-text text-transparent">Dashboard</h1>
         <div className="flex items-center gap-2 text-sm">
           {scopeLinks.map((link) => {
             const active = link.key === scope;
@@ -1543,8 +1543,8 @@ export default async function DashboardPage({
                 href={link.href}
                 className={
                   active
-                    ? "px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md font-medium transition-all"
-                    : "px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-white hover:shadow-sm transition-all"
+                    ? "px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-500 dark:to-indigo-500 text-white shadow-md font-medium transition-all"
+                    : "px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all"
                 }
               >
                 {link.label}
@@ -1555,10 +1555,10 @@ export default async function DashboardPage({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="space-y-4 rounded-2xl border border-purple-100 bg-gradient-to-br from-white to-purple-50/30 p-5 sm:p-6 shadow-lg">
+        <section className="space-y-4 rounded-2xl border border-purple-100 dark:border-purple-900/50 bg-gradient-to-br from-white to-purple-50/30 dark:from-slate-800 dark:to-purple-950/30 p-5 sm:p-6 shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-bold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent">Wichtige Hinweise</h2>
-            <Link href="/notices" className="text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors">
+            <h2 className="text-lg font-bold bg-gradient-to-r from-purple-700 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">Wichtige Hinweise</h2>
+            <Link href="/notices" className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 font-medium transition-colors">
               Hinweis-Historie →
             </Link>
           </div>
@@ -1646,16 +1646,16 @@ export default async function DashboardPage({
       </section>
 
       {/* Statusuebersicht */}
-      <section className="rounded-2xl border border-indigo-100 bg-white shadow-lg overflow-hidden">
-        <div className="px-5 py-4 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-purple-50">
-          <h2 className="font-bold text-lg bg-gradient-to-r from-indigo-700 to-purple-600 bg-clip-text text-transparent">Projektstatus</h2>
+      <section className="rounded-2xl border border-indigo-100 dark:border-indigo-900/50 bg-white dark:bg-slate-800 shadow-lg overflow-hidden">
+        <div className="px-5 py-4 border-b border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/50 dark:to-purple-950/50">
+          <h2 className="font-bold text-lg bg-gradient-to-r from-indigo-700 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Projektstatus</h2>
         </div>
         <div className="space-y-6 p-5">
           {statusSections.map((section) => (
             <div key={section.key} className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-gray-800">{section.label}</h3>
-                <Link href={withScope(section.href)} className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                <h3 className="text-base font-bold text-gray-800 dark:text-gray-200">{section.label}</h3>
+                <Link href={withScope(section.href)} className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors">
                   Alle anzeigen →
                 </Link>
               </div>
@@ -1664,11 +1664,11 @@ export default async function DashboardPage({
                   <Link
                     key={`${section.key}-${tile.key}`}
                     href={tile.href}
-                    className="group rounded-xl border-2 border-gray-200 bg-gradient-to-br from-white to-gray-50 p-3 shadow-sm hover:shadow-md hover:border-indigo-400 transition-all transform hover:-translate-y-0.5"
+                    className="group rounded-xl border-2 border-gray-200 dark:border-slate-700 bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 p-3 shadow-sm hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-600 transition-all transform hover:-translate-y-0.5"
                   >
-                    <div className="text-xs uppercase tracking-wide text-gray-600 font-semibold group-hover:text-indigo-700 transition-colors">{tile.label}</div>
+                    <div className="text-xs uppercase tracking-wide text-gray-600 dark:text-gray-400 font-semibold group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">{tile.label}</div>
                     <div className="mt-2 flex items-baseline gap-2">
-                      <div className="text-2xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{tile.count}</div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{tile.count}</div>
                       {tile.staleCount > 0 && (
                         <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold text-orange-700 bg-gradient-to-r from-orange-100 to-red-100 rounded-full border-2 border-orange-300">
                           <span title="Projekte, die länger als 4 Wochen in diesem Status sind">⚠️ {tile.staleCount}</span>
@@ -1685,9 +1685,9 @@ export default async function DashboardPage({
 
       {/* Film Scopes - nur für Filmagenten */}
       {isAgentView && allowedProjectTypes.includes("FILM") && Object.keys(filmScopeCounts).length > 0 && (
-        <section className="rounded-2xl border border-cyan-100 bg-white shadow-lg overflow-hidden">
-          <div className="px-5 py-4 border-b border-cyan-100 bg-gradient-to-r from-cyan-50 to-blue-50">
-            <h2 className="font-bold text-lg bg-gradient-to-r from-cyan-700 to-blue-600 bg-clip-text text-transparent">
+        <section className="rounded-2xl border border-cyan-100 dark:border-cyan-900/50 bg-white dark:bg-slate-800 shadow-lg overflow-hidden">
+          <div className="px-5 py-4 border-b border-cyan-100 dark:border-cyan-900/50 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/50 dark:to-blue-950/50">
+            <h2 className="font-bold text-lg bg-gradient-to-r from-cyan-700 to-blue-600 dark:from-cyan-400 dark:to-blue-400 bg-clip-text text-transparent">
               Filmprojekte nach Umfang
             </h2>
           </div>

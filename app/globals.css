@@ -120,3 +120,26 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Dark mode utility classes for common patterns */
+  .card-gradient {
+    @apply bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900;
+  }
+
+  .card-border {
+    @apply border-gray-200 dark:border-slate-700;
+  }
+
+  .section-bg {
+    @apply bg-white dark:bg-slate-800;
+  }
+
+  .text-heading {
+    @apply text-gray-900 dark:text-white;
+  }
+
+  .text-muted {
+    @apply text-gray-600 dark:text-gray-400;
+  }
+}

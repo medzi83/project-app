@@ -3,6 +3,7 @@ import AppShell from "@/components/AppShell";
 import AuthSessionProvider from "@/components/AuthSessionProvider";
 import { SessionTimeout } from "@/components/SessionTimeout";
 import { InstallationCheckHandler } from "@/components/InstallationCheckHandler";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { getAuthSession, getEffectiveUser } from "@/lib/authz";
 
 import { prisma } from "@/lib/prisma";
@@ -42,26 +43,28 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   const agencies = await loadAgencies();
 
   return (
-    <html lang="de">
+    <html lang="de" suppressHydrationWarning>
       <body>
-        <AuthSessionProvider session={session as any}>
-          <SessionTimeout />
-          {isPrivileged && <InstallationCheckHandler />}
-          {/*
-            AppShell (Navigation + Topbar) is only rendered when user is authenticated
-            and has a valid role (ADMIN or AGENT). For login page, shell will be null
-            and only children (login form) will be rendered without AppShell.
-          */}
-          {shell ? (
-            <AppShell user={shell} counts={counts} devMode={devMode} agencies={agencies}>
-              {children}
-            </AppShell>
-          ) : (
-            // No session or no valid role: render only children (login page)
-            // Middleware ensures only /login can be accessed without auth
-            children
-          )}
-        </AuthSessionProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <AuthSessionProvider session={session as any}>
+            <SessionTimeout />
+            {isPrivileged && <InstallationCheckHandler />}
+            {/*
+              AppShell (Navigation + Topbar) is only rendered when user is authenticated
+              and has a valid role (ADMIN or AGENT). For login page, shell will be null
+              and only children (login form) will be rendered without AppShell.
+            */}
+            {shell ? (
+              <AppShell user={shell} counts={counts} devMode={devMode} agencies={agencies}>
+                {children}
+              </AppShell>
+            ) : (
+              // No session or no valid role: render only children (login page)
+              // Middleware ensures only /login can be accessed without auth
+              children
+            )}
+          </AuthSessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

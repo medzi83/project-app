@@ -243,7 +243,7 @@ export default function LoginPage() {
               onFocus={() => setFocusedField("email")}
               onBlur={() => setFocusedField(null)}
               placeholder="ihre@email.de"
-              autoComplete="off"
+              autoComplete="email"
             />
             <label
               htmlFor="email"
@@ -267,7 +267,7 @@ export default function LoginPage() {
               onFocus={() => setFocusedField("password")}
               onBlur={() => setFocusedField(null)}
               placeholder="••••••••"
-              autoComplete="off"
+              autoComplete="current-password"
             />
             <label
               htmlFor="password"
