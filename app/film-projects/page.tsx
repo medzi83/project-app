@@ -5,6 +5,10 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import FilmInlineCell from "@/components/FilmInlineCell";
 import FilmPreviewCell from "@/components/FilmPreviewCell";
 import DangerActionButton from "@/components/DangerActionButton";
@@ -66,7 +70,7 @@ const P_STATUS_LABELS: Record<FilmProjectStatus, string> = {
 
 const HEX_COLOR_REGEX = /^#([0-9a-f]{6})$/i;
 const AGENT_BADGE_BASE_CLASS = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border";
-const AGENT_BADGE_EMPTY_CLASS = `${AGENT_BADGE_BASE_CLASS} border-gray-200 bg-gray-100 text-gray-800`;
+const AGENT_BADGE_EMPTY_CLASS = `${AGENT_BADGE_BASE_CLASS} border-border bg-muted text-muted-foreground`;
 
 const agentBadgeStyle = (color?: string | null): CSSProperties | undefined => {
   if (!color || !HEX_COLOR_REGEX.test(color)) return undefined;
@@ -715,7 +719,7 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
   const FILM_STATUSES: FilmStatus[] = ["SCOUTING", "SKRIPT", "SKRIPTFREIGABE", "DREH", "SCHNITT", "VORABVERSION", "FINALVERSION", "ONLINE", "BEENDET"];
 
   const renderPagination = (extraClass?: string) => {
-    const className = ["flex flex-wrap items-center gap-3 text-sm text-gray-600", extraClass].filter(Boolean).join(" ");
+    const className = ["flex flex-wrap items-center gap-3 text-sm text-muted-foreground", extraClass].filter(Boolean).join(" ");
     return (
       <div className={className}>
         <div>Zeige {from} - {to} von {total}</div>
@@ -732,57 +736,61 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Modern Header */}
-      <div className="rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 p-6 shadow-lg">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-white">Filmprojekte</h1>
-            <p className="text-purple-100 text-sm mt-1">{total} {total === 1 ? 'Projekt' : 'Projekte'} gesamt</p>
-          </div>
-          {session.user.role === "ADMIN" && (
-            <DangerActionButton action={deleteAllFilmProjects} confirmText="Wirklich ALLE Filmprojekte dauerhaft löschen?">
-              ALLE Projekte löschen
-            </DangerActionButton>
-          )}
+    <div className="w-full space-y-6 py-6 px-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 text-white shadow-lg">
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+          </svg>
         </div>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold tracking-tight">Filmprojekte</h1>
+          <p className="text-sm text-muted-foreground">
+            {total} {total === 1 ? 'Projekt' : 'Projekte'} gesamt
+          </p>
+        </div>
+        {session.user.role === "ADMIN" && (
+          <DangerActionButton action={deleteAllFilmProjects} confirmText="Wirklich ALLE Filmprojekte dauerhaft löschen?">
+            ALLE Projekte löschen
+          </DangerActionButton>
+        )}
       </div>
 
-      <div className="rounded-2xl border border-purple-200 bg-white shadow-sm">
-        <div className="px-6 py-3 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200 rounded-t-2xl flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-purple-900">Filter & Suche</h2>
-          <div className="flex gap-2">
-            <form method="get" className="contents">
-              <input type="hidden" name="sort" value="standard" />
-              <input type="hidden" name="dir" value={sp.sort === "standard" && sp.dir === "desc" ? "asc" : "desc"} />
-              {sp.q && <input type="hidden" name="q" value={sp.q} />}
-              {sp.agent?.map(v => <input key={v} type="hidden" name="agent" value={v} />)}
-              {sp.status?.map(v => <input key={v} type="hidden" name="status" value={v} />)}
-              {sp.pstatus?.map(v => <input key={v} type="hidden" name="pstatus" value={v} />)}
-              {sp.scope?.map(v => <input key={v} type="hidden" name="scope" value={v} />)}
-              {sp.ps && <input type="hidden" name="ps" value={sp.ps} />}
-              {sp.page && <input type="hidden" name="page" value={sp.page} />}
-              <button type="submit" className="px-3 py-1.5 text-xs font-medium rounded-lg border border-green-200 bg-white text-green-700 hover:bg-green-50 transition-colors">Standardsortierung</button>
-            </form>
+      {/* Filter */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>Filter & Suche</CardTitle>
+            <CardDescription>
+              Filtern und sortieren Sie Filmprojekte
+            </CardDescription>
           </div>
-        </div>
-        <div className="p-6">
+          <form method="get" className="contents">
+            <input type="hidden" name="sort" value="standard" />
+            <input type="hidden" name="dir" value={sp.sort === "standard" && sp.dir === "desc" ? "asc" : "desc"} />
+            {sp.q && <input type="hidden" name="q" value={sp.q} />}
+            {sp.agent?.map(v => <input key={v} type="hidden" name="agent" value={v} />)}
+            {sp.status?.map(v => <input key={v} type="hidden" name="status" value={v} />)}
+            {sp.pstatus?.map(v => <input key={v} type="hidden" name="pstatus" value={v} />)}
+            {sp.scope?.map(v => <input key={v} type="hidden" name="scope" value={v} />)}
+            {sp.ps && <input type="hidden" name="ps" value={sp.ps} />}
+            {sp.page && <input type="hidden" name="page" value={sp.page} />}
+            <Button type="submit" variant="outline" size="sm">Standardsortierung</Button>
+          </form>
+        </CardHeader>
+        <CardContent>
           <form method="get" className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="sort" value={sp.sort} />
             <input type="hidden" name="submitted" value="1" />
 
             <div className="flex flex-col gap-1 w-48">
-              <label className="text-xs uppercase tracking-wide text-gray-500">Kunde suchen</label>
+              <label className="text-xs uppercase tracking-wide text-muted-foreground">Kunde suchen</label>
               <input
                 name="q"
                 defaultValue={sp.q}
                 placeholder="Kundennr. oder Name"
-                className="rounded border px-2 py-1 text-xs"
+                className="rounded border px-2 py-1 text-xs bg-background text-foreground"
               />
             </div>
 
@@ -822,15 +830,15 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
             />
 
             <div className="flex flex-col gap-1 w-36 shrink-0">
-              <label className="text-xs uppercase tracking-wide text-gray-500">Reihenfolge</label>
-              <select name="dir" defaultValue={sp.dir} className="px-2 py-1 text-xs border rounded">
+              <label className="text-xs uppercase tracking-wide text-muted-foreground">Reihenfolge</label>
+              <select name="dir" defaultValue={sp.dir} className="px-2 py-1 text-xs border rounded bg-background text-foreground">
                 <option value="asc">aufsteigend</option>
                 <option value="desc">absteigend</option>
               </select>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button type="submit" className="px-4 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-colors shadow-sm">Anwenden</button>
+              <Button type="submit">Anwenden</Button>
               <SaveFilterButton
                 type="film-projects"
                 currentAgent={sp.agent}
@@ -838,46 +846,48 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 currentPStatus={sp.pstatus}
                 currentScope={sp.scope}
               />
-              <Link href="/film-projects?reset=1" className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">Zurücksetzen</Link>
+              <Button type="button" variant="outline" asChild>
+                <Link href="/film-projects?reset=1">Zurücksetzen</Link>
+              </Button>
             </div>
           </form>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {renderPagination("mt-4")}
 
-      <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="min-w-[1400px] w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wide text-gray-700">
-              <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
-                <Th href={mkSort("filmStatus")} active={sp.sort==="filmStatus"} dir={sp.dir}>Status</Th>
-                <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir}>Kd.-Nr.</Th>
-                <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir}>Name / Firma</Th>
-                <th className="w-12 text-center" title="Details">
-                  <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </th>
-                <Th href={mkSort("scope")} active={sp.sort==="scope"} dir={sp.dir}>Umfang</Th>
-                <Th href={mkSort("priority")} active={sp.sort==="priority"} dir={sp.dir}>Prio / Nur Film</Th>
-                <Th href={mkSort("filmer")} active={sp.sort==="filmer"} dir={sp.dir}>Verantwortl. Filmer</Th>
-                <Th href={mkSort("scouting")} active={sp.sort==="scouting"} dir={sp.dir}>Scouting</Th>
-                <Th href={mkSort("scriptToClient")} active={sp.sort==="scriptToClient"} dir={sp.dir}>Skript an Kunden</Th>
-                <Th href={mkSort("scriptApproved")} active={sp.sort==="scriptApproved"} dir={sp.dir}>Skriptfreigabe</Th>
-                <Th href={mkSort("shootDate")} active={sp.sort==="shootDate"} dir={sp.dir}>Dreh- / Fototermin</Th>
-                <Th href={mkSort("firstCutToClient")} active={sp.sort==="firstCutToClient"} dir={sp.dir}>Vorabversion an Kunden</Th>
-                <Th href={mkSort("finalToClient")} active={sp.sort==="finalToClient"} dir={sp.dir}>Finalversion an Kunden</Th>
-                <Th href={mkSort("onlineDate")} active={sp.sort==="onlineDate"} dir={sp.dir}>Online</Th>
-                <Th href={mkSort("lastContact")} active={sp.sort==="lastContact"} dir={sp.dir}>Letzter Kontakt</Th>
-                <Th href={mkSort("status")} active={sp.sort==="status"} dir={sp.dir}>P-Status</Th>
-                <Th href={mkSort("reminderAt")} active={sp.sort==="reminderAt"} dir={sp.dir}>Wiedervorlage am</Th>
-                <Th>Hinweis</Th>
-                {canDelete && <Th>Löschen</Th>}
-              </tr>
-            </thead>
-            <tbody className="[&>tr>td]:px-3 [&>tr>td]:py-2 align-top">
+      {/* Table */}
+      <div className="overflow-x-auto rounded-lg border shadow-sm bg-card">
+        <Table className="min-w-[1400px]">
+              <TableHeader>
+                <TableRow>
+                  <Th href={mkSort("filmStatus")} active={sp.sort==="filmStatus"} dir={sp.dir}>Status</Th>
+                  <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir}>Kd.-Nr.</Th>
+                  <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir}>Name / Firma</Th>
+                  <TableHead className="w-12 text-center" title="Details">
+                    <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </TableHead>
+                  <Th href={mkSort("scope")} active={sp.sort==="scope"} dir={sp.dir}>Umfang</Th>
+                  <Th href={mkSort("priority")} active={sp.sort==="priority"} dir={sp.dir}>Prio / Nur Film</Th>
+                  <Th href={mkSort("filmer")} active={sp.sort==="filmer"} dir={sp.dir}>Verantwortl. Filmer</Th>
+                  <Th href={mkSort("scouting")} active={sp.sort==="scouting"} dir={sp.dir}>Scouting</Th>
+                  <Th href={mkSort("scriptToClient")} active={sp.sort==="scriptToClient"} dir={sp.dir}>Skript an Kunden</Th>
+                  <Th href={mkSort("scriptApproved")} active={sp.sort==="scriptApproved"} dir={sp.dir}>Skriptfreigabe</Th>
+                  <Th href={mkSort("shootDate")} active={sp.sort==="shootDate"} dir={sp.dir}>Dreh- / Fototermin</Th>
+                  <Th href={mkSort("firstCutToClient")} active={sp.sort==="firstCutToClient"} dir={sp.dir}>Vorabversion an Kunden</Th>
+                  <Th href={mkSort("finalToClient")} active={sp.sort==="finalToClient"} dir={sp.dir}>Finalversion an Kunden</Th>
+                  <Th href={mkSort("onlineDate")} active={sp.sort==="onlineDate"} dir={sp.dir}>Online</Th>
+                  <Th href={mkSort("lastContact")} active={sp.sort==="lastContact"} dir={sp.dir}>Letzter Kontakt</Th>
+                  <Th href={mkSort("status")} active={sp.sort==="status"} dir={sp.dir}>P-Status</Th>
+                  <Th href={mkSort("reminderAt")} active={sp.sort==="reminderAt"} dir={sp.dir}>Wiedervorlage am</Th>
+                  <Th>Hinweis</Th>
+                  {canDelete && <Th>Löschen</Th>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
               {filmProjects.map((project) => {
                 const film = project.film;
                 const row = rows.find((r) => r.id === project.id)!;
@@ -910,25 +920,26 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                 const pStatus = film?.status;
                 let statusBadgeClasses = "inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs";
                 if (pStatus === "MMW") {
-                  statusBadgeClasses += " bg-red-200 text-red-900";
+                  statusBadgeClasses += " bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive-foreground";
                 } else if (pStatus === "VERZICHT" || pStatus === "WARTEN") {
-                  statusBadgeClasses += " bg-orange-200 text-orange-900";
+                  statusBadgeClasses += " bg-orange-200 dark:bg-orange-500/30 text-orange-900 dark:text-orange-100";
                 } else if (pStatus === "BEENDET") {
-                  statusBadgeClasses += " bg-gray-400 text-gray-900";
+                  statusBadgeClasses += " bg-muted text-muted-foreground";
                 } else {
-                  statusBadgeClasses += " bg-gray-100 text-gray-900";
+                  statusBadgeClasses += " bg-muted text-foreground";
                 }
 
                 const isFavoriteClient = project.client?.id && favoriteClientIds.has(project.client.id);
 
-                const rowClasses = ["border-t", "border-gray-200", "transition-colors", "hover:bg-gray-50"];
+                const rowClasses = ["transition-colors"];
                 // Don't show stale background for ONLINE projects
-                if (row.isStale && !isOnline) rowClasses.push("bg-red-50", "hover:bg-red-100/50");
+                if (row.isStale && !isOnline) rowClasses.push("bg-destructive/10", "hover:bg-destructive/20");
+                else rowClasses.push("hover:bg-muted/50");
                 if (isBeendet) rowClasses.push("opacity-60");
 
                 return (
                   <FilmProjectRow key={project.id} rowClasses={rowClasses.join(" ")} projectId={project.id}>
-                    <td className="font-semibold">
+                    <TableCell className="font-semibold">
                       <span className={statusBadgeClasses}>
                         {row.primaryLinkHref && (
                           <a
@@ -945,29 +956,29 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         )}
                         {row.filmStatus}
                         {isNotActive && (
-                          <span className="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-yellow-800 bg-yellow-200 rounded-full cursor-help" title="Achtung, Projektstatus beachten">
+                          <span className="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-yellow-800 dark:text-yellow-200 bg-yellow-200 dark:bg-yellow-600/50 rounded-full cursor-help" title="Achtung, Projektstatus beachten">
                             !
                           </span>
                         )}
                       </span>
-                    </td>
-                    <td className="font-mono text-xs text-gray-600">
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
                       <div className="flex flex-col gap-1">
                         {row.customerNo !== "-" ? (
-                          <Link href={`/clients/${project.client?.id}`} className="underline text-blue-600 hover:text-blue-800">
+                          <Link href={`/clients/${project.client?.id}`} className="underline text-primary hover:text-primary/80">
                             {row.customerNo}
                           </Link>
                         ) : (
                           <span>-</span>
                         )}
                         {project.client?.workStopped && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-600 text-white">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-destructive text-destructive-foreground">
                             ARBEITSSTOPP
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td className="font-medium text-gray-900 client-name-cell cursor-pointer select-none">
+                    </TableCell>
+                    <TableCell className="font-medium text-foreground client-name-cell cursor-pointer select-none">
                       <div className="flex items-center gap-2">
                         {isSales && isFavoriteClient && (
                           <svg className="w-3.5 h-3.5 text-yellow-500 fill-current flex-shrink-0" viewBox="0 0 24 24">
@@ -976,16 +987,16 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         )}
                         <span>{row.clientName}</span>
                       </div>
-                    </td>
-                    <td className="text-center w-12">
-                      <Link href={`/film-projects/${project.id}`} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors" title="Details anzeigen">
+                    </TableCell>
+                    <TableCell className="text-center w-12">
+                      <Link href={`/film-projects/${project.id}`} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-primary hover:bg-muted transition-colors" title="Details anzeigen">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
                       </Link>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="scope"
@@ -995,8 +1006,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         options={SCOPE_OPTIONS}
                         canEdit={canEdit}
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="priority"
@@ -1006,8 +1017,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         options={PRIORITY_OPTIONS}
                         canEdit={canEdit}
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="filmerId"
@@ -1019,8 +1030,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         displayClassName={filmerBadgeClass}
                         displayStyle={filmerBadgeStyle}
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="scouting"
@@ -1029,8 +1040,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         value={film?.scouting?.toISOString() ?? null}
                         canEdit={canEdit}
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="scriptToClient"
@@ -1039,8 +1050,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         value={film?.scriptToClient?.toISOString() ?? null}
                         canEdit={canEdit}
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="scriptApproved"
@@ -1049,8 +1060,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         value={film?.scriptApproved?.toISOString() ?? null}
                         canEdit={canEdit}
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="shootDate"
@@ -1059,8 +1070,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         value={film?.shootDate?.toISOString() ?? null}
                         canEdit={canEdit}
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmPreviewCell
                         projectId={project.id}
                         display={row.firstCutToClient}
@@ -1068,8 +1079,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         currentLink={film?.previewVersions?.[0]?.link ?? null}
                         canEdit={canEdit}
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="finalToClient"
@@ -1087,8 +1098,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         }}
                         canEdit={canEdit}
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="onlineDate"
@@ -1106,8 +1117,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         }}
                         canEdit={canEdit}
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="lastContact"
@@ -1116,8 +1127,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         value={film?.lastContact?.toISOString() ?? null}
                         canEdit={canEdit}
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="status"
@@ -1126,10 +1137,10 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         value={film?.status ?? "AKTIV"}
                         options={P_STATUS_OPTIONS}
                         canEdit={canEdit}
-                        displayClassName="uppercase tracking-wide text-xs text-gray-700"
+                        displayClassName="uppercase tracking-wide text-xs text-muted-foreground"
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="reminderAt"
@@ -1138,8 +1149,8 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         value={film?.reminderAt?.toISOString() ?? null}
                         canEdit={canEdit}
                       />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <FilmInlineCell
                         id={project.id}
                         name="note"
@@ -1147,35 +1158,34 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                         display={row.note.length > 200 ? `${row.note.slice(0, 200)}...` : row.note}
                         value={film?.note ?? ""}
                         canEdit={canEdit}
-                        displayClassName="max-w-[240px] text-xs text-gray-600"
+                        displayClassName="max-w-[240px] text-xs text-muted-foreground"
                       />
-                    </td>
+                    </TableCell>
                     {canDelete && (
-                      <td>
+                      <TableCell>
                         <DangerActionButton
                           action={deleteFilmProject}
                           id={project.id}
                           confirmText={`Filmprojekt "${row.clientName}" wirklich löschen?`}
-                          className="inline-flex items-center justify-center rounded p-1 text-red-600 hover:bg-red-50"
+                          className="inline-flex items-center justify-center rounded p-1 text-destructive hover:bg-destructive/10"
                         >
                           <TrashIcon className="h-4 w-4" />
                         </DangerActionButton>
-                      </td>
+                      </TableCell>
                     )}
                   </FilmProjectRow>
                 );
               })}
               {rows.length === 0 && (
-                <tr>
-                  <td colSpan={21} className="py-8 text-center text-sm text-gray-500">
+                <TableRow>
+                  <TableCell colSpan={21} className="py-8 text-center text-sm text-muted-foreground">
                     Noch keine Filmprojekte hinterlegt.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </TableBody>
+        </Table>
+      </div>
 
       {renderPagination("mt-4")}
     </div>
@@ -1231,11 +1241,10 @@ function makePageSizeHref({ current, size }: { current: Search; size: number }) 
 function Th(props: { href?: string; active?: boolean; dir?: "asc" | "desc"; children: React.ReactNode }) {
   const { href, active, dir, children } = props;
   const arrow = active ? (dir === "desc" ? " ↓" : " ↑") : "";
-  const className = "px-3 py-2 text-left";
-  if (!href) return <th className={className}>{children}</th>;
+  if (!href) return <TableHead>{children}</TableHead>;
   return (
-    <th className={className}>
-      <Link href={href} className="underline">{children}{arrow}</Link>
-    </th>
+    <TableHead>
+      <Link href={href} className="underline hover:text-primary">{children}{arrow}</Link>
+    </TableHead>
   );
 }

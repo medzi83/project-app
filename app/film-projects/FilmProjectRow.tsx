@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TableRow } from "@/components/ui/table";
 
 type FilmProjectRowProps = {
   children: React.ReactNode;
@@ -13,10 +14,11 @@ export function FilmProjectRow({ children, rowClasses, projectId }: FilmProjectR
 
   const handleClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    const td = target.closest("td");
+    // Check for both td (native) and TableCell elements
+    const cell = target.closest("td, [role='cell']");
 
     // Only toggle highlight when clicking on the client-name-cell
-    if (td?.classList.contains("client-name-cell")) {
+    if (cell?.classList.contains("client-name-cell")) {
       e.preventDefault();
       setIsHighlighted(!isHighlighted);
     }
@@ -27,12 +29,12 @@ export function FilmProjectRow({ children, rowClasses, projectId }: FilmProjectR
     : "";
 
   return (
-    <tr
+    <TableRow
       className={`${rowClasses} ${highlightClasses}`}
       onClick={handleClick}
       data-project-id={projectId}
     >
       {children}
-    </tr>
+    </TableRow>
   );
 }

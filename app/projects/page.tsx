@@ -4,6 +4,10 @@ import type { Prisma, MaterialStatus, ProjectStatus, WebsitePriority, CMS as Pri
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { redirect } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import InlineCell from "@/components/InlineCell";
 import DangerActionButton from "@/components/DangerActionButton";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
@@ -75,7 +79,7 @@ const mm = (n?: number | null) => (n ? `${Math.floor(n / 60)}h ${n % 60}m` : "-"
 
 const HEX_COLOR_REGEX = /^#([0-9a-f]{6})$/i;
 const AGENT_BADGE_BASE_CLASS = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border";
-const AGENT_BADGE_EMPTY_CLASS = `${AGENT_BADGE_BASE_CLASS} border-gray-200 bg-gray-100 text-gray-800`;
+const AGENT_BADGE_EMPTY_CLASS = `${AGENT_BADGE_BASE_CLASS} border-border bg-muted text-muted-foreground`;
 
 const agentBadgeStyle = (color?: string | null): CSSProperties | undefined => {
   if (!color || !HEX_COLOR_REGEX.test(color)) return undefined;
@@ -201,9 +205,9 @@ const getRemainingWorkdays = (
   if (days < 0) days = 0;
 
   let className: string | undefined;
-  if (days >= 60) className = "bg-red-200 text-yellow-900 font-semibold px-2 py-0.5 rounded";
-  else if (days >= 50) className = "text-red-600 font-semibold";
-  else if (days >= 30) className = "text-yellow-600 font-semibold";
+  if (days >= 60) className = "bg-destructive/20 text-destructive dark:bg-destructive/30 dark:text-destructive-foreground font-semibold px-2 py-0.5 rounded";
+  else if (days >= 50) className = "text-destructive font-semibold";
+  else if (days >= 30) className = "text-yellow-600 dark:text-yellow-500 font-semibold";
   return { display: String(days), className };
 };
 
@@ -497,7 +501,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
   const mkPageHref = (p: number) => makePageHref({ current: sp, page: p });
   const mkPageSizeHref = (s: number) => makePageSizeHref({ current: sp, size: s });
   const renderPagination = (extraClass?: string) => {
-    const className = ["flex flex-wrap items-center gap-3 text-sm text-gray-600", extraClass].filter(Boolean).join(" ");
+    const className = ["flex flex-wrap items-center gap-3 text-sm text-muted-foreground", extraClass].filter(Boolean).join(" ");
     return (
       <div className={className}>
         <div>Zeige {from} - {to} von {total}</div>
@@ -538,31 +542,34 @@ export default async function ProjectsPage({ searchParams }: Props) {
   const textitOptions = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"].map((v) => ({ value: v, label: labelForTextitStatus(v) }));
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Modern Header */}
-      <div className="rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-6 shadow-lg">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-white">Webseitenprojekte</h1>
-            <p className="text-blue-100 text-sm mt-1">{total} {total === 1 ? 'Projekt' : 'Projekte'} gesamt</p>
-          </div>
-          {role === "ADMIN" && session.user.role === "ADMIN" && (
-            <DangerActionButton action={deleteAllProjects} confirmText="Wirklich ALLE Projekte dauerhaft löschen?">ALLE Projekte löschen</DangerActionButton>
-          )}
+    <div className="w-full space-y-6 py-6 px-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg">
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+          </svg>
         </div>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold tracking-tight">Webseitenprojekte</h1>
+          <p className="text-sm text-muted-foreground">
+            {total} {total === 1 ? 'Projekt' : 'Projekte'} gesamt
+          </p>
+        </div>
+        {role === "ADMIN" && session.user.role === "ADMIN" && (
+          <DangerActionButton action={deleteAllProjects} confirmText="Wirklich ALLE Projekte dauerhaft löschen?">ALLE Projekte löschen</DangerActionButton>
+        )}
       </div>
 
       {/* Filter */}
-<div className="rounded-2xl border border-blue-200 bg-white shadow-sm">
-  <div className="px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 rounded-t-2xl">
-    <h2 className="text-sm font-semibold text-blue-900">Filter & Suche</h2>
-  </div>
-    <div className="p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Filter & Suche</CardTitle>
+          <CardDescription>
+            Filtern und sortieren Sie Webseitenprojekte
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
     <form method="get" className="flex flex-wrap items-end gap-3">
       <input type="hidden" name="sort" value={sp.sort} />
       <input type="hidden" name="submitted" value="1" />
@@ -571,8 +578,8 @@ export default async function ProjectsPage({ searchParams }: Props) {
       {sp.overdue === "1" && <input type="hidden" name="overdue" value="1" />}
 
       <div className="flex flex-col gap-1 w-48 shrink-0">
-        <label className="text-[11px] uppercase tracking-wide text-gray-500">Kunde suchen</label>
-        <input name="q" defaultValue={sp.q} placeholder="Kundennr. oder Name" className="px-2 py-1 text-xs border rounded" />
+        <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Kunde suchen</label>
+        <input name="q" defaultValue={sp.q} placeholder="Kundennr. oder Name" className="px-2 py-1 text-xs border rounded bg-background text-foreground" />
       </div>
 
       <CheckboxFilterGroup
@@ -618,15 +625,15 @@ export default async function ProjectsPage({ searchParams }: Props) {
       />
 
       <div className="flex flex-col gap-1 w-36 shrink-0">
-        <label className="text-[11px] uppercase tracking-wide text-gray-500">Reihenfolge</label>
-        <select name="dir" defaultValue={sp.dir} className="px-2 py-1 text-xs border rounded">
+        <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Reihenfolge</label>
+        <select name="dir" defaultValue={sp.dir} className="px-2 py-1 text-xs border rounded bg-background text-foreground">
           <option value="asc">aufsteigend</option>
           <option value="desc">absteigend</option>
         </select>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button className="px-4 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-colors shadow-sm" type="submit">Anwenden</button>
+        <Button type="submit" className="gap-2">Anwenden</Button>
         <SaveFilterButton
           type="projects"
           currentStatus={sp.status}
@@ -634,47 +641,51 @@ export default async function ProjectsPage({ searchParams }: Props) {
           currentCms={sp.cms}
           currentAgent={sp.agent}
         />
-        <Link href="/projects?reset=1" className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">Zurücksetzen</Link>
-        <button type="submit" name="standardSort" value="1" className="px-4 py-2 text-xs font-medium rounded-lg border border-purple-200 bg-white text-purple-700 hover:bg-purple-50 transition-colors">Standardsortierung</button>
+        <Button type="button" variant="outline" asChild>
+          <Link href="/projects?reset=1">Zurücksetzen</Link>
+        </Button>
+        <Button type="submit" name="standardSort" value="1" variant="outline">Standardsortierung</Button>
       </div>
     </form>
-  </div>
-</div>
+        </CardContent>
+      </Card>
 
       {renderPagination("mt-4")}
-      <div className="overflow-x-auto rounded-2xl border border-purple-200 shadow-sm bg-white">
-        <table className="min-w-[1200px] w-full text-sm">
-          <thead className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200">
-            <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
-              <Th href={mkSort("status")} active={sp.sort==="status"} dir={sp.dir}>Status</Th>
-              <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir} width={120}>Kundennr.</Th>
-              <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir} width={200}>Kunde</Th>
-              <Th href={mkSort("domain")} active={sp.sort==="domain"} dir={sp.dir}>Domain</Th>
-              <Th href={mkSort("priority")} active={sp.sort==="priority"} dir={sp.dir}>Prio</Th>
-              <Th href={mkSort("pStatus")} active={sp.sort==="pStatus"} dir={sp.dir}>P-Status</Th>
-              <Th href={mkSort("cms")} active={sp.sort==="cms"} dir={sp.dir}>CMS</Th>
-              <Th href={mkSort("agent")} active={sp.sort==="agent"} dir={sp.dir}>Umsetzer</Th>
-              <Th href={mkSort("webDate")} active={sp.sort==="webDate"} dir={sp.dir}>Webtermin</Th>
-              <Th href={mkSort("demoDate")} active={sp.sort==="demoDate"} dir={sp.dir}>Demo an Kunden</Th>
-              <Th href={mkSort("onlineDate")} active={sp.sort==="onlineDate"} dir={sp.dir}>Online</Th>
-              <Th href={mkSort("materialStatus")} active={sp.sort==="materialStatus"} dir={sp.dir}>Material</Th>
-              <Th href={mkSort("lastMaterialAt")} active={sp.sort==="lastMaterialAt"} dir={sp.dir}>Letzter Materialeingang</Th>
-              <Th href={mkSort("effortBuildMin")} active={sp.sort==="effortBuildMin"} dir={sp.dir}>Aufwand Umsetz.</Th>
-              <Th href={mkSort("effortDemoMin")} active={sp.sort==="effortDemoMin"} dir={sp.dir}>Aufwand Demo</Th>
-              <Th href={mkSort("workdays")} active={sp.sort==="workdays"} dir={sp.dir}>Arbeitstage</Th>
-              <Th href={mkSort("seo")} active={sp.sort==="seo"} dir={sp.dir}>SEO</Th>
-              <Th href={mkSort("textit")} active={sp.sort==="textit"} dir={sp.dir}>Textit</Th>
-              <Th href={mkSort("accessible")} active={sp.sort==="accessible"} dir={sp.dir}>Barrierefrei</Th>
-              <Th href={mkSort("note")} active={sp.sort==="note"} dir={sp.dir}>Hinweis</Th>
-              <Th href={mkSort("updatedAt")} active={sp.sort==="updatedAt"} dir={sp.dir}>Aktualisiert</Th>
-              <Th>Aktionen</Th>
-            </tr>
-          </thead>
-          <tbody className="[&>tr>td]:px-3 [&>tr>td]:py-2">
+
+      {/* Table */}
+      <div className="overflow-x-auto rounded-lg border shadow-sm bg-card">
+        <Table className="min-w-[1200px]">
+              <TableHeader>
+                <TableRow>
+                  <Th href={mkSort("status")} active={sp.sort==="status"} dir={sp.dir}>Status</Th>
+                  <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir} width={120}>Kundennr.</Th>
+                  <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir} width={200}>Kunde</Th>
+                  <Th href={mkSort("domain")} active={sp.sort==="domain"} dir={sp.dir}>Domain</Th>
+                  <Th href={mkSort("priority")} active={sp.sort==="priority"} dir={sp.dir}>Prio</Th>
+                  <Th href={mkSort("pStatus")} active={sp.sort==="pStatus"} dir={sp.dir}>P-Status</Th>
+                  <Th href={mkSort("cms")} active={sp.sort==="cms"} dir={sp.dir}>CMS</Th>
+                  <Th href={mkSort("agent")} active={sp.sort==="agent"} dir={sp.dir}>Umsetzer</Th>
+                  <Th href={mkSort("webDate")} active={sp.sort==="webDate"} dir={sp.dir}>Webtermin</Th>
+                  <Th href={mkSort("demoDate")} active={sp.sort==="demoDate"} dir={sp.dir}>Demo an Kunden</Th>
+                  <Th href={mkSort("onlineDate")} active={sp.sort==="onlineDate"} dir={sp.dir}>Online</Th>
+                  <Th href={mkSort("materialStatus")} active={sp.sort==="materialStatus"} dir={sp.dir}>Material</Th>
+                  <Th href={mkSort("lastMaterialAt")} active={sp.sort==="lastMaterialAt"} dir={sp.dir}>Letzter Materialeingang</Th>
+                  <Th href={mkSort("effortBuildMin")} active={sp.sort==="effortBuildMin"} dir={sp.dir}>Aufwand Umsetz.</Th>
+                  <Th href={mkSort("effortDemoMin")} active={sp.sort==="effortDemoMin"} dir={sp.dir}>Aufwand Demo</Th>
+                  <Th href={mkSort("workdays")} active={sp.sort==="workdays"} dir={sp.dir}>Arbeitstage</Th>
+                  <Th href={mkSort("seo")} active={sp.sort==="seo"} dir={sp.dir}>SEO</Th>
+                  <Th href={mkSort("textit")} active={sp.sort==="textit"} dir={sp.dir}>Textit</Th>
+                  <Th href={mkSort("accessible")} active={sp.sort==="accessible"} dir={sp.dir}>Barrierefrei</Th>
+                  <Th href={mkSort("note")} active={sp.sort==="note"} dir={sp.dir}>Hinweis</Th>
+                  <Th href={mkSort("updatedAt")} active={sp.sort==="updatedAt"} dir={sp.dir}>Aktualisiert</Th>
+                  <Th>Aktionen</Th>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
             {projects.map((p) => {
               const materialStatus = (p.website?.materialStatus ?? "ANGEFORDERT") as MaterialStatus;
               const workdayInfo = getRemainingWorkdays(materialStatus, p.website?.lastMaterialAt, p.website?.demoDate);
-              const materialStatusClass = materialStatus === "VOLLSTAENDIG" ? "bg-green-100 px-2 py-1 rounded" : undefined;
+              const materialStatusClass = materialStatus === "VOLLSTAENDIG" ? "bg-green-500/20 dark:bg-green-500/30 px-2 py-1 rounded" : undefined;
               const hasAgent = Boolean(p.agent);
               const badgeClass = hasAgent ? (p.agent?.color ? AGENT_BADGE_BASE_CLASS : AGENT_BADGE_EMPTY_CLASS) : undefined;
               const badgeStyle = hasAgent ? agentBadgeStyle(p.agent?.color) : undefined;
@@ -710,31 +721,32 @@ export default async function ProjectsPage({ searchParams }: Props) {
 
               const isFavoriteClient = p.clientId && favoriteClientIds.has(p.clientId);
 
-              const rowClasses = ["border-t", "border-purple-100", "transition-colors", "hover:bg-purple-50/50"];
-              if (isStale) rowClasses.push("bg-red-50", "hover:bg-red-100/50");
+              const rowClasses = ["transition-colors"];
+              if (isStale) rowClasses.push("bg-destructive/10", "hover:bg-destructive/20");
+              else rowClasses.push("hover:bg-muted/50");
               if (ended) rowClasses.push("opacity-60");
               return (
-                <tr key={p.id} className={rowClasses.join(" ")}>
-                  <td className={statusGreen ? "bg-green-100 font-semibold rounded-lg" : ""}>
-                    <span className={statusGreen ? "inline-flex items-center px-2 py-1 rounded-md bg-green-200 text-green-900 text-xs font-semibold" : ""}>{statusLabel}</span>
-                  </td>
-                  <td className="whitespace-nowrap">
+                <TableRow key={p.id} className={rowClasses.join(" ")}>
+                  <TableCell className={statusGreen ? "bg-green-500/20 dark:bg-green-500/30 font-semibold rounded-lg" : ""}>
+                    <span className={statusGreen ? "inline-flex items-center px-2 py-1 rounded-md bg-green-500/30 dark:bg-green-500/40 text-green-900 dark:text-green-100 text-xs font-semibold" : ""}>{statusLabel}</span>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <div className="flex flex-col gap-1">
                       {p.client?.customerNo ? (
-                        <Link href={`/clients/${p.clientId}`} className="underline text-blue-600 hover:text-blue-800">
+                        <Link href={`/clients/${p.clientId}`} className="underline text-primary hover:text-primary/80">
                           {p.client.customerNo}
                         </Link>
                       ) : (
                         <span>-</span>
                       )}
                       {p.client?.workStopped && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-600 text-white">
+                        <Badge variant="destructive" className="text-xs font-bold">
                           ARBEITSSTOPP
-                        </span>
+                        </Badge>
                       )}
                     </div>
-                  </td>
-                  <td className="max-w-[200px]" title={p.client?.name ?? ""}>
+                  </TableCell>
+                  <TableCell className="max-w-[200px]" title={p.client?.name ?? ""}>
                     <div className="flex items-center gap-2">
                       {isSales && isFavoriteClient && (
                         <svg className="w-3.5 h-3.5 text-yellow-500 fill-current flex-shrink-0" viewBox="0 0 24 24">
@@ -743,31 +755,31 @@ export default async function ProjectsPage({ searchParams }: Props) {
                       )}
                       <span className="truncate">{p.client?.name ?? "-"}</span>
                       {p.website?.isRelaunch && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-orange-500 text-white flex-shrink-0" title="Relaunch-Projekt">
+                        <Badge className="bg-orange-500 dark:bg-orange-600 text-white text-xs flex-shrink-0" title="Relaunch-Projekt">
                           RL
-                        </span>
+                        </Badge>
                       )}
                     </div>
-                  </td>
-                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="domain" type="text" display={p.website?.domain ?? "-"} value={p.website?.domain ?? ""} canEdit={canEdit} /></td>
-                  <td><InlineCell target="website" id={p.id} name="priority" type="select" display={labelForWebsitePriority(p.website?.priority)} value={p.website?.priority ?? "NONE"} options={priorityOptions} canEdit={canEdit} /></td>
-                  <td><InlineCell target="website" id={p.id} name="pStatus" type="select" display={labelForProductionStatus(p.website?.pStatus)} value={p.website?.pStatus ?? "NONE"} options={pStatusOptions} canEdit={canEdit} /></td>
-                  <td><InlineCell target="website" id={p.id} name="cms" type="select" display={p.website?.cms === "SHOPWARE" ? "Shop" : p.website?.cms ?? "-"} value={p.website?.cms ?? ""} options={cmsOptions} canEdit={canEdit} /></td>
-                  <td><InlineCell target="project" id={p.id} name="agentId" type="select" display={agentDisplayName} value={effectiveAgentId} options={agentOptions} canEdit={canEdit} displayClassName={badgeClass} displayStyle={badgeStyle} /></td>
-                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="webDate" type="datetime-with-type" display={fmtDateTime(p.website?.webDate)} value={p.website?.webDate ? new Date(p.website.webDate).toISOString() : ""} extraValue={p.website?.webterminType ?? ""} canEdit={canEdit} /></td>
-                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="demoDate" type="date" display={fmtDate(p.website?.demoDate)} value={p.website?.demoDate ? new Date(p.website.demoDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
-                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="onlineDate" type="date" display={fmtDate(p.website?.onlineDate)} value={p.website?.onlineDate ? new Date(p.website.onlineDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
-                  <td><InlineCell target="website" id={p.id} name="materialStatus" type="select" display={labelForMaterialStatus(materialStatus)} value={materialStatus} options={materialStatusOptions} canEdit={canEdit} displayClassName={materialStatusClass} /></td>
-                  <td className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="lastMaterialAt" type="date" display={fmtDate(p.website?.lastMaterialAt)} value={p.website?.lastMaterialAt ? new Date(p.website.lastMaterialAt).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></td>
-                  <td><InlineCell target="website" id={p.id} name="effortBuildMin" type="number" display={mm(p.website?.effortBuildMin)} value={p.website?.effortBuildMin != null ? p.website.effortBuildMin / 60 : ""} canEdit={canEdit} /></td>
-                  <td><InlineCell target="website" id={p.id} name="effortDemoMin" type="number" display={mm(p.website?.effortDemoMin)} value={p.website?.effortDemoMin != null ? p.website.effortDemoMin / 60 : ""} canEdit={canEdit} /></td>
-                  <td className={workdayInfo.className}>{workdayInfo.display}</td>
-                  <td><InlineCell target="website" id={p.id} name="seo" type="select" display={labelForSeoStatus(p.website?.seo)} value={p.website?.seo ?? ""} options={seoOptions} canEdit={canEdit} /></td>
-                  <td><InlineCell target="website" id={p.id} name="textit" type="select" display={labelForTextitStatus(p.website?.textit)} value={p.website?.textit ?? ""} options={textitOptions} canEdit={canEdit} /></td>
-                  <td><InlineCell target="website" id={p.id} name="accessible" type="tri" display={p.website?.accessible == null ? "-" : p.website?.accessible ? "Ja" : "Nein"} value={p.website?.accessible ?? null} canEdit={canEdit} /></td>
-                  <td className="align-top"><InlineCell target="website" id={p.id} name="note" type="textarea" display={p.website?.note ?? ""} value={p.website?.note ?? ""} canEdit={canEdit} displayClassName="block whitespace-pre-wrap" /></td>
-                  <td className="whitespace-nowrap">{fmtDate(p.updatedAt)}</td>
-                  <td className="whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="domain" type="text" display={p.website?.domain ?? "-"} value={p.website?.domain ?? ""} canEdit={canEdit} /></TableCell>
+                  <TableCell><InlineCell target="website" id={p.id} name="priority" type="select" display={labelForWebsitePriority(p.website?.priority)} value={p.website?.priority ?? "NONE"} options={priorityOptions} canEdit={canEdit} /></TableCell>
+                  <TableCell><InlineCell target="website" id={p.id} name="pStatus" type="select" display={labelForProductionStatus(p.website?.pStatus)} value={p.website?.pStatus ?? "NONE"} options={pStatusOptions} canEdit={canEdit} /></TableCell>
+                  <TableCell><InlineCell target="website" id={p.id} name="cms" type="select" display={p.website?.cms === "SHOPWARE" ? "Shop" : p.website?.cms ?? "-"} value={p.website?.cms ?? ""} options={cmsOptions} canEdit={canEdit} /></TableCell>
+                  <TableCell><InlineCell target="project" id={p.id} name="agentId" type="select" display={agentDisplayName} value={effectiveAgentId} options={agentOptions} canEdit={canEdit} displayClassName={badgeClass} displayStyle={badgeStyle} /></TableCell>
+                  <TableCell className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="webDate" type="datetime-with-type" display={fmtDateTime(p.website?.webDate)} value={p.website?.webDate ? new Date(p.website.webDate).toISOString() : ""} extraValue={p.website?.webterminType ?? ""} canEdit={canEdit} /></TableCell>
+                  <TableCell className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="demoDate" type="date" display={fmtDate(p.website?.demoDate)} value={p.website?.demoDate ? new Date(p.website.demoDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></TableCell>
+                  <TableCell className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="onlineDate" type="date" display={fmtDate(p.website?.onlineDate)} value={p.website?.onlineDate ? new Date(p.website.onlineDate).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></TableCell>
+                  <TableCell><InlineCell target="website" id={p.id} name="materialStatus" type="select" display={labelForMaterialStatus(materialStatus)} value={materialStatus} options={materialStatusOptions} canEdit={canEdit} displayClassName={materialStatusClass} /></TableCell>
+                  <TableCell className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="lastMaterialAt" type="date" display={fmtDate(p.website?.lastMaterialAt)} value={p.website?.lastMaterialAt ? new Date(p.website.lastMaterialAt).toISOString().slice(0, 10) : ""} canEdit={canEdit} /></TableCell>
+                  <TableCell><InlineCell target="website" id={p.id} name="effortBuildMin" type="number" display={mm(p.website?.effortBuildMin)} value={p.website?.effortBuildMin != null ? p.website.effortBuildMin / 60 : ""} canEdit={canEdit} /></TableCell>
+                  <TableCell><InlineCell target="website" id={p.id} name="effortDemoMin" type="number" display={mm(p.website?.effortDemoMin)} value={p.website?.effortDemoMin != null ? p.website.effortDemoMin / 60 : ""} canEdit={canEdit} /></TableCell>
+                  <TableCell className={workdayInfo.className}>{workdayInfo.display}</TableCell>
+                  <TableCell><InlineCell target="website" id={p.id} name="seo" type="select" display={labelForSeoStatus(p.website?.seo)} value={p.website?.seo ?? ""} options={seoOptions} canEdit={canEdit} /></TableCell>
+                  <TableCell><InlineCell target="website" id={p.id} name="textit" type="select" display={labelForTextitStatus(p.website?.textit)} value={p.website?.textit ?? ""} options={textitOptions} canEdit={canEdit} /></TableCell>
+                  <TableCell><InlineCell target="website" id={p.id} name="accessible" type="tri" display={p.website?.accessible == null ? "-" : p.website?.accessible ? "Ja" : "Nein"} value={p.website?.accessible ?? null} canEdit={canEdit} /></TableCell>
+                  <TableCell className="align-top"><InlineCell target="website" id={p.id} name="note" type="textarea" display={p.website?.note ?? ""} value={p.website?.note ?? ""} canEdit={canEdit} displayClassName="block whitespace-pre-wrap" /></TableCell>
+                  <TableCell className="whitespace-nowrap">{fmtDate(p.updatedAt)}</TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <Link href={`/projects/${p.id}`} className="underline">Details</Link>
                       {role === "ADMIN" && (
@@ -775,7 +787,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
                           <input type="hidden" name="projectId" value={p.id} />
                           <ConfirmSubmit
                             confirmText="Dieses Projekt unwiderruflich löschen?"
-                            className="inline-flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50"
+                            className="inline-flex items-center gap-1 rounded border border-destructive/30 px-2 py-1 text-destructive hover:bg-destructive/10"
                           >
                             <TrashIcon className="h-4 w-4" />
                             <span className="sr-only">Projekt löschen</span>
@@ -783,13 +795,19 @@ export default async function ProjectsPage({ searchParams }: Props) {
                         </form>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-            {projects.length === 0 && (<tr><td colSpan={22} className="py-10 text-center opacity-60">Keine Webseitenprojekte gefunden.</td></tr>)}
-          </tbody>
-        </table>
+            {projects.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={22} className="py-10 text-center text-muted-foreground">
+                  Keine Webseitenprojekte gefunden.
+                </TableCell>
+              </TableRow>
+            )}
+              </TableBody>
+        </Table>
       </div>
 
       {renderPagination("mt-4")}
@@ -899,13 +917,12 @@ function makePageSizeHref({ current, size }: { current: Search; size: number }) 
 }
 function Th(props: { href?: string; active?: boolean; dir?: "asc" | "desc"; children: React.ReactNode; width?: number }) {
   const { href, active, dir, children, width } = props;
-const arrow = active ? (dir === "desc" ? " ↓" : " ↑") : "";
-  const className = "px-3 py-2 text-left";
-  if (!href) return <th style={width ? { width } : undefined} className={className}>{children}</th>;
+  const arrow = active ? (dir === "desc" ? " ↓" : " ↑") : "";
+  if (!href) return <TableHead style={width ? { width } : undefined}>{children}</TableHead>;
   return (
-    <th style={width ? { width } : undefined} className={className}>
-      <Link href={href} className="underline">{children} {arrow}</Link>
-    </th>
+    <TableHead style={width ? { width } : undefined}>
+      <Link href={href} className="underline hover:text-primary">{children}{arrow}</Link>
+    </TableHead>
   );
 }
 
