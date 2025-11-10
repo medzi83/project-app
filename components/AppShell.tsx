@@ -6,12 +6,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap, Megaphone, MessageSquareHeart, ExternalLink, HardDrive, FileText, Handshake, Database, Moon, Sun, Monitor } from "lucide-react";
+import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap, Megaphone, MessageSquareHeart, ExternalLink, HardDrive, FileText, Handshake, Database, Moon, Sun, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,10 +69,24 @@ type AppShellProps = {
 export default function AppShell({ user, counts, devMode, agencies, children }: AppShellProps) {
   const [open, setOpen] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const navigationRole = user.role;
 
   React.useEffect(() => {
     setMounted(true);
+    // Load sidebar state from localStorage
+    const saved = localStorage.getItem('sidebar-collapsed');
+    if (saved !== null) {
+      setSidebarCollapsed(saved === 'true');
+    }
+  }, []);
+
+  const toggleSidebar = React.useCallback(() => {
+    setSidebarCollapsed(prev => {
+      const newValue = !prev;
+      localStorage.setItem('sidebar-collapsed', String(newValue));
+      return newValue;
+    });
   }, []);
 
   return (
@@ -90,7 +105,7 @@ export default function AppShell({ user, counts, devMode, agencies, children }: 
                 <SheetTitle>Navigation</SheetTitle>
               </SheetHeader>
               <Separator />
-              <Sidebar user={user} counts={counts} onNavigate={() => setOpen(false)} />
+              <Sidebar user={user} counts={counts} onNavigate={() => setOpen(false)} collapsed={false} />
             </SheetContent>
           </Sheet>
 
@@ -174,9 +189,9 @@ export default function AppShell({ user, counts, devMode, agencies, children }: 
         </div>
       </div>
 
-      <div className="grid w-full grid-cols-1 md:grid-cols-[260px_1fr]">
+      <div className={`grid w-full grid-cols-1 ${sidebarCollapsed ? 'md:grid-cols-[60px_1fr]' : 'md:grid-cols-[260px_1fr]'} transition-all duration-300`}>
         <aside className="hidden border-r border-white/40 dark:border-slate-700/50 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md md:block shadow-sm">
-          <Sidebar user={user} counts={counts} />
+          <Sidebar user={user} counts={counts} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
         </aside>
 
         <main className="min-h-[calc(100vh-56px)] w-full p-4 md:p-6">
@@ -195,7 +210,7 @@ type NavItem = {
   badge?: string;
 };
 
-function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; onNavigate?: () => void }) {
+function Sidebar({ user, counts, onNavigate, collapsed, onToggleCollapse }: { user: User; counts?: Counts; onNavigate?: () => void; collapsed?: boolean; onToggleCollapse?: () => void }) {
   const pathname = usePathname();
   const navigationRole = user.role;
   const hasSocialMediaCategory = user.categories?.includes("SOCIALMEDIA") ?? false;
@@ -241,53 +256,92 @@ function Sidebar({ user, counts, onNavigate }: { user: User; counts?: Counts; on
     : [];
 
   return (
-    <div className="flex h-[calc(100vh-56px)] flex-col">
-      <div className="px-4 py-4">
-        <h2 className="text-sm font-medium text-muted-foreground dark:text-slate-400">Navigation</h2>
-      </div>
-      <Separator className="dark:bg-slate-700/50" />
+    <TooltipProvider delayDuration={300}>
+      <div className="flex h-[calc(100vh-56px)] flex-col">
+        <div className={`px-4 py-4 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
+          {!collapsed && <h2 className="text-sm font-medium text-muted-foreground dark:text-slate-400">Navigation</h2>}
+          {onToggleCollapse && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onToggleCollapse}
+                  className="h-8 w-8 text-foreground hover:bg-muted hover:text-foreground"
+                >
+                  {collapsed ? (
+                    <ChevronsRight className="h-4 w-4" />
+                  ) : (
+                    <ChevronsLeft className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>{collapsed ? "Sidebar erweitern" : "Sidebar minimieren"}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+        <Separator className="dark:bg-slate-700/50" />
 
-      <ScrollArea className="h-full">
-        <nav className="px-2 py-3">
-          <NavSection label="Allgemein" items={baseItems} activePath={pathname} onNavigate={onNavigate} />
+        <ScrollArea className="h-full">
+          <nav className="px-2 py-3">
+            <NavSection label="Allgemein" items={baseItems} activePath={pathname} onNavigate={onNavigate} collapsed={collapsed} />
 
           {adminItems.length > 0 && (
             <div className="mt-6">
-              <NavSection label="Admin" items={adminItems} activePath={pathname} onNavigate={onNavigate} />
+              <NavSection label="Admin" items={adminItems} activePath={pathname} onNavigate={onNavigate} collapsed={collapsed} />
             </div>
           )}
 
           {socialMediaItems.length > 0 && (
             <div className="mt-6">
-              <NavSection label="Social Media" items={socialMediaItems} activePath={pathname} onNavigate={onNavigate} />
+              <NavSection label="Social Media" items={socialMediaItems} activePath={pathname} onNavigate={onNavigate} collapsed={collapsed} />
             </div>
           )}
 
           {importItems.length > 0 && (
             <div className="mt-6">
-              <NavSection label="Import" items={importItems} activePath={pathname} onNavigate={onNavigate} />
+              <NavSection label="Import" items={importItems} activePath={pathname} onNavigate={onNavigate} collapsed={collapsed} />
             </div>
           )}
         </nav>
       </ScrollArea>
 
-      <div className="mt-auto space-y-2 p-3">
-        <Separator className="dark:bg-slate-700/50" />
-        <div className="flex items-center justify-between rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800 border border-blue-100 dark:border-slate-700 p-3 shadow-sm">
-          <div>
-            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Angemeldet als</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">{user.name}</p>
+      {!collapsed && (
+        <div className="mt-auto space-y-2 p-3">
+          <Separator className="dark:bg-slate-700/50" />
+          <div className="flex items-center justify-between rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800 border border-blue-100 dark:border-slate-700 p-3 shadow-sm">
+            <div>
+              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Angemeldet als</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{user.name}</p>
+            </div>
+            <RoleBadge role={user.role} />
           </div>
-          <RoleBadge role={user.role} />
         </div>
+      )}
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
 
-function NavSection({ label, items, activePath, onNavigate }: { label: string; items: NavItem[]; activePath: string | null; onNavigate?: () => void }) {
+function NavSection({ label, items, activePath, onNavigate, collapsed }: { label: string; items: NavItem[]; activePath: string | null; onNavigate?: () => void; collapsed?: boolean }) {
   const [open, setOpen] = React.useState(true);
   if (items.length === 0) return null;
+
+  if (collapsed) {
+    // In collapsed mode, show only icons without labels
+    return (
+      <div className="space-y-1">
+        {items.map((item) => (
+          <div key={item.href}>
+            <SidebarLink item={item} activePath={activePath} onNavigate={onNavigate} collapsed={collapsed} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div>
       <button
@@ -301,7 +355,7 @@ function NavSection({ label, items, activePath, onNavigate }: { label: string; i
         <ul className="mt-1 space-y-1">
           {items.map((item) => (
             <li key={item.href}>
-              <SidebarLink item={item} activePath={activePath} onNavigate={onNavigate} />
+              <SidebarLink item={item} activePath={activePath} onNavigate={onNavigate} collapsed={collapsed} />
             </li>
           ))}
         </ul>
@@ -310,9 +364,40 @@ function NavSection({ label, items, activePath, onNavigate }: { label: string; i
   );
 }
 
-function SidebarLink({ item, activePath, onNavigate }: { item: NavItem; activePath: string | null; onNavigate?: () => void }) {
+function SidebarLink({ item, activePath, onNavigate, collapsed }: { item: NavItem; activePath: string | null; onNavigate?: () => void; collapsed?: boolean }) {
   const isActive = activePath ? activePath === item.href || activePath.startsWith(item.href + "/") : false;
   const Icon = item.icon;
+
+  if (collapsed) {
+    // Collapsed mode: show only icon with tooltip
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link
+            href={item.href}
+            onClick={onNavigate}
+            className={[
+              "group flex items-center justify-center rounded-xl p-2.5 text-sm transition-all relative",
+              isActive
+                ? "bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 font-medium text-white shadow-md"
+                : "text-gray-700 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-800/80 hover:text-gray-900 dark:hover:text-white hover:shadow-sm",
+            ].join(" ")}
+          >
+            {Icon && <Icon className={`h-5 w-5 ${isActive ? 'opacity-100' : 'opacity-70'}`} />}
+            {item.badge && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                {item.badge}
+              </span>
+            )}
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          <p>{item.label}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
   return (
     <Link
       href={item.href}

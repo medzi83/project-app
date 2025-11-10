@@ -13,6 +13,7 @@ import DangerActionButton from "@/components/DangerActionButton";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import CheckboxFilterGroup from "@/components/CheckboxFilterGroup";
 import { SaveFilterButton } from "@/components/SaveFilterButton";
+import { ProjectRow } from "./ProjectRow";
 import { deleteAllProjects, deleteProject } from "./actions";
 import {
   buildWebsiteStatusWhere,
@@ -660,7 +661,6 @@ export default async function ProjectsPage({ searchParams }: Props) {
                   <Th href={mkSort("status")} active={sp.sort==="status"} dir={sp.dir}>Status</Th>
                   <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir} width={120}>Kundennr.</Th>
                   <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir} width={200}>Kunde</Th>
-                  <Th href={mkSort("domain")} active={sp.sort==="domain"} dir={sp.dir}>Domain</Th>
                   <Th href={mkSort("priority")} active={sp.sort==="priority"} dir={sp.dir}>Prio</Th>
                   <Th href={mkSort("pStatus")} active={sp.sort==="pStatus"} dir={sp.dir}>P-Status</Th>
                   <Th href={mkSort("cms")} active={sp.sort==="cms"} dir={sp.dir}>CMS</Th>
@@ -726,7 +726,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
               else rowClasses.push("hover:bg-muted/50");
               if (ended) rowClasses.push("opacity-60");
               return (
-                <TableRow key={p.id} className={rowClasses.join(" ")}>
+                <ProjectRow key={p.id} rowClasses={rowClasses.join(" ")} projectId={p.id}>
                   <TableCell className={statusGreen ? "bg-green-500/20 dark:bg-green-500/30 font-semibold rounded-lg" : ""}>
                     <span className={statusGreen ? "inline-flex items-center px-2 py-1 rounded-md bg-green-500/30 dark:bg-green-500/40 text-green-900 dark:text-green-100 text-xs font-semibold" : ""}>{statusLabel}</span>
                   </TableCell>
@@ -746,7 +746,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-[200px]" title={p.client?.name ?? ""}>
+                  <TableCell className="max-w-[200px] client-name-cell cursor-pointer select-none" title={p.client?.name ?? ""}>
                     <div className="flex items-center gap-2">
                       {isSales && isFavoriteClient && (
                         <svg className="w-3.5 h-3.5 text-yellow-500 fill-current flex-shrink-0" viewBox="0 0 24 24">
@@ -761,7 +761,6 @@ export default async function ProjectsPage({ searchParams }: Props) {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap"><InlineCell target="website" id={p.id} name="domain" type="text" display={p.website?.domain ?? "-"} value={p.website?.domain ?? ""} canEdit={canEdit} /></TableCell>
                   <TableCell><InlineCell target="website" id={p.id} name="priority" type="select" display={labelForWebsitePriority(p.website?.priority)} value={p.website?.priority ?? "NONE"} options={priorityOptions} canEdit={canEdit} /></TableCell>
                   <TableCell><InlineCell target="website" id={p.id} name="pStatus" type="select" display={labelForProductionStatus(p.website?.pStatus)} value={p.website?.pStatus ?? "NONE"} options={pStatusOptions} canEdit={canEdit} /></TableCell>
                   <TableCell><InlineCell target="website" id={p.id} name="cms" type="select" display={p.website?.cms === "SHOPWARE" ? "Shop" : p.website?.cms ?? "-"} value={p.website?.cms ?? ""} options={cmsOptions} canEdit={canEdit} /></TableCell>
@@ -796,7 +795,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
                       )}
                     </div>
                   </TableCell>
-                </TableRow>
+                </ProjectRow>
               );
             })}
             {projects.length === 0 && (
@@ -918,9 +917,9 @@ function makePageSizeHref({ current, size }: { current: Search; size: number }) 
 function Th(props: { href?: string; active?: boolean; dir?: "asc" | "desc"; children: React.ReactNode; width?: number }) {
   const { href, active, dir, children, width } = props;
   const arrow = active ? (dir === "desc" ? " ↓" : " ↑") : "";
-  if (!href) return <TableHead style={width ? { width } : undefined}>{children}</TableHead>;
+  if (!href) return <TableHead className="whitespace-normal" style={width ? { width } : undefined}>{children}</TableHead>;
   return (
-    <TableHead style={width ? { width } : undefined}>
+    <TableHead className="whitespace-normal" style={width ? { width } : undefined}>
       <Link href={href} className="underline hover:text-primary">{children}{arrow}</Link>
     </TableHead>
   );

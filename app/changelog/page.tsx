@@ -27,6 +27,42 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "10.11.2024",
+    version: "2.3.1",
+    changes: [
+      {
+        title: "Sidebar minimierbar",
+        description:
+          "Die Navigation (Sitenav) kann jetzt eingeklappt werden! Neben der Überschrift 'Navigation' findest du einen Button mit Doppelpfeil-Icon. Im minimierten Zustand werden nur die Icons angezeigt. Beim Hovern über ein Icon erscheint ein Tooltip mit dem vollständigen Namen. Deine Auswahl wird gespeichert und bleibt auch nach einem Neustart erhalten. So hast du mehr Platz für die Projektlisten.",
+        type: "feature",
+      },
+      {
+        title: "Projekt-Zeilen markierbar in Webseitenprojekten",
+        description:
+          "Wie in der Filmprojekt-Liste kannst du jetzt auch in der Webseitenprojekt-Liste einzelne Zeilen durch Anklicken des Kundennamens markieren. Markierte Zeilen werden mit einem blauen Rahmen hervorgehoben und sind so leichter wiederzufinden. Perfekt, wenn du mehrere Projekte parallel bearbeitest.",
+        type: "feature",
+      },
+      {
+        title: "Domain-Spalte aus Webseitenprojekten entfernt",
+        description:
+          "Die Domain-Spalte wurde aus der Webseitenprojekt-Liste entfernt, um die Tabelle übersichtlicher zu machen. Die Domain-Information ist weiterhin auf der Projekt-Detailseite verfügbar.",
+        type: "improvement",
+      },
+      {
+        title: "Spaltenüberschriften umbrechen sich bei Bedarf",
+        description:
+          "Spaltenüberschriften in der Webseitenprojekt-Liste können sich jetzt auf zwei Zeilen umbrechen, wenn der Text zu lang ist. Dadurch sind alle Überschriften vollständig lesbar, auch bei schmaleren Bildschirmen.",
+        type: "improvement",
+      },
+      {
+        title: "Dark Mode-Verbesserungen",
+        description:
+          "Mehrere Komponenten wurden für den Dark Mode optimiert: Filter in Projekt- und Filmprojekt-Listen sind jetzt besser lesbar, Dashboard-Hinweise haben verbesserte Kontraste, die 'Projekte ohne Installation'-Box ist deutlicher sichtbar, und alle Komponenten nutzen jetzt semantische Farbklassen für konsistente Darstellung in beiden Modi.",
+        type: "improvement",
+      },
+    ],
+  },
+  {
     date: "09.11.2024",
     version: "2.2.9",
     changes: [
@@ -221,9 +257,9 @@ const changelog: ChangelogEntry[] = [
 ];
 
 const typeColors = {
-  feature: "bg-green-100 text-green-800 border-green-200",
-  improvement: "bg-blue-100 text-blue-800 border-blue-200",
-  fix: "bg-orange-100 text-orange-800 border-orange-200",
+  feature: "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800",
+  improvement: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
+  fix: "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800",
 };
 
 const typeLabels = {
@@ -236,11 +272,11 @@ export default function ChangelogPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-          <Sparkles className="h-8 w-8 text-blue-600" />
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+          <Sparkles className="h-8 w-8 text-blue-600 dark:text-blue-400" />
           Changelog
         </h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-gray-400">
           Hier findest du alle Änderungen und Verbesserungen an der Projektverwaltung.
         </p>
       </div>
@@ -250,18 +286,18 @@ export default function ChangelogPage() {
           <div key={entryIndex} className="relative">
             {/* Timeline line */}
             {entryIndex < changelog.length - 1 && (
-              <div className="absolute left-[19px] top-12 bottom-0 w-0.5 bg-gray-200" />
+              <div className="absolute left-[19px] top-12 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
             )}
 
             {/* Date badge */}
             <div className="flex items-center gap-3 mb-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg z-10">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-700 text-white shadow-lg z-10">
                 <Calendar className="h-5 w-5" />
               </div>
               <div>
-                <div className="text-xl font-semibold text-gray-900">{entry.date}</div>
+                <div className="text-xl font-semibold text-gray-900 dark:text-gray-100">{entry.date}</div>
                 {entry.version && (
-                  <div className="text-sm text-gray-500">Version {entry.version}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Version {entry.version}</div>
                 )}
               </div>
             </div>
@@ -271,13 +307,13 @@ export default function ChangelogPage() {
               {entry.changes.map((change, changeIndex) => (
                 <div
                   key={changeIndex}
-                  className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+                  className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <h3 className="font-semibold text-gray-900">{change.title}</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">{change.title}</h3>
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
                             typeColors[change.type]
@@ -286,7 +322,7 @@ export default function ChangelogPage() {
                           {typeLabels[change.type]}
                         </span>
                       </div>
-                      <p className="text-gray-600 text-sm leading-relaxed">
+                      <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
                         {change.description}
                       </p>
                     </div>
@@ -299,8 +335,8 @@ export default function ChangelogPage() {
       </div>
 
       {/* Footer info */}
-      <div className="mt-12 pt-8 border-t border-gray-200">
-        <p className="text-sm text-gray-500 text-center">
+      <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
           Letzte Aktualisierung: {changelog[0].date}
         </p>
       </div>

@@ -30,27 +30,27 @@ export function InstallationWarningsSlideout({
   return (
     <>
       {/* Compact Tile */}
-      <section className="rounded-2xl border border-orange-300 bg-orange-50 p-5 sm:p-6 shadow-sm">
+      <section className="rounded-2xl border border-orange-300 dark:border-orange-900/50 bg-orange-50 dark:bg-orange-950/30 p-5 sm:p-6 shadow-sm">
         <button
           onClick={() => setIsOpen(true)}
-          className="w-full text-left hover:bg-orange-100/50 rounded-lg -m-1 p-1 transition-colors"
+          className="w-full text-left hover:bg-orange-100/50 dark:hover:bg-orange-900/30 rounded-lg -m-1 p-1 transition-colors"
         >
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0 text-3xl">⚙️</div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-orange-900">
+                <h2 className="text-lg font-semibold text-orange-900 dark:text-orange-200">
                   Projekte ohne Installation
                 </h2>
-                <span className="text-sm font-medium text-orange-700 bg-orange-200 px-2.5 py-0.5 rounded-full">
+                <span className="text-sm font-medium text-orange-700 dark:text-orange-300 bg-orange-200 dark:bg-orange-800/50 px-2.5 py-0.5 rounded-full">
                   {totalCount}
                 </span>
               </div>
-              <p className="text-sm text-orange-700 mt-1">
+              <p className="text-sm text-orange-700 dark:text-orange-400 mt-1">
                 {totalCount} Projekt{totalCount !== 1 ? 'e' : ''} in Umsetzung benötigt{totalCount === 1 ? '' : 'en'} eine Joomla-Installation
               </p>
             </div>
-            <svg className="w-5 h-5 text-orange-700 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 text-orange-700 dark:text-orange-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </div>
