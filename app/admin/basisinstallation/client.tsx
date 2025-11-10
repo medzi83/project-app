@@ -229,11 +229,11 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
   const step2Complete = step1Complete && (customerDetails !== null || ((selectedClient && !client?.customerNo) || isNewCustomer) && currentStep >= 2);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="mx-auto max-w-5xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Basisinstallation</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Basisinstallation</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             Erstelle einen Froxlor-Kunden und installiere Joomla in 3 einfachen Schritten
           </p>
         </div>
@@ -248,7 +248,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
               completed={!!step1Complete}
               onClick={() => setCurrentStep(1)}
             />
-            <div className={`h-1 flex-1 mx-2 ${step1Complete ? 'bg-blue-600' : 'bg-gray-300'}`} />
+            <div className={`h-1 flex-1 mx-2 ${step1Complete ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`} />
 
             <StepIndicator
               number={2}
@@ -258,7 +258,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
               onClick={() => step1Complete && setCurrentStep(2)}
               disabled={!step1Complete}
             />
-            <div className={`h-1 flex-1 mx-2 ${step2Complete ? 'bg-blue-600' : 'bg-gray-300'}`} />
+            <div className={`h-1 flex-1 mx-2 ${step2Complete ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`} />
 
             <StepIndicator
               number={3}
@@ -293,12 +293,12 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
         )}
 
         {/* Step Content */}
-        <div className="rounded-lg bg-white shadow-sm border">
+        <div className="rounded-lg bg-card shadow-sm border border-border">
           {currentStep === 1 && (
             <StepContent title="Schritt 1: Kunde auswählen & Server prüfen">
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Kunde suchen oder neuen anlegen
                   </label>
 
@@ -307,7 +307,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                       <input
                         type="text"
                         placeholder="Nach Name oder Kundennummer suchen..."
-                        className="w-full rounded-lg border border-gray-300 p-3 pr-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-3 pr-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition"
                         value={clientSearchTerm}
                         onChange={(e) => {
                           setClientSearchTerm(e.target.value);
@@ -741,10 +741,10 @@ function StepIndicator({
       <div
         className={`flex h-12 w-12 items-center justify-center rounded-full font-semibold transition ${
           completed
-            ? 'bg-blue-600 text-white'
+            ? 'bg-blue-600 dark:bg-blue-700 text-white'
             : active
-            ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-600'
-            : 'bg-gray-200 text-gray-500'
+            ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 ring-2 ring-blue-600 dark:ring-blue-500'
+            : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
         }`}
       >
         {completed ? (
@@ -755,7 +755,7 @@ function StepIndicator({
           number
         )}
       </div>
-      <span className={`text-sm font-medium ${active ? 'text-gray-900' : 'text-gray-500'}`}>
+      <span className={`text-sm font-medium ${active ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>
         {title}
       </span>
     </button>
@@ -765,7 +765,7 @@ function StepIndicator({
 function StepContent({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">{title}</h2>
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">{title}</h2>
       {children}
     </div>
   );

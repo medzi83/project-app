@@ -71,7 +71,7 @@ export default function FeedbackDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2" title="Feedback geben">
+        <Button variant="ghost" size="sm" className="gap-2 hover:bg-accent dark:hover:bg-slate-700" title="Feedback geben">
           <MessageSquarePlus className="h-4 w-4" />
           <span className="hidden sm:inline">Kummerkasten</span>
         </Button>

@@ -112,13 +112,13 @@ export default async function ClientsPage({ searchParams }: Props) {
     <div className="container mx-auto space-y-6 py-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 text-white shadow-lg">
           <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         </div>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Kunden</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Kunden</h1>
           <p className="text-sm text-muted-foreground">
             {total} {total === 1 ? 'Kunde' : 'Kunden'} gefunden
           </p>
@@ -140,12 +140,12 @@ export default async function ClientsPage({ searchParams }: Props) {
               name="search"
               defaultValue={searchQuery}
               placeholder="Suche nach Name oder Kundennummer..."
-              className="flex-1 rounded-lg border px-4 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              className="flex-1 rounded-lg border border-border bg-background text-foreground px-4 py-2 text-sm focus:border-blue-500 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all"
             />
             <select
               name="agency"
               defaultValue={agencyFilter}
-              className="rounded-lg border px-4 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              className="rounded-lg border border-border bg-background text-foreground px-4 py-2 text-sm focus:border-blue-500 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all"
             >
               <option value="">Alle Agenturen</option>
               {agencies.map((agency) => (
@@ -159,7 +159,7 @@ export default async function ClientsPage({ searchParams }: Props) {
               Suchen
             </Button>
             {(searchQuery || agencyFilter) && (
-              <Link href="/clients" className="text-sm text-blue-600 hover:text-blue-800 font-medium underline transition-colors self-center">
+              <Link href="/clients" className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium underline transition-colors self-center">
                 Zurücksetzen
               </Link>
             )}
@@ -169,9 +169,9 @@ export default async function ClientsPage({ searchParams }: Props) {
 
       {/* Admin Info */}
       {isAdmin && (
-        <Card className="border-blue-200 bg-blue-50/50">
+        <Card className="border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/30">
           <CardContent className="py-3">
-            <p className="text-xs text-blue-700 font-medium">
+            <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">
               Admin: Kunden löschen über Auswahl und Button unten.
             </p>
           </CardContent>
@@ -182,12 +182,12 @@ export default async function ClientsPage({ searchParams }: Props) {
       <div className="flex items-center justify-between gap-2 text-sm">
         <div className="text-muted-foreground font-medium">Zeige {from}–{to} von {total}</div>
         <div className="flex items-center gap-3">
-          <Link className={pageSize===50?"px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-sm":"px-3 py-1.5 rounded-lg border text-muted-foreground hover:bg-accent transition-all"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</Link>
-          <Link className={pageSize===100?"px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-sm":"px-3 py-1.5 rounded-lg border text-muted-foreground hover:bg-accent transition-all"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</Link>
+          <Link className={pageSize===50?"px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white font-semibold shadow-sm":"px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-accent transition-all"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</Link>
+          <Link className={pageSize===100?"px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white font-semibold shadow-sm":"px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-accent transition-all"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</Link>
           <span className="mx-1 text-muted-foreground">|</span>
-          <Link className={page===1?"pointer-events-none opacity-50 px-3 py-1.5 rounded-lg border":"px-3 py-1.5 rounded-lg border hover:bg-accent transition-all font-medium"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>← Zurück</Link>
-          <span className="font-semibold">Seite {page} / {totalPages}</span>
-          <Link className={page>=totalPages?"pointer-events-none opacity-50 px-3 py-1.5 rounded-lg border":"px-3 py-1.5 rounded-lg border hover:bg-accent transition-all font-medium"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter →</Link>
+          <Link className={page===1?"pointer-events-none opacity-50 px-3 py-1.5 rounded-lg border border-border":"px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition-all font-medium"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>← Zurück</Link>
+          <span className="font-semibold text-foreground">Seite {page} / {totalPages}</span>
+          <Link className={page>=totalPages?"pointer-events-none opacity-50 px-3 py-1.5 rounded-lg border border-border":"px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition-all font-medium"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter →</Link>
         </div>
       </div>
 
@@ -263,7 +263,7 @@ export default async function ClientsPage({ searchParams }: Props) {
                         )}
                         <TableCell className="font-mono text-xs">
                           {client.customerNo ? (
-                            <Link href={`/clients/${client.id}`} className="text-blue-600 hover:underline">
+                            <Link href={`/clients/${client.id}`} className="text-blue-600 dark:text-blue-400 hover:underline">
                               {client.customerNo}
                             </Link>
                           ) : (
@@ -277,7 +277,7 @@ export default async function ClientsPage({ searchParams }: Props) {
                               <Badge variant="destructive" className="text-xs">Arbeitsstopp</Badge>
                             )}
                             {client.finished && (
-                              <Badge className="bg-black hover:bg-gray-900 text-white text-xs">Beendet</Badge>
+                              <Badge className="bg-black dark:bg-gray-200 hover:bg-gray-900 dark:hover:bg-gray-300 text-white dark:text-black text-xs">Beendet</Badge>
                             )}
                           </span>
                         </TableCell>
@@ -309,7 +309,7 @@ export default async function ClientsPage({ searchParams }: Props) {
                         <TableCell>{[client.firstname, client.lastname].filter(Boolean).join(' ') || "-"}</TableCell>
                         <TableCell className="whitespace-nowrap">{
                           phoneHref ? (
-                            <a href={phoneHref} className="text-blue-600 hover:underline">
+                            <a href={phoneHref} className="text-blue-600 dark:text-blue-400 hover:underline">
                               {phoneLabel}
                             </a>
                           ) : (
@@ -321,13 +321,13 @@ export default async function ClientsPage({ searchParams }: Props) {
                             <span>0</span>
                           ) : (
                             <div className="flex items-center gap-2">
-                              <Link href={`/projects?client=${client.id}`} className="text-blue-600 hover:underline">
+                              <Link href={`/projects?client=${client.id}`} className="text-blue-600 dark:text-blue-400 hover:underline">
                                 {client._count.projects}
                               </Link>
                               {client.projects.some(p => p.website) && (
                                 <Link
                                   href={`/projects?client=${client.id}`}
-                                  className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                  className="text-xs px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50"
                                   title="Webseiten-Projekte"
                                 >
                                   W
@@ -336,7 +336,7 @@ export default async function ClientsPage({ searchParams }: Props) {
                               {client.projects.some(p => p.film) && (
                                 <Link
                                   href={`/film-projects?q=${encodeURIComponent(client.customerNo || client.name)}`}
-                                  className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 hover:bg-purple-200"
+                                  className="text-xs px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50"
                                   title="Film-Projekte"
                                 >
                                   F
@@ -368,7 +368,7 @@ export default async function ClientsPage({ searchParams }: Props) {
                         <TableCell className="whitespace-nowrap">
                           <Link
                             href={`/clients/${client.id}`}
-                            className="text-blue-600 hover:underline text-sm"
+                            className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
                           >
                             Details
                           </Link>
@@ -386,8 +386,8 @@ export default async function ClientsPage({ searchParams }: Props) {
                 </TableBody>
               </Table>
               {isAdmin && (
-                <div className="border-t p-3 flex justify-end">
-                  <ConfirmSubmit confirmText="Ausgewählte Kunden unwiderruflich löschen?" className="px-3 py-1.5 rounded border border-red-300 text-red-700 bg-red-50 hover:bg-red-100">
+                <div className="border-t border-border p-3 flex justify-end">
+                  <ConfirmSubmit confirmText="Ausgewählte Kunden unwiderruflich löschen?" className="px-3 py-1.5 rounded border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50">
                     Ausgewählte löschen
                   </ConfirmSubmit>
                 </div>
@@ -401,12 +401,12 @@ export default async function ClientsPage({ searchParams }: Props) {
       <div className="flex items-center justify-between gap-2 text-sm">
         <div className="text-muted-foreground">Zeige {from}–{to} von {total}</div>
         <div className="flex items-center gap-3">
-          <Link className={pageSize===50?"font-semibold underline":"underline"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</Link>
-          <Link className={pageSize===100?"font-semibold underline":"underline"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</Link>
+          <Link className={pageSize===50?"font-semibold underline text-foreground":"underline text-muted-foreground hover:text-foreground"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</Link>
+          <Link className={pageSize===100?"font-semibold underline text-foreground":"underline text-muted-foreground hover:text-foreground"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</Link>
           <span className="mx-2 text-muted-foreground">|</span>
-          <Link className={page===1?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Zurück</Link>
-          <span>Seite {page} / {totalPages}</span>
-          <Link className={page>=totalPages?"pointer-events-none opacity-50 underline":"underline"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter</Link>
+          <Link className={page===1?"pointer-events-none opacity-50 underline text-muted-foreground":"underline text-foreground hover:text-primary"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Zurück</Link>
+          <span className="text-foreground">Seite {page} / {totalPages}</span>
+          <Link className={page>=totalPages?"pointer-events-none opacity-50 underline text-muted-foreground":"underline text-foreground hover:text-primary"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter</Link>
         </div>
       </div>
     </div>

@@ -65,13 +65,13 @@ export function ClientDetailHeader({ client, isAdmin, canSendEmail = true, isSal
       <header className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <Link href="/clients" className="text-blue-600 hover:underline">
+            <Link href="/clients" className="text-blue-600 dark:text-blue-400 hover:underline">
               ← Zurück zur Kundenliste
             </Link>
           </div>
           <div className="flex items-center gap-4 mt-2">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold">{client.name}</h1>
+              <h1 className="text-2xl font-semibold text-foreground">{client.name}</h1>
               {isSales && (
                 <FavoriteToggle
                   clientId={client.id}
@@ -83,7 +83,7 @@ export function ClientDetailHeader({ client, isAdmin, canSendEmail = true, isSal
             {canSendEmail && (
               <button
                 onClick={handleMailButtonClick}
-                className="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 transition-colors flex items-center gap-2"
+                className="rounded bg-blue-600 dark:bg-blue-700 px-3 py-1.5 text-sm text-white hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors flex items-center gap-2"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                   <path d="M3 4a2 2 0 0 0-2 2v1.161l8.441 4.221a1.25 1.25 0 0 0 1.118 0L19 7.162V6a2 2 0 0 0-2-2H3Z" />
@@ -95,7 +95,7 @@ export function ClientDetailHeader({ client, isAdmin, canSendEmail = true, isSal
             {isAdmin && (
               <Link
                 href={`/admin/basisinstallation?clientId=${client.id}`}
-                className="rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 transition-colors flex items-center gap-2"
+                className="rounded bg-green-600 dark:bg-green-700 px-3 py-1.5 text-sm text-white hover:bg-green-700 dark:hover:bg-green-800 transition-colors flex items-center gap-2"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                   <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
@@ -105,10 +105,10 @@ export function ClientDetailHeader({ client, isAdmin, canSendEmail = true, isSal
             )}
           </div>
           {client.customerNo && (
-            <p className="text-sm text-gray-500">Kundennummer: {client.customerNo}</p>
+            <p className="text-sm text-muted-foreground">Kundennummer: {client.customerNo}</p>
           )}
           {client.agency && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Agentur: {client.agency.name}
             </p>
           )}

@@ -536,7 +536,7 @@ export default async function ClientDetailPage({ params }: Props) {
       {/* Info-Cards oben */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Basic Information */}
-        <section className="rounded-lg border bg-white p-4">
+        <section className="rounded-lg border border-border bg-card p-4">
           <ClientDataEditor
             client={{
               id: client.id,
@@ -564,7 +564,7 @@ export default async function ClientDetailPage({ params }: Props) {
 
         {/* Froxlor Customer Data */}
         {froxlorCustomer && client.server && (
-          <section className="rounded-lg border bg-white p-4">
+          <section className="rounded-lg border border-border bg-card p-4">
             <FroxlorDataEditor
               customer={froxlorCustomer}
               serverId={client.server.id}
@@ -596,22 +596,22 @@ export default async function ClientDetailPage({ params }: Props) {
             p.status === "UMSETZUNG" &&
             !client.joomlaInstallations.some((inst) => inst.project?.id === p.id)
           ) && (
-            <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+            <div className="rounded-lg border border-orange-200 dark:border-orange-900/50 bg-orange-50 dark:bg-orange-950/30 p-3">
               <div className="flex items-start gap-2">
-                <svg className="h-5 w-5 text-orange-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-orange-900">
+                  <p className="text-sm font-medium text-orange-900 dark:text-orange-200">
                     Projekte im Status &quot;Umsetzung&quot; ohne Installation
                   </p>
-                  <p className="text-xs text-orange-700 mt-1">
+                  <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
                     Bitte ordnen Sie den Projekten eine Installation zu oder erstellen Sie eine neue.
                   </p>
                   {client.server && (
                     <Link
                       href={`/admin/basisinstallation?server=${client.server.id}&customer=${client.customerNo}`}
-                      className="inline-block mt-2 text-xs text-orange-800 hover:text-orange-900 font-medium underline"
+                      className="inline-block mt-2 text-xs text-orange-800 dark:text-orange-200 hover:text-orange-900 dark:hover:text-orange-100 font-medium underline"
                     >
                       → Neue Installation erstellen
                     </Link>
@@ -623,8 +623,8 @@ export default async function ClientDetailPage({ params }: Props) {
 
           {/* Projects Grid */}
           {client.projects.length === 0 ? (
-            <section className="rounded-lg border bg-white p-4">
-              <p className="text-sm text-gray-500">Keine Projekte vorhanden.</p>
+            <section className="rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Keine Projekte vorhanden.</p>
             </section>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -638,45 +638,45 @@ export default async function ClientDetailPage({ params }: Props) {
                   switch (cms) {
                     case "JOOMLA":
                       typeLabel = "Webseite (Joomla)";
-                      badgeClass = "bg-blue-100 text-blue-800 border-blue-300";
+                      badgeClass = "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-800";
                       break;
                     case "WORDPRESS":
                       typeLabel = "Webseite (WordPress)";
-                      badgeClass = "bg-indigo-100 text-indigo-800 border-indigo-300";
+                      badgeClass = "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800";
                       break;
                     case "SHOPWARE":
                       typeLabel = "Shop (Shopware)";
-                      badgeClass = "bg-purple-100 text-purple-800 border-purple-300";
+                      badgeClass = "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-800";
                       break;
                     case "LOGO":
                       typeLabel = "Logo";
-                      badgeClass = "bg-pink-100 text-pink-800 border-pink-300";
+                      badgeClass = "bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300 border-pink-300 dark:border-pink-800";
                       break;
                     case "PRINT":
                       typeLabel = "Print";
-                      badgeClass = "bg-orange-100 text-orange-800 border-orange-300";
+                      badgeClass = "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-800";
                       break;
                     case "CUSTOM":
                       typeLabel = "Webseite (Custom)";
-                      badgeClass = "bg-cyan-100 text-cyan-800 border-cyan-300";
+                      badgeClass = "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-300 border-cyan-300 dark:border-cyan-800";
                       break;
                     case "OTHER":
                       typeLabel = project.website.cmsOther || "Anderes";
-                      badgeClass = "bg-gray-100 text-gray-800 border-gray-300";
+                      badgeClass = "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border-gray-300 dark:border-gray-700";
                       break;
                     default:
                       typeLabel = "Webseite";
-                      badgeClass = "bg-blue-100 text-blue-800 border-blue-300";
+                      badgeClass = "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-800";
                   }
                 } else if (project.type === "FILM") {
                   typeLabel = "Film";
-                  badgeClass = "bg-red-100 text-red-800 border-red-300";
+                  badgeClass = "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-300 dark:border-red-800";
                 } else if (project.type === "SOCIAL") {
                   typeLabel = "Social Media";
-                  badgeClass = "bg-green-100 text-green-800 border-green-300";
+                  badgeClass = "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-300 dark:border-green-800";
                 } else {
                   typeLabel = project.type;
-                  badgeClass = "bg-gray-100 text-gray-800 border-gray-300";
+                  badgeClass = "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border-gray-300 dark:border-gray-700";
                 }
 
                 // Use derived status for website and film projects
@@ -709,7 +709,7 @@ export default async function ClientDetailPage({ params }: Props) {
                 const isOnlineWebsite = project.type === "WEBSITE" && project.status === "ONLINE";
 
                 return (
-                  <div key={project.id} className="rounded-lg border bg-white p-4">
+                  <div key={project.id} className="rounded-lg border border-border bg-card p-4">
                     <Link
                       href={project.type === "FILM" ? `/film-projects/${project.id}` : `/projects/${project.id}`}
                       className="block transition-all hover:opacity-80"
@@ -718,25 +718,25 @@ export default async function ClientDetailPage({ params }: Props) {
                         <Badge variant="outline" className={`text-xs font-semibold ${badgeClass}`}>
                           {typeLabel}
                         </Badge>
-                        <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
                       {project.title && (
-                        <div className="text-lg font-bold text-gray-900 mb-1">
+                        <div className="text-lg font-bold text-foreground mb-1">
                           {project.title}
                         </div>
                       )}
-                      <div className="text-sm text-gray-600 mb-1">
+                      <div className="text-sm text-muted-foreground mb-1">
                         Status: {statusLabel}
                       </div>
                       {statusDate && (
-                        <div className="text-xs text-gray-500 mb-2">
+                        <div className="text-xs text-muted-foreground mb-2">
                           seit {formatDateOnly(statusDate)}
                         </div>
                       )}
                       {project.website && project.website.domain && (
-                        <div className="text-xs text-gray-600 font-mono truncate">
+                        <div className="text-xs text-muted-foreground font-mono truncate">
                           {project.website.domain}
                         </div>
                       )}
@@ -772,8 +772,8 @@ export default async function ClientDetailPage({ params }: Props) {
 
         {/* Joomla Installations */}
         {client.joomlaInstallations.length > 0 && (
-          <section className="rounded-lg border bg-white p-4">
-              <h2 className="text-base font-medium mb-3">
+          <section className="rounded-lg border border-border bg-card p-4">
+              <h2 className="text-base font-medium text-foreground mb-3">
                 Joomla Installationen ({client.joomlaInstallations.length})
               </h2>
               <div className="space-y-3">
@@ -784,25 +784,25 @@ export default async function ClientDetailPage({ params }: Props) {
                       key={installation.id}
                       className={`rounded border p-3 ${
                         hasProject
-                          ? 'border-green-200 bg-green-50/40'
-                          : 'border-blue-100 bg-blue-50/30'
+                          ? 'border-green-200 dark:border-green-800 bg-green-50/40 dark:bg-green-950/30'
+                          : 'border-blue-100 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/30'
                       }`}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <div className="font-medium text-sm">
+                            <div className="font-medium text-sm text-foreground">
                               {installation.standardDomain}/{installation.folderName}
                             </div>
                             {hasProject ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700 border border-green-200">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
                                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 Zugeordnet
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700 border border-orange-200">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
                                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                 </svg>
@@ -810,9 +810,9 @@ export default async function ClientDetailPage({ params }: Props) {
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-gray-600 space-y-0.5">
+                          <div className="text-xs text-muted-foreground space-y-0.5">
                             <div>
-                              <span className="text-gray-500">Server:</span>{" "}
+                              <span className="text-muted-foreground">Server:</span>{" "}
                               <span className="font-medium">{installation.server.name}</span>
                             </div>
                             <div className="font-mono text-[11px]">
@@ -820,13 +820,13 @@ export default async function ClientDetailPage({ params }: Props) {
                             </div>
                             {installation.project && (
                               <div className="mt-1 flex items-center gap-1">
-                                <svg className="h-3.5 w-3.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg className="h-3.5 w-3.5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
-                                <span className="text-gray-500">Projekt:</span>{" "}
+                                <span className="text-muted-foreground">Projekt:</span>{" "}
                                 <Link
                                   href={`/projects/${installation.project.id}`}
-                                  className="text-green-700 hover:underline font-medium"
+                                  className="text-green-700 dark:text-green-400 hover:underline font-medium"
                                 >
                                   {installation.project.title}
                                 </Link>
@@ -838,7 +838,7 @@ export default async function ClientDetailPage({ params }: Props) {
                         href={installation.installUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="ml-3 inline-flex items-center gap-1 px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition text-xs font-medium whitespace-nowrap"
+                        className="ml-3 inline-flex items-center gap-1 px-3 py-1.5 rounded bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800 transition text-xs font-medium whitespace-nowrap"
                       >
                         <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -847,31 +847,31 @@ export default async function ClientDetailPage({ params }: Props) {
                       </a>
                     </div>
 
-                    <div className="pt-2 border-t border-blue-200/50 grid grid-cols-2 gap-2 text-xs">
+                    <div className="pt-2 border-t border-blue-200/50 dark:border-blue-800/50 grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-gray-500">Datenbank:</span>{" "}
-                        <span className="font-mono">{installation.databaseName}</span>
+                        <span className="text-muted-foreground">Datenbank:</span>{" "}
+                        <span className="font-mono text-foreground">{installation.databaseName}</span>
                       </div>
                       <div>
-                        <span className="text-gray-500">DB-Passwort:</span>{" "}
-                        <span className="font-mono">{installation.databasePassword}</span>
+                        <span className="text-muted-foreground">DB-Passwort:</span>{" "}
+                        <span className="font-mono text-foreground">{installation.databasePassword}</span>
                       </div>
                       {installation.filesExtracted && (
                         <div>
-                          <span className="text-gray-500">Dateien:</span>{" "}
-                          <span>{installation.filesExtracted.toLocaleString()}</span>
+                          <span className="text-muted-foreground">Dateien:</span>{" "}
+                          <span className="text-foreground">{installation.filesExtracted.toLocaleString()}</span>
                         </div>
                       )}
                       <div>
-                        <span className="text-gray-500">Installiert:</span>{" "}
-                        <span>{formatDateOnly(installation.createdAt)}</span>
+                        <span className="text-muted-foreground">Installiert:</span>{" "}
+                        <span className="text-foreground">{formatDateOnly(installation.createdAt)}</span>
                       </div>
                     </div>
 
                     {isAdmin && (
                       <>
-                        <div className="pt-2 border-t border-blue-200/50 mt-2">
-                          <div className="text-xs text-gray-500 mb-1">
+                        <div className="pt-2 border-t border-blue-200/50 dark:border-blue-800/50 mt-2">
+                          <div className="text-xs text-muted-foreground mb-1">
                             {installation.project ? "Projektzuordnung:" : "Projekt zuordnen:"}
                           </div>
                           <InstallationProjectAssignment
@@ -900,20 +900,20 @@ export default async function ClientDetailPage({ params }: Props) {
         <TabsContent value="server" className="space-y-6 mt-6">
           {/* Domains */}
           {(hasFroxlorConfig || froxlorError) && (
-            <section className="rounded-lg border bg-white p-4">
-              <h2 className="text-base font-medium mb-3">
+            <section className="rounded-lg border border-border bg-card p-4">
+              <h2 className="text-base font-medium text-foreground mb-3">
                 Domains
                 {froxlorDomains.length > 0 && <span> ({froxlorDomains.length})</span>}
               </h2>
 
               {froxlorError && (
-                <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                <div className="rounded border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs text-red-700 dark:text-red-400">
                   {froxlorError}
                 </div>
               )}
 
               {!froxlorError && froxlorDomains.length === 0 && (
-                <p className="text-sm text-gray-500">Keine Domains fuer diesen Kunden vorhanden.</p>
+                <p className="text-sm text-muted-foreground">Keine Domains fuer diesen Kunden vorhanden.</p>
               )}
 
               {!froxlorError && froxlorDomains.length > 0 && (
@@ -929,22 +929,22 @@ export default async function ClientDetailPage({ params }: Props) {
                     );
 
                     return (
-                      <div key={domain.id} className="rounded border p-3">
+                      <div key={domain.id} className="rounded border border-border bg-card p-3">
                         <div className="flex items-center gap-2 mb-1">
                           {isStandard && (
                             <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
                               Standard
                             </Badge>
                           )}
-                          <span className="font-medium text-sm">{domain.domain}</span>
+                          <span className="font-medium text-sm text-foreground">{domain.domain}</span>
                           {domain.deactivated === "1" && (
                             <Badge variant="destructive" className="text-xs">Deaktiviert</Badge>
                           )}
                         </div>
                         {!isStandard && (
-                          <div className="font-mono text-xs text-gray-600 mb-1 break-all">{domain.documentroot}</div>
+                          <div className="font-mono text-xs text-muted-foreground mb-1 break-all">{domain.documentroot}</div>
                         )}
-                        <div className="flex gap-3 text-xs text-gray-500">
+                        <div className="flex gap-3 text-xs text-muted-foreground">
                           <span>SSL: {domain.ssl_redirect === "1" ? "Ja" : "Nein"}</span>
                           <span>LE: {domain.letsencrypt === "1" ? "Ja" : "Nein"}</span>
                           <span>PHP: {froxlorPhpConfigs[domain.phpsettingid] || domain.phpsettingid}</span>
@@ -955,13 +955,13 @@ export default async function ClientDetailPage({ params }: Props) {
                           <div className="mt-2 pt-2 border-t">
                             {assignedProject ? (
                               <div className="flex items-center gap-2 text-xs">
-                                <svg className="h-3.5 w-3.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg className="h-3.5 w-3.5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
-                                <span className="text-gray-500">Zugeordnet zu:</span>
+                                <span className="text-muted-foreground">Zugeordnet zu:</span>
                                 <Link
                                   href={`/projects/${assignedProject.id}`}
-                                  className="text-blue-600 hover:underline font-medium"
+                                  className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
                                 >
                                   {getProjectDisplayName(assignedProject)}
                                 </Link>
@@ -993,39 +993,39 @@ export default async function ClientDetailPage({ params }: Props) {
 
         {/* FTP Accounts */}
         {froxlorFtpAccounts.length > 0 && (
-          <section className="rounded-lg border bg-white p-4">
-              <h2 className="text-base font-medium mb-3">
+          <section className="rounded-lg border border-border bg-card p-4">
+              <h2 className="text-base font-medium text-foreground mb-3">
                 FTP-Zugänge ({froxlorFtpAccounts.length})
               </h2>
               <div className="space-y-2">
                 {froxlorFtpAccounts.map((ftp) => (
-                  <div key={ftp.id} className="rounded border p-3 bg-gray-50">
+                  <div key={ftp.id} className="rounded border border-border p-3 bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="font-medium text-sm">{ftp.username}</span>
+                      <span className="font-medium text-sm text-foreground">{ftp.username}</span>
                       {ftp.login_enabled === "0" && (
                         <Badge variant="destructive" className="text-xs">Deaktiviert</Badge>
                       )}
                       {ftp.description && (
-                        <span className="text-xs text-gray-500">- {ftp.description}</span>
+                        <span className="text-xs text-muted-foreground">- {ftp.description}</span>
                       )}
                     </div>
                     <div className="grid gap-2 text-xs">
                       <div className="grid grid-cols-[auto,1fr] gap-2">
-                        <span className="text-gray-500">Benutzername:</span>
-                        <span className="font-mono">{ftp.username}</span>
+                        <span className="text-muted-foreground">Benutzername:</span>
+                        <span className="font-mono text-foreground">{ftp.username}</span>
                       </div>
                       <div className="grid grid-cols-[auto,1fr] gap-2">
-                        <span className="text-gray-500">Passwort:</span>
-                        <span className="font-mono">{ftp.password}</span>
+                        <span className="text-muted-foreground">Passwort:</span>
+                        <span className="font-mono text-foreground">{ftp.password}</span>
                       </div>
                       <div className="grid grid-cols-[auto,1fr] gap-2">
-                        <span className="text-gray-500">Home-Verzeichnis:</span>
-                        <span className="font-mono text-[11px] break-all">{ftp.homedir}</span>
+                        <span className="text-muted-foreground">Home-Verzeichnis:</span>
+                        <span className="font-mono text-[11px] text-foreground break-all">{ftp.homedir}</span>
                       </div>
                       {ftp.last_login && (
                         <div className="grid grid-cols-[auto,1fr] gap-2">
-                          <span className="text-gray-500">Letzter Login:</span>
-                          <span>{formatDate(ftp.last_login)}</span>
+                          <span className="text-muted-foreground">Letzter Login:</span>
+                          <span className="text-foreground">{formatDate(ftp.last_login)}</span>
                         </div>
                       )}
                     </div>
@@ -1039,12 +1039,12 @@ export default async function ClientDetailPage({ params }: Props) {
         {/* Tab: Kommunikation */}
         <TabsContent value="communication" className="space-y-6 mt-6">
           {/* Email Logs */}
-          <section className="rounded-lg border bg-white p-4">
-            <h2 className="text-base font-medium mb-3">
+          <section className="rounded-lg border border-border bg-card p-4">
+            <h2 className="text-base font-medium text-foreground mb-3">
               Versendete E-Mails ({allEmailLogs.length})
             </h2>
             {allEmailLogs.length === 0 && generalEmails.length === 0 ? (
-              <p className="text-sm text-gray-500">Noch keine E-Mails an diesen Kunden versendet.</p>
+              <p className="text-sm text-muted-foreground">Noch keine E-Mails an diesen Kunden versendet.</p>
             ) : (
               <Tabs defaultValue="general" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
@@ -1064,7 +1064,7 @@ export default async function ClientDetailPage({ params }: Props) {
 
                 <TabsContent value="general" className="mt-4">
                   {generalEmails.length === 0 ? (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       Keine allgemeinen E-Mails (ohne Projektbezug) vorhanden.
                     </p>
                   ) : (
@@ -1079,7 +1079,7 @@ export default async function ClientDetailPage({ params }: Props) {
                 {(["WEBSITE", "FILM", "SOCIAL"] as const).map((type) => (
                   <TabsContent key={type} value={type} className="mt-4">
                     {emailLogsByType[type].length === 0 ? (
-                      <p className="text-sm text-gray-500">Keine E-Mails für diesen Projekttyp.</p>
+                      <p className="text-sm text-muted-foreground">Keine E-Mails für diesen Projekttyp.</p>
                     ) : (
                       <div className="space-y-2">
                         {emailLogsByType[type].map((log) => (

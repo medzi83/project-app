@@ -59,8 +59,8 @@ export function ClientStatusToggles({
         disabled={loading !== null}
         className={`flex items-center gap-2 px-3 py-2 rounded border transition-all ${
           workStopped
-            ? "bg-red-100 border-red-300 text-red-800"
-            : "bg-gray-50 border-gray-300 text-gray-400 hover:border-red-300 hover:text-red-600"
+            ? "bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-800 text-red-800 dark:text-red-300"
+            : "bg-muted/50 border-border text-muted-foreground hover:border-red-300 dark:hover:border-red-800 hover:text-red-600 dark:hover:text-red-400"
         } ${loading === "workStopped" ? "opacity-50 cursor-wait" : "cursor-pointer"}`}
         title={workStopped ? "Arbeitsstopp aktiv - Klicken zum Deaktivieren" : "Arbeitsstopp setzen"}
       >
@@ -85,8 +85,8 @@ export function ClientStatusToggles({
         disabled={loading !== null}
         className={`flex items-center gap-2 px-3 py-2 rounded border transition-all ${
           finished
-            ? "bg-gray-600 border-gray-700 text-white"
-            : "bg-gray-50 border-gray-300 text-gray-400 hover:border-gray-600 hover:text-gray-700"
+            ? "bg-gray-600 dark:bg-gray-300 border-gray-700 dark:border-gray-400 text-white dark:text-black"
+            : "bg-muted/50 border-border text-muted-foreground hover:border-gray-600 dark:hover:border-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
         } ${loading === "finished" ? "opacity-50 cursor-wait" : "cursor-pointer"}`}
         title={finished ? "Beendet - Klicken zum Reaktivieren" : "Als beendet markieren"}
       >

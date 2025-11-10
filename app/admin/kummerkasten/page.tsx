@@ -80,29 +80,29 @@ export default async function KummerkastenPage() {
 
   return (
     <main className="space-y-8">
-      <section className="rounded-2xl border bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border bg-card p-6 shadow-sm">
         <header className="mb-6">
-          <h1 className="text-2xl font-semibold">Kummerkasten</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Kummerkasten</h1>
           <p className="text-sm text-muted-foreground">
             Hier siehst du alle Verbesserungsvorschläge und Bug-Meldungen von deinen Agenten.
           </p>
         </header>
 
         <div className="grid gap-4 sm:grid-cols-4">
-          <div className="rounded-lg border p-4">
-            <div className="text-2xl font-bold">{stats.open}</div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="text-2xl font-bold text-foreground">{stats.open}</div>
             <div className="text-sm text-muted-foreground">Offen</div>
           </div>
-          <div className="rounded-lg border p-4">
-            <div className="text-2xl font-bold">{stats.inProgress}</div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="text-2xl font-bold text-foreground">{stats.inProgress}</div>
             <div className="text-sm text-muted-foreground">In Bearbeitung</div>
           </div>
-          <div className="rounded-lg border p-4">
-            <div className="text-2xl font-bold">{stats.resolved}</div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="text-2xl font-bold text-foreground">{stats.resolved}</div>
             <div className="text-sm text-muted-foreground">Erledigt</div>
           </div>
-          <div className="rounded-lg border p-4">
-            <div className="text-2xl font-bold">{stats.dismissed}</div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="text-2xl font-bold text-foreground">{stats.dismissed}</div>
             <div className="text-sm text-muted-foreground">Abgelehnt</div>
           </div>
         </div>
@@ -110,7 +110,7 @@ export default async function KummerkastenPage() {
 
       <section>
         {feedbacks.length === 0 ? (
-          <div className="rounded-2xl border border-dashed bg-white p-6 text-center text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed bg-card p-6 text-center text-sm text-muted-foreground">
             Es wurden noch keine Feedbacks eingereicht.
           </div>
         ) : (
@@ -137,7 +137,7 @@ export default async function KummerkastenPage() {
               return (
                 <TabsContent key={type} value={type} className="space-y-4">
                   {typeFeedbacks.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed bg-white p-6 text-center text-sm text-muted-foreground">
+                    <div className="rounded-2xl border border-dashed bg-card p-6 text-center text-sm text-muted-foreground">
                       Keine {feedbackTypeLabels[type]}-Meldungen vorhanden.
                     </div>
                   ) : (
@@ -146,18 +146,18 @@ export default async function KummerkastenPage() {
                     return (
                       <article
                         key={feedback.id}
-                        className={`rounded-2xl border bg-white p-6 shadow-sm space-y-4 ${isDimmed ? "opacity-60" : ""}`}
+                        className={`rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4 ${isDimmed ? "opacity-60" : ""}`}
                       >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-lg font-semibold">{feedback.title}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">{feedback.title}</h3>
                     <Badge variant={feedbackStatusVariant[feedback.status]}>
                       {feedbackStatusLabels[feedback.status]}
                     </Badge>
                   </div>
                 </div>
 
-                <p className="whitespace-pre-wrap text-sm text-gray-700">{feedback.message}</p>
+                <p className="whitespace-pre-wrap text-sm text-foreground">{feedback.message}</p>
 
               <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                 <span>

@@ -513,26 +513,26 @@ function UserPill({ user }: { user: User }) {
         </DropdownMenuSub>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/notices" className="flex items-center cursor-pointer">
+          <Link href="/notices" className="flex items-center cursor-pointer hover:bg-accent dark:hover:bg-slate-700">
             <Megaphone className="mr-2 h-4 w-4" />
             <span>Hinweis-Historie</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/kummerkasten" className="flex items-center cursor-pointer">
+          <Link href="/kummerkasten" className="flex items-center cursor-pointer hover:bg-accent dark:hover:bg-slate-700">
             <MessageSquareHeart className="mr-2 h-4 w-4" />
             <span>Kummerkasten-Feedback</span>
             <FeedbackNotificationBadge />
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/settings" className="flex items-center cursor-pointer">
+          <Link href="/settings" className="flex items-center cursor-pointer hover:bg-accent dark:hover:bg-slate-700">
             <Settings className="mr-2 h-4 w-4" />
             <span>Einstellungen</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/changelog" className="flex items-center cursor-pointer">
+          <Link href="/changelog" className="flex items-center cursor-pointer hover:bg-accent dark:hover:bg-slate-700">
             <FileText className="mr-2 h-4 w-4" />
             <span>Changelog</span>
           </Link>
