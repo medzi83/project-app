@@ -777,12 +777,12 @@ export default async function ClientDetailPage({ params }: Props) {
                     )}
 
                     {/* Online Video Link for Film Projects */}
-                    {project.type === "FILM" && project.film?.onlineVideoUrl && (
+                    {project.type === "FILM" && project.film?.onlineLink && (
                       <div className="mt-3 pt-3 border-t">
                         <a
-                          href={project.film.onlineVideoUrl.startsWith("http")
-                            ? project.film.onlineVideoUrl
-                            : `https://${project.film.onlineVideoUrl}`}
+                          href={project.film.onlineLink.startsWith("http")
+                            ? project.film.onlineLink
+                            : `https://${project.film.onlineLink}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="group flex items-center gap-2 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"

@@ -26,11 +26,16 @@ export function FeedbackNotificationProvider({ children }: { children: ReactNode
     // Fetch initial count
     fetchCount();
 
-    // Poll every 30 seconds
+    // Only poll every 30 seconds when on the dashboard
+    const isDashboard = pathname === "/dashboard";
+    if (!isDashboard) {
+      return; // No polling on other pages
+    }
+
     const interval = setInterval(fetchCount, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [pathname]);
 
   // Refresh count when navigating away from kummerkasten
   useEffect(() => {
