@@ -158,79 +158,79 @@ export function FroxlorDataEditor({ customer, serverId, isAdmin }: Props) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Vorname</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Vorname</label>
             <input
               type="text"
               value={formData.firstname}
               onChange={(e) => setFormData({ ...formData, firstname: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Nachname</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Nachname</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Firma</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Firma</label>
             <input
               type="text"
               value={formData.company}
               onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">E-Mail</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">E-Mail</label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Speicherplatz (GB)</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Speicherplatz (GB)</label>
             <input
               type="number"
               value={formData.diskspace_gb}
               onChange={(e) => setFormData({ ...formData, diskspace_gb: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
               required
               min="1"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">MySQL Datenbanken</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">MySQL Datenbanken</label>
             <input
               type="number"
               value={formData.mysqls}
               onChange={(e) => setFormData({ ...formData, mysqls: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
               required
               min="0"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">FTP Konten</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">FTP Konten</label>
             <input
               type="number"
               value={formData.ftps}
               onChange={(e) => setFormData({ ...formData, ftps: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
               required
               min="0"
             />
@@ -249,7 +249,7 @@ export function FroxlorDataEditor({ customer, serverId, isAdmin }: Props) {
           </div>
         </div>
 
-        <div className="rounded bg-gray-50 p-3 text-xs text-gray-600">
+        <div className="rounded bg-gray-50 dark:bg-gray-700 p-3 text-xs text-gray-600 dark:text-gray-300">
           <strong>Hinweis:</strong> Login-Name und Document Root können hier nicht geändert werden.
           Diese Einstellungen müssen direkt in Froxlor angepasst werden.
         </div>

@@ -286,33 +286,33 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Kundenname *</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Kundenname *</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Kundennummer</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Kundennummer</label>
             <input
               type="text"
               value={formData.customerNo}
               onChange={(e) => setFormData({ ...formData, customerNo: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
               placeholder="z.B. 10437 oder EM10437"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Anrede</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Anrede</label>
             <select
               value={formData.salutation}
               onChange={(e) => setFormData({ ...formData, salutation: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
             >
               <option value="">-- Bitte wählen --</option>
               <option value="Herr">Herr</option>
@@ -321,54 +321,54 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Vorname</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Vorname</label>
             <input
               type="text"
               value={formData.firstname}
               onChange={(e) => setFormData({ ...formData, firstname: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
               placeholder="Max"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Nachname</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Nachname</label>
             <input
               type="text"
               value={formData.lastname}
               onChange={(e) => setFormData({ ...formData, lastname: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
               placeholder="Mustermann"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">E-Mail</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">E-Mail</label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
               placeholder="kunde@example.com"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Telefon</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Telefon</label>
             <input
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Server</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Server</label>
             <select
               value={formData.serverId}
               onChange={(e) => setFormData({ ...formData, serverId: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
             >
               <option value="">Kein Server zugeordnet</option>
               {servers.map((server) => (
@@ -380,11 +380,11 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Agentur</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Agentur</label>
             <select
               value={formData.agencyId}
               onChange={(e) => setFormData({ ...formData, agencyId: e.target.value })}
-              className="w-full rounded border p-2 text-sm"
+              className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
             >
               <option value="">Keine Agentur zugeordnet</option>
               {agencies.map((agency) => (
@@ -397,18 +397,18 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
         </div>
 
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Notizen</label>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Notizen</label>
           <textarea
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             rows={4}
-            className="w-full rounded border p-2 text-sm"
+            className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           />
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs text-gray-500">Uploadlinks</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400">Uploadlinks</label>
             <Button
               type="button"
               onClick={addUploadLink}
@@ -430,7 +430,7 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
                   value={link}
                   onChange={(e) => updateUploadLink(index, e.target.value)}
                   placeholder="https://example.com/upload"
-                  className="flex-1 rounded border p-2 text-sm"
+                  className="flex-1 rounded border p-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
                 />
                 {uploadLinks.length > 1 && (
                   <Button

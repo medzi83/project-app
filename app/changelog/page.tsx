@@ -28,6 +28,18 @@ type ChangelogEntry = {
 const changelog: ChangelogEntry[] = [
   {
     date: "11.11.2024",
+    version: "2.3.3",
+    changes: [
+      {
+        title: "Erweiterte Filteroptionen für Kundenliste",
+        description:
+          "Die Kundenliste (/clients) hat jetzt vier neue Filter erhalten! Du kannst jetzt gezielt nach Status (Aktiv, Beendet, Arbeitsstopp), Projektart (Webseite, Film, Social Media), Agentur und Server filtern. Alle Filter lassen sich kombinieren und bleiben beim Blättern zwischen den Seiten erhalten. Mit dem 'Zurücksetzen'-Button kannst du alle aktiven Filter mit einem Klick entfernen. So findest du noch schneller die gesuchten Kunden!",
+        type: "feature",
+      },
+    ],
+  },
+  {
+    date: "11.11.2024",
     version: "2.3.2",
     changes: [
       {

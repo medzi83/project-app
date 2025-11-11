@@ -57,6 +57,9 @@ export default async function ClientsPage({ searchParams }: Props) {
   const skip = (page - 1) * pageSize;
   const searchQuery = typeof spRaw.search === "string" ? spRaw.search.trim() : "";
   const agencyFilter = typeof spRaw.agency === "string" ? spRaw.agency : "";
+  const serverFilter = typeof spRaw.server === "string" ? spRaw.server : "";
+  const statusFilter = typeof spRaw.status === "string" ? spRaw.status : "";
+  const projectTypeFilter = typeof spRaw.projectType === "string" ? spRaw.projectType : "";
 
   const filters: Prisma.ClientWhereInput = {};
   if (searchQuery) {
@@ -67,6 +70,26 @@ export default async function ClientsPage({ searchParams }: Props) {
   }
   if (agencyFilter) {
     filters.agencyId = agencyFilter;
+  }
+  if (serverFilter) {
+    filters.serverId = serverFilter;
+  }
+  if (statusFilter) {
+    if (statusFilter === "active") {
+      filters.finished = false;
+      filters.workStopped = false;
+    } else if (statusFilter === "finished") {
+      filters.finished = true;
+    } else if (statusFilter === "workStopped") {
+      filters.workStopped = true;
+    }
+  }
+  if (projectTypeFilter) {
+    filters.projects = {
+      some: {
+        type: projectTypeFilter as any,
+      },
+    };
   }
 
   const whereClause = Object.keys(filters).length > 0 ? filters : undefined;
@@ -79,7 +102,7 @@ export default async function ClientsPage({ searchParams }: Props) {
       }).then((favorites) => new Set(favorites.map((f) => f.clientId)))
     : new Set<string>();
 
-  const [clients, total, agencies] = await Promise.all([
+  const [clients, total, agencies, servers] = await Promise.all([
     prisma.client.findMany({
       where: whereClause,
       orderBy: { name: "asc" },
@@ -102,6 +125,10 @@ export default async function ClientsPage({ searchParams }: Props) {
     prisma.agency.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
+    }),
+    prisma.server.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, hostname: true },
     }),
   ]);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -134,35 +161,71 @@ export default async function ClientsPage({ searchParams }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form method="get" className="flex flex-col gap-4 sm:flex-row">
-            <input
-              type="search"
-              name="search"
-              defaultValue={searchQuery}
-              placeholder="Suche nach Name oder Kundennummer..."
-              className="flex-1 rounded-lg border border-border bg-background text-foreground px-4 py-2 text-sm focus:border-blue-500 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all"
-            />
-            <select
-              name="agency"
-              defaultValue={agencyFilter}
-              className="rounded-lg border border-border bg-background text-foreground px-4 py-2 text-sm focus:border-blue-500 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all"
-            >
-              <option value="">Alle Agenturen</option>
-              {agencies.map((agency) => (
-                <option key={agency.id} value={agency.id}>
-                  {agency.name}
-                </option>
-              ))}
-            </select>
-            <input type="hidden" name="ps" value={pageSize} />
-            <Button type="submit" className="gap-2">
-              Suchen
-            </Button>
-            {(searchQuery || agencyFilter) && (
-              <Link href="/clients" className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium underline transition-colors self-center">
-                Zurücksetzen
-              </Link>
-            )}
+          <form method="get" className="space-y-4">
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <input
+                type="search"
+                name="search"
+                defaultValue={searchQuery}
+                placeholder="Suche nach Name oder Kundennummer..."
+                className="flex-1 rounded-lg border border-border bg-background text-foreground px-4 py-2 text-sm focus:border-blue-500 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all"
+              />
+              <input type="hidden" name="ps" value={pageSize} />
+              <Button type="submit" className="gap-2">
+                Suchen / Filter anwenden
+              </Button>
+              {(searchQuery || agencyFilter || serverFilter || statusFilter || projectTypeFilter) && (
+                <Link href="/clients" className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium underline transition-colors self-center">
+                  Zurücksetzen
+                </Link>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <select
+                name="status"
+                defaultValue={statusFilter}
+                className="rounded-lg border border-border bg-background text-foreground px-3 py-2 text-sm focus:border-blue-500 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all"
+              >
+                <option value="">Alle Status</option>
+                <option value="active">Aktiv</option>
+                <option value="finished">Beendet</option>
+                <option value="workStopped">Arbeitsstopp</option>
+              </select>
+              <select
+                name="projectType"
+                defaultValue={projectTypeFilter}
+                className="rounded-lg border border-border bg-background text-foreground px-3 py-2 text-sm focus:border-blue-500 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all"
+              >
+                <option value="">Alle Projektarten</option>
+                <option value="WEBSITE">Webseite</option>
+                <option value="FILM">Film</option>
+                <option value="SOCIAL">Social Media</option>
+              </select>
+              <select
+                name="agency"
+                defaultValue={agencyFilter}
+                className="rounded-lg border border-border bg-background text-foreground px-3 py-2 text-sm focus:border-blue-500 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all"
+              >
+                <option value="">Alle Agenturen</option>
+                {agencies.map((agency) => (
+                  <option key={agency.id} value={agency.id}>
+                    {agency.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="server"
+                defaultValue={serverFilter}
+                className="rounded-lg border border-border bg-background text-foreground px-3 py-2 text-sm focus:border-blue-500 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all"
+              >
+                <option value="">Alle Server</option>
+                {servers.map((server) => (
+                  <option key={server.id} value={server.id}>
+                    {server.hostname || server.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -182,12 +245,12 @@ export default async function ClientsPage({ searchParams }: Props) {
       <div className="flex items-center justify-between gap-2 text-sm">
         <div className="text-muted-foreground font-medium">Zeige {from}–{to} von {total}</div>
         <div className="flex items-center gap-3">
-          <Link className={pageSize===50?"px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white font-semibold shadow-sm":"px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-accent transition-all"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</Link>
-          <Link className={pageSize===100?"px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white font-semibold shadow-sm":"px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-accent transition-all"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</Link>
+          <Link className={pageSize===50?"px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white font-semibold shadow-sm":"px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-accent transition-all"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}${serverFilter ? `&server=${encodeURIComponent(serverFilter)}` : ""}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ""}${projectTypeFilter ? `&projectType=${encodeURIComponent(projectTypeFilter)}` : ""}`}>50/Seite</Link>
+          <Link className={pageSize===100?"px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white font-semibold shadow-sm":"px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-accent transition-all"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}${serverFilter ? `&server=${encodeURIComponent(serverFilter)}` : ""}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ""}${projectTypeFilter ? `&projectType=${encodeURIComponent(projectTypeFilter)}` : ""}`}>100/Seite</Link>
           <span className="mx-1 text-muted-foreground">|</span>
-          <Link className={page===1?"pointer-events-none opacity-50 px-3 py-1.5 rounded-lg border border-border":"px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition-all font-medium"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>← Zurück</Link>
+          <Link className={page===1?"pointer-events-none opacity-50 px-3 py-1.5 rounded-lg border border-border":"px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition-all font-medium"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}${serverFilter ? `&server=${encodeURIComponent(serverFilter)}` : ""}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ""}${projectTypeFilter ? `&projectType=${encodeURIComponent(projectTypeFilter)}` : ""}`}>← Zurück</Link>
           <span className="font-semibold text-foreground">Seite {page} / {totalPages}</span>
-          <Link className={page>=totalPages?"pointer-events-none opacity-50 px-3 py-1.5 rounded-lg border border-border":"px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition-all font-medium"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter →</Link>
+          <Link className={page>=totalPages?"pointer-events-none opacity-50 px-3 py-1.5 rounded-lg border border-border":"px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition-all font-medium"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}${serverFilter ? `&server=${encodeURIComponent(serverFilter)}` : ""}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ""}${projectTypeFilter ? `&projectType=${encodeURIComponent(projectTypeFilter)}` : ""}`}>Weiter →</Link>
         </div>
       </div>
 
@@ -401,12 +464,12 @@ export default async function ClientsPage({ searchParams }: Props) {
       <div className="flex items-center justify-between gap-2 text-sm">
         <div className="text-muted-foreground">Zeige {from}–{to} von {total}</div>
         <div className="flex items-center gap-3">
-          <Link className={pageSize===50?"font-semibold underline text-foreground":"underline text-muted-foreground hover:text-foreground"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>50/Seite</Link>
-          <Link className={pageSize===100?"font-semibold underline text-foreground":"underline text-muted-foreground hover:text-foreground"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>100/Seite</Link>
+          <Link className={pageSize===50?"font-semibold underline text-foreground":"underline text-muted-foreground hover:text-foreground"} href={`?ps=50&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}${serverFilter ? `&server=${encodeURIComponent(serverFilter)}` : ""}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ""}${projectTypeFilter ? `&projectType=${encodeURIComponent(projectTypeFilter)}` : ""}`}>50/Seite</Link>
+          <Link className={pageSize===100?"font-semibold underline text-foreground":"underline text-muted-foreground hover:text-foreground"} href={`?ps=100&page=1${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}${serverFilter ? `&server=${encodeURIComponent(serverFilter)}` : ""}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ""}${projectTypeFilter ? `&projectType=${encodeURIComponent(projectTypeFilter)}` : ""}`}>100/Seite</Link>
           <span className="mx-2 text-muted-foreground">|</span>
-          <Link className={page===1?"pointer-events-none opacity-50 underline text-muted-foreground":"underline text-foreground hover:text-primary"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Zurück</Link>
+          <Link className={page===1?"pointer-events-none opacity-50 underline text-muted-foreground":"underline text-foreground hover:text-primary"} href={`?ps=${pageSize}&page=${Math.max(1,page-1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}${serverFilter ? `&server=${encodeURIComponent(serverFilter)}` : ""}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ""}${projectTypeFilter ? `&projectType=${encodeURIComponent(projectTypeFilter)}` : ""}`}>Zurück</Link>
           <span className="text-foreground">Seite {page} / {totalPages}</span>
-          <Link className={page>=totalPages?"pointer-events-none opacity-50 underline text-muted-foreground":"underline text-foreground hover:text-primary"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}`}>Weiter</Link>
+          <Link className={page>=totalPages?"pointer-events-none opacity-50 underline text-muted-foreground":"underline text-foreground hover:text-primary"} href={`?ps=${pageSize}&page=${Math.min(totalPages,page+1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${agencyFilter ? `&agency=${encodeURIComponent(agencyFilter)}` : ""}${serverFilter ? `&server=${encodeURIComponent(serverFilter)}` : ""}${statusFilter ? `&status=${encodeURIComponent(statusFilter)}` : ""}${projectTypeFilter ? `&projectType=${encodeURIComponent(projectTypeFilter)}` : ""}`}>Weiter</Link>
         </div>
       </div>
     </div>
