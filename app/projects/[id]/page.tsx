@@ -237,7 +237,7 @@ export default async function ProjectDetail({ params }: Props) {
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(displayStatus)}`}>
                 {statusLabel}
               </span>
@@ -247,6 +247,17 @@ export default async function ProjectDetail({ params }: Props) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   RELAUNCH
+                </span>
+              )}
+              {website?.priority && website.priority !== "NONE" && (
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-sm border ${
+                  website.priority === "PRIO_1"
+                    ? "bg-gradient-to-r from-red-500 to-red-600 text-white border-red-600"
+                    : website.priority === "PRIO_2"
+                    ? "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-yellow-600"
+                    : "bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-600"
+                }`}>
+                  {website.priority === "PRIO_1" ? "PRIO 1" : website.priority === "PRIO_2" ? "PRIO 2" : "PRIO 3"}
                 </span>
               )}
             </div>
@@ -269,9 +280,10 @@ export default async function ProjectDetail({ params }: Props) {
             </div>
           </div>
 
-          {/* Domain Link Button */}
-          {website?.domain && (
-            <div className="flex-shrink-0">
+          {/* Action Buttons */}
+          <div className="flex-shrink-0 flex flex-col gap-2">
+            {/* Domain Link Button */}
+            {website?.domain && (
               <a
                 href={website.domain.startsWith("http") ? website.domain : `https://${website.domain}`}
                 target="_blank"
@@ -286,8 +298,33 @@ export default async function ProjectDetail({ params }: Props) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </a>
-            </div>
-          )}
+            )}
+
+            {/* Demo Link Button - Custom or First Joomla Installation */}
+            {(website?.demoLink || (project.joomlaInstallations && project.joomlaInstallations.length > 0)) && (
+              <a
+                href={
+                  website?.demoLink
+                    ? (website.demoLink.startsWith("http") ? website.demoLink : `https://${website.demoLink}`)
+                    : (project.joomlaInstallations![0].installUrl.startsWith("http")
+                        ? project.joomlaInstallations![0].installUrl
+                        : `https://${project.joomlaInstallations![0].installUrl}`)
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border-2 border-green-600 dark:border-green-500 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-600 dark:hover:bg-green-600 hover:text-white dark:hover:text-white transition-colors font-medium text-sm shadow-sm"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Zur Demo
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            )}
+          </div>
         </div>
 
         {project.important && (

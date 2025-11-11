@@ -22,7 +22,7 @@ const WebsiteKey = z.enum([
   "domain","priority","pStatus","cms",
   "webDate","demoDate","onlineDate","lastMaterialAt",
   "effortBuildMin","effortDemoMin",
-  "materialStatus","seo","textit","accessible","isRelaunch","note",
+  "materialStatus","seo","textit","accessible","isRelaunch","note","demoLink",
 ]);
 
 const FormSchema = z.object({
@@ -215,6 +215,12 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
         const nextValue = typeof parsedValue === "string" ? parsedValue : null;
         updateData.note = nextValue;
         createData.note = nextValue ?? undefined;
+        break;
+      }
+      case "demoLink": {
+        const nextValue = typeof parsedValue === "string" ? parsedValue : null;
+        updateData.demoLink = nextValue;
+        createData.demoLink = nextValue ?? undefined;
         break;
       }
     }

@@ -749,6 +749,56 @@ export default async function ClientDetailPage({ params }: Props) {
                       )}
                     </Link>
 
+                    {/* Demo Link for Website Projects */}
+                    {project.type === "WEBSITE" && (project.website?.demoLink || client.joomlaInstallations.some(inst => inst.project?.id === project.id)) && (
+                      <div className="mt-3 pt-3 border-t">
+                        <a
+                          href={
+                            project.website?.demoLink
+                              ? (project.website.demoLink.startsWith("http") ? project.website.demoLink : `https://${project.website.demoLink}`)
+                              : (client.joomlaInstallations.find(inst => inst.project?.id === project.id)?.installUrl.startsWith("http")
+                                  ? client.joomlaInstallations.find(inst => inst.project?.id === project.id)?.installUrl
+                                  : `https://${client.joomlaInstallations.find(inst => inst.project?.id === project.id)?.installUrl}`)
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex items-center gap-2 text-xs text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-colors"
+                        >
+                          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          <span className="font-medium">Zur Demo</span>
+                          <svg className="w-3 h-3 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Online Video Link for Film Projects */}
+                    {project.type === "FILM" && project.film?.onlineVideoUrl && (
+                      <div className="mt-3 pt-3 border-t">
+                        <a
+                          href={project.film.onlineVideoUrl.startsWith("http")
+                            ? project.film.onlineVideoUrl
+                            : `https://${project.film.onlineVideoUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex items-center gap-2 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+                        >
+                          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="font-medium">Zum Film</span>
+                          <svg className="w-3 h-3 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </div>
+                    )}
+
                     {/* Domain Assignment for ONLINE websites */}
                     {isAdmin && isOnlineWebsite && froxlorDomains.length > 0 && (
                       <div className="mt-3 pt-3 border-t">
