@@ -27,6 +27,30 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "11.11.2024",
+    version: "2.3.2",
+    changes: [
+      {
+        title: "Quick Links direkt in den Projekt-Boxen",
+        description:
+          "Demo-Links für Webseiten und Film-Links sind jetzt direkt in den Projekt-Boxen auf der Kundenseite integriert! Du musst nicht mehr scrollen - die Links erscheinen am Ende jeder Box mit einem grünen 'Zur Demo'-Button für Webseiten (zeigt den benutzerdefinierten Demo-Link oder die Joomla-Installation) und einem roten 'Zum Film'-Button für Film-Projekte mit Online-Link. Demo-Links können jetzt auch manuell auf der Projekt-Detailseite hinzugefügt werden. So hast du schnellen Zugriff auf die wichtigsten Links.",
+        type: "feature",
+      },
+      {
+        title: "Dark Mode-Verbesserungen für Filmprojekte",
+        description:
+          "Alle Filmprojekt-Seiten unterstützen jetzt vollständig den Dark Mode! Die Detailseite, die Film-Projekt-Liste und alle Inline-Bearbeitungsfelder wurden für dunkles Design optimiert. Texte, Rahmen und Hintergründe passen sich automatisch an dein gewähltes Theme an und sorgen für optimale Lesbarkeit in beiden Modi.",
+        type: "improvement",
+      },
+      {
+        title: "Feedback-Polling nur noch auf dem Dashboard",
+        description:
+          "Die Abfrage neuer Feedback-Benachrichtigungen (rotes Badge) erfolgt jetzt nur noch alle 30 Sekunden, wenn du dich auf dem Dashboard befindest. Auf allen anderen Seiten wird die Anzahl nur beim Seitenwechsel aktualisiert. Das spart unnötige Server-Anfragen und reduziert die Last auf dem Server erheblich.",
+        type: "improvement",
+      },
+    ],
+  },
+  {
     date: "10.11.2024",
     version: "2.3.1",
     changes: [
