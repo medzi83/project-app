@@ -237,6 +237,10 @@ export async function POST(request: NextRequest) {
             const escapedHost = hostForConfig.replace(/[\/&']/g, '\\$&');
             const escapedPort = String(mysqlPort);
 
+            // For MySQL command line: keep host and port separate (mysql -h HOST -P PORT)
+            const mysqlCmdHost = mysqlHost.replace(/[\/&']/g, '\\$&');
+            const mysqlCmdPort = String(mysqlPort);
+
             // Single bash script to do all post-processing
             const postProcessScript = `
 cd ${targetPath} || exit 1
@@ -302,12 +306,12 @@ if [ -d installation/sql ]; then
     echo "Replaced #__ with \$DB_PREFIX in SQL dump"
 
     # Import combined SQL with proper host and port
-    if [ "${escapedHost}" = "localhost" ] && [ "${escapedPort}" = "3306" ]; then
+    if [ "${mysqlCmdHost}" = "localhost" ] && [ "${mysqlCmdPort}" = "3306" ]; then
       # Use socket connection for default localhost:3306
       mysql -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < /tmp/combined_${escapedDbName}.sql 2>&1
     else
       # Use TCP connection for non-standard hosts/ports
-      mysql -h ${escapedHost} -P ${escapedPort} -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < /tmp/combined_${escapedDbName}.sql 2>&1
+      mysql -h ${mysqlCmdHost} -P ${mysqlCmdPort} -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < /tmp/combined_${escapedDbName}.sql 2>&1
     fi
     if [ $? -eq 0 ]; then
       echo "✓ Imported multi-part database (site.sql + parts)"
@@ -318,12 +322,12 @@ if [ -d installation/sql ]; then
     fi
   # Standard single-file SQL dump
   elif [ -f mysql/joomla.sql ]; then
-    if [ "${escapedHost}" = "localhost" ] && [ "${escapedPort}" = "3306" ]; then
+    if [ "${mysqlCmdHost}" = "localhost" ] && [ "${mysqlCmdPort}" = "3306" ]; then
       # Use socket connection for default localhost:3306
       mysql -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < mysql/joomla.sql 2>&1
     else
       # Use TCP connection for non-standard hosts/ports
-      mysql -h ${escapedHost} -P ${escapedPort} -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < mysql/joomla.sql 2>&1
+      mysql -h ${mysqlCmdHost} -P ${mysqlCmdPort} -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < mysql/joomla.sql 2>&1
     fi
     if [ $? -eq 0 ]; then
       echo "✓ Imported database from mysql/joomla.sql"
@@ -334,12 +338,12 @@ if [ -d installation/sql ]; then
     # Try to find any .sql file (not .s## parts)
     SQLFILE=$(find . -name "*.sql" -type f ! -name "*.s[0-9]*" | head -n 1)
     if [ -n "$SQLFILE" ]; then
-      if [ "${escapedHost}" = "localhost" ] && [ "${escapedPort}" = "3306" ]; then
+      if [ "${mysqlCmdHost}" = "localhost" ] && [ "${mysqlCmdPort}" = "3306" ]; then
         # Use socket connection for default localhost:3306
         mysql -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < "$SQLFILE" 2>&1
       else
         # Use TCP connection for non-standard hosts/ports
-        mysql -h ${escapedHost} -P ${escapedPort} -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < "$SQLFILE" 2>&1
+        mysql -h ${mysqlCmdHost} -P ${mysqlCmdPort} -u ${escapedDbName} -p'${escapedPassword}' ${escapedDbName} < "$SQLFILE" 2>&1
       fi
       if [ $? -eq 0 ]; then
         echo "✓ Imported database from $SQLFILE"
