@@ -70,62 +70,62 @@ export default async function NewProjectPage({ searchParams }: Props) {
   return (
     <div className="p-6 space-y-10">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">Neues Projekt anlegen</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Neues Projekt anlegen</h1>
+        <p className="text-sm text-muted-foreground dark:text-gray-400">
           Wähle zunächst, ob du ein Projekt für einen bestehenden Kunden oder einen neuen Kunden anlegen möchtest.
         </p>
       </header>
 
-      <details className="rounded-lg border bg-white" open={Boolean(clientError)}>
-        <summary className="flex cursor-pointer items-center justify-between gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
+      <details className="rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700" open={Boolean(clientError)}>
+        <summary className="flex cursor-pointer items-center justify-between gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           <div>
-            <h2 className="text-lg font-semibold">Neukunde anlegen</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Neukunde anlegen</h2>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">
               Falls der Kunde noch nicht in der Datenbank vorhanden ist, lege ihn hier zuerst an.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground bg-gray-100 px-3 py-1 rounded-full">Optional</span>
+            <span className="text-sm text-muted-foreground dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">Optional</span>
           </div>
         </summary>
-        <div className="space-y-4 border-t px-6 py-6">
-          {clientError && <p className="text-sm text-red-600">{clientError}</p>}
+        <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 px-6 py-6">
+          {clientError && <p className="text-sm text-red-600 dark:text-red-400">{clientError}</p>}
           <form action={createClient} className="grid gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Name *</span>
-              <input name="name" required className="rounded border p-2" placeholder="z. B. Muster GmbH" />
+              <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Name *</span>
+              <input name="name" required className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="z. B. Muster GmbH" />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Kundennummer *</span>
-              <input name="customerNo" required className="rounded border p-2" placeholder="z. B. M12345" />
+              <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Kundennummer *</span>
+              <input name="customerNo" required className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="z. B. M12345" />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Anrede</span>
-              <select name="salutation" className="rounded border p-2">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Anrede</span>
+              <select name="salutation" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600">
                 <option value="">-- Bitte wählen --</option>
                 <option value="Herr">Herr</option>
                 <option value="Frau">Frau</option>
               </select>
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Vorname</span>
-              <input name="firstname" className="rounded border p-2" placeholder="optional" />
+              <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Vorname</span>
+              <input name="firstname" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Nachname</span>
-              <input name="lastname" className="rounded border p-2" placeholder="optional" />
+              <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Nachname</span>
+              <input name="lastname" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">E-Mail</span>
-              <input name="email" type="email" className="rounded border p-2" placeholder="optional" />
+              <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">E-Mail</span>
+              <input name="email" type="email" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Telefon</span>
-              <input name="phone" className="rounded border p-2" placeholder="optional" />
+              <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Telefon</span>
+              <input name="phone" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Agentur</span>
-              <select name="agencyId" className="rounded border p-2">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Agentur</span>
+              <select name="agencyId" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600">
                 <option value="">Keine Agentur</option>
                 {agencies.map((agency) => (
                   <option key={agency.id} value={agency.id}>
@@ -135,27 +135,27 @@ export default async function NewProjectPage({ searchParams }: Props) {
               </select>
             </label>
             <label className="flex flex-col gap-1 md:col-span-2">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">Notiz</span>
-              <textarea name="notes" rows={3} className="rounded border p-2" placeholder="optional" />
+              <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Notiz</span>
+              <textarea name="notes" rows={3} className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
             </label>
             <div className="md:col-span-2 flex items-center justify-end gap-3">
-              <button type="submit" className="rounded bg-black px-4 py-2 text-white">Kunde speichern</button>
+              <button type="submit" className="rounded bg-black dark:bg-blue-600 px-4 py-2 text-white hover:bg-gray-800 dark:hover:bg-blue-700">Kunde speichern</button>
             </div>
           </form>
         </div>
       </details>
 
-      <section className="rounded-lg border bg-white">
-        <div className="border-b px-6 py-5 bg-gray-50">
-          <h2 className="text-lg font-semibold">Projekt für Bestandskunden</h2>
-          <p className="text-sm text-muted-foreground">
+      <section className="rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+        <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-5 bg-gray-50 dark:bg-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Projekt für Bestandskunden</h2>
+          <p className="text-sm text-muted-foreground dark:text-gray-400">
             Suche einen bestehenden Kunden und lege ein neues Projekt an.
           </p>
         </div>
 
         <div className="space-y-6 px-6 py-6">
           {projectError && (
-            <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
               <strong>Fehler:</strong> {projectError}
             </div>
           )}

@@ -297,16 +297,16 @@ export function UnifiedProjectForm({
       {/* Schritt 1: Kundenauswahl mit Live-Suche */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white font-semibold">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black dark:bg-blue-600 text-white font-semibold">
             1
           </div>
-          <h3 className="text-lg font-semibold">Kunde suchen und auswählen</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Kunde suchen und auswählen</h3>
         </div>
 
         <div className="ml-11 space-y-4">
           <div className="relative client-search-container">
             <label className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">
                 Kunde suchen (nach Name oder Kundennummer) *
               </span>
               <input
@@ -322,7 +322,7 @@ export function UnifiedProjectForm({
                 }}
                 onFocus={() => setShowDropdown(true)}
                 placeholder="Tippe, um zu suchen..."
-                className="rounded border p-2 text-base"
+                className="rounded border p-2 text-base bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
                 autoComplete="off"
               />
             </label>
@@ -332,7 +332,7 @@ export function UnifiedProjectForm({
 
             {/* Dropdown with filtered results */}
             {showDropdown && !selectedClient && searchQuery && (
-              <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg max-h-60 overflow-auto">
+              <div className="absolute z-10 mt-1 w-full rounded-md border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg max-h-60 overflow-auto">
                 {filteredClients.length > 0 ? (
                   <ul className="py-1">
                     {filteredClients.slice(0, 20).map((option) => (
@@ -343,19 +343,19 @@ export function UnifiedProjectForm({
                           setSearchQuery("");
                           setShowDropdown(false);
                         }}
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                        className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-900 dark:text-white"
                       >
                         {option.label}
                       </li>
                     ))}
                     {filteredClients.length > 20 && (
-                      <li className="px-4 py-2 text-sm text-muted-foreground italic">
+                      <li className="px-4 py-2 text-sm text-muted-foreground dark:text-gray-400 italic">
                         ... und {filteredClients.length - 20} weitere. Verfeinere deine Suche.
                       </li>
                     )}
                   </ul>
                 ) : (
-                  <div className="px-4 py-3 text-sm text-muted-foreground">
+                  <div className="px-4 py-3 text-sm text-muted-foreground dark:text-gray-400">
                     Keine Kunden gefunden. Versuche einen anderen Suchbegriff.
                   </div>
                 )}
@@ -364,7 +364,7 @@ export function UnifiedProjectForm({
 
             {/* Show all clients when focused but no search query */}
             {showDropdown && !selectedClient && !searchQuery && (
-              <div className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-lg max-h-60 overflow-auto">
+              <div className="absolute z-10 mt-1 w-full rounded-md border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-lg max-h-60 overflow-auto">
                 <ul className="py-1">
                   {clientOptions.slice(0, 20).map((option) => (
                     <li
@@ -373,13 +373,13 @@ export function UnifiedProjectForm({
                         setSelectedClient(option.value);
                         setShowDropdown(false);
                       }}
-                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                      className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-900 dark:text-white"
                     >
                       {option.label}
                     </li>
                   ))}
                   {clientOptions.length > 20 && (
-                    <li className="px-4 py-2 text-sm text-muted-foreground italic">
+                    <li className="px-4 py-2 text-sm text-muted-foreground dark:text-gray-400 italic">
                       ... und {clientOptions.length - 20} weitere. Nutze die Suche.
                     </li>
                   )}
@@ -390,8 +390,8 @@ export function UnifiedProjectForm({
 
           {/* Selected client display */}
           {selectedClient && (
-            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded">
-              <span className="text-sm font-medium text-green-900">
+            <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded">
+              <span className="text-sm font-medium text-green-900 dark:text-green-200">
                 ✓ Ausgewählt: {selectedClientLabel}
               </span>
               <button
@@ -400,7 +400,7 @@ export function UnifiedProjectForm({
                   setSelectedClient("");
                   setSearchQuery("");
                 }}
-                className="ml-auto text-sm text-green-700 hover:text-green-900 underline"
+                className="ml-auto text-sm text-green-700 dark:text-green-300 hover:text-green-900 dark:hover:text-green-100 underline"
               >
                 Ändern
               </button>
@@ -408,7 +408,7 @@ export function UnifiedProjectForm({
           )}
 
           {!selectedClient && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground dark:text-gray-400">
               💡 Kunde nicht in der Liste? Lege zuerst oben einen neuen Kunden an.
             </p>
           )}
@@ -418,18 +418,18 @@ export function UnifiedProjectForm({
       {/* Schritt 2: Projekttyp (nur sichtbar wenn Kunde ausgewählt) */}
       {selectedClient && (
         <>
-          <div className="border-t pt-6 space-y-4">
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white font-semibold">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black dark:bg-blue-600 text-white font-semibold">
                 2
               </div>
-              <h3 className="text-lg font-semibold">Projekttyp auswählen</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Projekttyp auswählen</h3>
             </div>
 
             <div className="ml-11">
-              <div className="rounded border bg-gray-50 p-4">
+              <div className="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4">
                 <fieldset className="flex flex-wrap gap-4">
-                  <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-gray-400">
                     Welche Art(en) von Projekt? (Mehrfachauswahl möglich) *
                   </legend>
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -441,7 +441,7 @@ export function UnifiedProjectForm({
                       checked={projectTypes.has("WEBSITE")}
                       onChange={(e) => handleProjectTypeChange("WEBSITE", e.target.checked)}
                     />
-                    <span className="font-medium">Website</span>
+                    <span className="font-medium text-gray-900 dark:text-white">Website</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -452,7 +452,7 @@ export function UnifiedProjectForm({
                       checked={projectTypes.has("FILM")}
                       onChange={(e) => handleProjectTypeChange("FILM", e.target.checked)}
                     />
-                    <span className="font-medium">Film</span>
+                    <span className="font-medium text-gray-900 dark:text-white">Film</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -463,11 +463,11 @@ export function UnifiedProjectForm({
                       checked={projectTypes.has("SOCIAL_MEDIA")}
                       onChange={(e) => handleProjectTypeChange("SOCIAL_MEDIA", e.target.checked)}
                     />
-                    <span className="font-medium">Social Media</span>
+                    <span className="font-medium text-gray-900 dark:text-white">Social Media</span>
                   </label>
                 </fieldset>
                 {projectTypes.size === 0 && (
-                  <p className="mt-3 text-sm text-muted-foreground">
+                  <p className="mt-3 text-sm text-muted-foreground dark:text-gray-400">
                     Wähle mindestens einen Projekttyp aus.
                   </p>
                 )}
@@ -477,57 +477,61 @@ export function UnifiedProjectForm({
 
           {/* Schritt 3: Projektdetails (nur sichtbar wenn mindestens ein Projekttyp ausgewählt) */}
           {projectTypes.size > 0 && (
-            <div className="border-t pt-6 space-y-4">
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-white font-semibold">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black dark:bg-blue-600 text-white font-semibold">
                   3
                 </div>
-                <h3 className="text-lg font-semibold">Projektdetails</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Projektdetails</h3>
               </div>
 
               <div className="ml-11 space-y-6">
                 {/* Gemeinsame Felder für alle Projekttypen */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="flex flex-col gap-1">
-                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Projekttitel</span>
-                    <input name="title" className="rounded border p-2" placeholder="optional" />
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Projekttitel</span>
+                    <input name="title" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="z.B. Restaurant, Warteseite, 2. Demo" />
+                    <p className="text-xs text-muted-foreground dark:text-gray-400 mt-1">
+                      💡 Optionale Kurzbeschreibung des Projekts zur besseren Übersicht
+                    </p>
                   </label>
                 </div>
 
                 {/* Website-spezifische Schnellfelder */}
                 {projectTypes.has("WEBSITE") && (
-                  <div className="rounded-lg border bg-blue-50 p-4 space-y-4">
-                    <h4 className="text-sm font-semibold text-blue-900">Wichtige Website-Infos</h4>
+                  <div className="rounded-lg border bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-200">Wichtige Website-Infos</h4>
                     <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
                       <SelectField name="websiteAgentId" label="Agent" options={websiteAgentOptions} defaultValue="" />
                       <SelectField name="cms" label="CMS *" options={CMS_OPTIONS} defaultValue="JOOMLA" />
+                      <SelectField name="seo" label="SEO *" options={SEO_OPTIONS} defaultValue="" />
                       <SelectField name="textit" label="Texte vorhanden?" options={TEXTIT_OPTIONS} defaultValue="" />
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs uppercase tracking-wide text-muted-foreground">Webtermin (Datum + Zeit)</span>
-                        <input type="datetime-local" name="webDate" className="rounded border p-2" />
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Webtermin (Datum + Zeit)</span>
+                        <input type="datetime-local" name="webDate" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" />
                       </div>
                       <SelectField name="webterminType" label="Art des Termins" options={WEBTERMIN_TYPES} defaultValue="" />
                     </div>
                     <div className="pt-2">
                       <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="isRelaunch" className="h-4 w-4 rounded border-gray-300" />
-                        <span className="text-sm font-medium text-blue-900">Als Relaunch kennzeichnen</span>
+                        <input type="checkbox" name="isRelaunch" className="h-4 w-4 rounded border-gray-300 dark:border-gray-600" />
+                        <span className="text-sm font-medium text-blue-900 dark:text-blue-200">Als Relaunch kennzeichnen</span>
                       </label>
-                      <p className="text-xs text-blue-700 mt-1 ml-6">Relaunch-Projekte werden in der Tabelle mit einem &quot;RL&quot;-Badge markiert</p>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-1 ml-6">Relaunch-Projekte werden in der Tabelle mit einem &quot;RL&quot;-Badge markiert</p>
                     </div>
                   </div>
                 )}
 
                 {/* Film-spezifische Schnellfelder */}
                 {projectTypes.has("FILM") && (
-                  <div className="rounded-lg border bg-purple-50 p-4 space-y-4">
-                    <h4 className="text-sm font-semibold text-purple-900">Wichtige Film-Infos</h4>
+                  <div className="rounded-lg border bg-purple-50 dark:bg-purple-900/20 dark:border-purple-700 p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-200">Wichtige Film-Infos</h4>
                     <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                       <SelectField name="filmAgentId" label="Agent" options={filmAgentOptions} defaultValue="" />
                       <SelectField name="scope" label="Umfang *" options={FILM_SCOPE_OPTIONS} defaultValue="FILM" />
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs uppercase tracking-wide text-muted-foreground">Scouting (Datum + Zeit)</span>
-                        <input type="datetime-local" name="scouting" className="rounded border p-2" />
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Scouting (Datum + Zeit)</span>
+                        <input type="datetime-local" name="scouting" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" />
                       </div>
                     </div>
                   </div>
@@ -535,42 +539,42 @@ export function UnifiedProjectForm({
 
                 {/* Social-Media-spezifische Schnellfelder */}
                 {projectTypes.has("SOCIAL_MEDIA") && (
-                  <div className="rounded-lg border bg-green-50 p-4 space-y-4">
-                    <h4 className="text-sm font-semibold text-green-900">Wichtige Social-Media-Infos</h4>
+                  <div className="rounded-lg border bg-green-50 dark:bg-green-900/20 dark:border-green-700 p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-green-900 dark:text-green-200">Wichtige Social-Media-Infos</h4>
                     <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                       <SelectField name="socialAgentId" label="Agent" options={websiteAgentOptions} defaultValue="" />
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs uppercase tracking-wide text-muted-foreground">Plattformen</span>
-                        <input name="socialPlatforms" className="rounded border p-2" placeholder="z.B. Instagram, Facebook" />
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Plattformen</span>
+                        <input name="socialPlatforms" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="z.B. Instagram, Facebook" />
                       </label>
                       <label className="flex flex-col gap-1">
-                        <span className="text-xs uppercase tracking-wide text-muted-foreground">Posting-Frequenz</span>
-                        <input name="socialFrequency" className="rounded border p-2" placeholder="z.B. täglich, wöchentlich" />
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Posting-Frequenz</span>
+                        <input name="socialFrequency" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="z.B. täglich, wöchentlich" />
                       </label>
                     </div>
                   </div>
                 )}
 
                 {/* Hinweis auf weitere Felder */}
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                  <p className="text-sm text-muted-foreground">
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3">
+                  <p className="text-sm text-muted-foreground dark:text-gray-400">
                     💡 Weitere Details kannst du nach dem Anlegen auf der Projektseite ergänzen.
                   </p>
                 </div>
 
                 {/* Versteckte zusätzliche Felder - werden vom useEffect-Handler ein/ausgeblendet */}
                 <div className="website-fields space-y-6 hidden">
-                  <h3 className="text-base font-semibold border-b pb-2">Weitere Website-Details (optional)</h3>
+                  <h3 className="text-base font-semibold border-b border-gray-200 dark:border-gray-700 pb-2 text-gray-900 dark:text-white">Weitere Website-Details (optional)</h3>
 
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Domain</span>
-                      <input name="domain" className="rounded border p-2" placeholder="optional" />
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Domain</span>
+                      <input name="domain" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
                     </label>
                     <SelectField name="priority" label="Priorität" options={PRIORITY_OPTIONS} defaultValue="NONE" />
                     <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground">CMS (frei)</span>
-                      <input name="cmsOther" className="rounded border p-2" placeholder="optional" />
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">CMS (frei)</span>
+                      <input name="cmsOther" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
                     </label>
                     <SelectField name="pStatus" label="P-Status" options={PRODUCTION_OPTIONS} defaultValue="NONE" />
                   </div>
@@ -597,18 +601,18 @@ export function UnifiedProjectForm({
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Demolink</span>
-                      <input name="demoLink" className="rounded border p-2" placeholder="https://..." />
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Demolink</span>
+                      <input name="demoLink" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="https://..." />
                     </label>
                     <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Hinweise (Website)</span>
-                      <textarea name="websiteNote" rows={3} className="rounded border p-2" placeholder="optional" />
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Hinweise (Website)</span>
+                      <textarea name="websiteNote" rows={3} className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
                     </label>
                   </div>
                 </div>
 
                 <div className="film-fields space-y-6 hidden">
-                  <h3 className="text-base font-semibold border-b pb-2">Weitere Film-Details (optional)</h3>
+                  <h3 className="text-base font-semibold border-b border-gray-200 dark:border-gray-700 pb-2 text-gray-900 dark:text-white">Weitere Film-Details (optional)</h3>
 
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <SelectField name="filmPriority" label="Prio / Nur Film" options={FILM_PRIORITY_OPTIONS} defaultValue="NONE" />
@@ -632,19 +636,19 @@ export function UnifiedProjectForm({
 
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Finalversion-Link</span>
-                      <input type="url" name="finalLink" className="rounded border p-2" placeholder="https://domain.tld/film" />
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Finalversion-Link</span>
+                      <input type="url" name="finalLink" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="https://domain.tld/film" />
                     </label>
                     <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Hauptlink (Online)</span>
-                      <input type="url" name="onlineLink" className="rounded border p-2" placeholder="https://domain.tld/live" />
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Hauptlink (Online)</span>
+                      <input type="url" name="onlineLink" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="https://domain.tld/live" />
                     </label>
                   </div>
 
                   <div className="grid gap-4">
                     <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Hinweis (Film)</span>
-                      <textarea name="filmNote" rows={3} className="rounded border p-2" placeholder="optional" />
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Hinweis (Film)</span>
+                      <textarea name="filmNote" rows={3} className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
                     </label>
                   </div>
 
@@ -667,19 +671,19 @@ export function UnifiedProjectForm({
 function DateField({ name, label }: { name: string; label: string }) {
   return label ? (
     <label className="flex flex-col gap-1">
-      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-      <input type="date" name={name} className="rounded border p-2" />
+      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">{label}</span>
+      <input type="date" name={name} className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" />
     </label>
   ) : (
-    <input type="date" name={name} className="rounded border p-2" />
+    <input type="date" name={name} className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" />
   );
 }
 
 function NumberField({ name, label }: { name: string; label: string }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-      <input type="number" name={name} className="rounded border p-2" min={0} step={0.5} inputMode="decimal" />
+      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">{label}</span>
+      <input type="number" name={name} className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" min={0} step={0.5} inputMode="decimal" />
     </label>
   );
 }
@@ -697,8 +701,8 @@ function SelectField({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-      <select name={name} defaultValue={defaultValue} className="rounded border p-2">
+      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">{label}</span>
+      <select name={name} defaultValue={defaultValue} className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600">
         {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
@@ -712,12 +716,12 @@ function SelectField({
 function FormActions({ saveLabel, isSubmitting }: { saveLabel: string; isSubmitting?: boolean }) {
   return (
     <div className="flex items-center justify-end gap-3">
-      <Link href="/projects" className="rounded border px-4 py-2">
+      <Link href="/projects" className="rounded border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700">
         Abbrechen
       </Link>
       <button
         type="submit"
-        className="rounded bg-black px-4 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded bg-black dark:bg-blue-600 px-4 py-2 text-white hover:bg-gray-800 dark:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={isSubmitting}
       >
         {isSubmitting ? "Wird gespeichert..." : saveLabel}
