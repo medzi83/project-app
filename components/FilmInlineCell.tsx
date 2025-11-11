@@ -138,7 +138,7 @@ export default function FilmInlineCell({
     const baseButtonClass =
       "inline-flex w-full items-start justify-start gap-2 rounded px-2 py-1 text-left cursor-pointer bg-transparent min-h-[2rem]";
     const interactiveClass =
-      "transition-all duration-150 hover:bg-blue-50 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500";
+      "transition-all duration-150 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:focus-visible:outline-blue-400";
     const buttonClassName = `${baseButtonClass} ${interactiveClass}`;
 
     return (
@@ -182,7 +182,7 @@ export default function FilmInlineCell({
           ref={(el: HTMLSelectElement | null) => {
             inputRef.current = el;
           }}
-          className="p-1 border rounded"
+          className="p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           onBlur={() => {
             if (shouldAutoSubmit) formRef.current?.requestSubmit();
           }}
@@ -213,7 +213,7 @@ export default function FilmInlineCell({
           ref={(el: HTMLInputElement | null) => {
             inputRef.current = el;
           }}
-          className="p-1 border rounded"
+          className="p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           onBlur={() => {
             if (shouldAutoSubmit) formRef.current?.requestSubmit();
           }}
@@ -238,7 +238,7 @@ export default function FilmInlineCell({
           ref={(el: HTMLInputElement | null) => {
             inputRef.current = el;
           }}
-          className="p-1 border rounded"
+          className="p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           onBlur={() => {
             if (shouldAutoSubmit) formRef.current?.requestSubmit();
           }}
@@ -263,7 +263,7 @@ export default function FilmInlineCell({
           ref={(el: HTMLInputElement | null) => {
             inputRef.current = el;
           }}
-          className="p-1 border rounded"
+          className="p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           onBlur={() => formRef.current?.requestSubmit()}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
@@ -285,7 +285,7 @@ export default function FilmInlineCell({
           ref={(el: HTMLTextAreaElement | null) => {
             inputRef.current = el;
           }}
-          className="w-56 p-1 border rounded"
+          className="w-56 p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           rows={4}
           onBlur={() => {
             if (shouldAutoSubmit) formRef.current?.requestSubmit();
@@ -306,7 +306,7 @@ export default function FilmInlineCell({
       {extraField && (
         <div className="mt-2 flex flex-col gap-1">
           {extraField.label && (
-            <label htmlFor={extraInputId} className="text-xs uppercase tracking-wide text-gray-500">
+            <label htmlFor={extraInputId} className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {extraField.label}
             </label>
           )}
@@ -317,7 +317,7 @@ export default function FilmInlineCell({
             defaultValue={extraDefaultValue}
             placeholder={extraField.placeholder}
             required={extraField.required}
-            className="p-1 border rounded"
+            className="p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           />
         </div>
       )}
@@ -326,14 +326,14 @@ export default function FilmInlineCell({
         <div className="mt-2 flex gap-2 text-xs">
           <button
             type="submit"
-            className="rounded bg-black px-2 py-1 text-white hover:bg-gray-800"
+            className="rounded bg-black dark:bg-blue-600 px-2 py-1 text-white hover:bg-gray-800 dark:hover:bg-blue-700"
           >
             Speichern
           </button>
           <button
             type="button"
             onClick={cancel}
-            className="rounded border px-2 py-1 hover:bg-gray-50"
+            className="rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-600"
           >
             Abbrechen
           </button>

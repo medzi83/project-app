@@ -311,7 +311,14 @@ export default async function ClientDetailPage({ params }: Props) {
             break; // Stop searching after finding the first match
           }
         } catch (error) {
-          console.error(`Error checking server ${server.name} for customer ${customerNo}:`, error);
+          // Only log non-credential errors
+          // Credential errors (invalid API keys) are expected when servers are misconfigured
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (!errorMessage.includes('Invalid request header') &&
+              !errorMessage.includes('API credentials') &&
+              !errorMessage.includes('API key and secret')) {
+            console.error(`Error checking server ${server.name} for customer ${customerNo}:`, error);
+          }
           // Continue with next server
         }
       }

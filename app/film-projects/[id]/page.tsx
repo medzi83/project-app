@@ -287,7 +287,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <Link href="/film-projects" className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800">
+        <Link href="/film-projects" className="inline-flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -296,7 +296,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
       </div>
 
       {/* Project Header Card */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200 p-6 shadow-sm">
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl border border-green-200 dark:border-green-700 p-6 shadow-sm">
         <div className="flex items-start justify-between gap-6">
           {/* Large Film Icon */}
           <div className="flex-shrink-0">
@@ -323,18 +323,18 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                 </span>
               )}
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{getProjectDisplayName(project)}</h1>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{getProjectDisplayName(project)}</h1>
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
-              <Link href={`/clients/${project.clientId}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+              <Link href={`/clients/${project.clientId}`} className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline">
                 {project.client?.name || "Unbekannter Kunde"}
               </Link>
               {project.client?.customerNo && (
                 <>
-                  <span className="text-gray-400">•</span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-300">
+                  <span className="text-gray-400 dark:text-gray-500">•</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600">
                     Kd-Nr: {project.client.customerNo}
                   </span>
                 </>
@@ -357,14 +357,14 @@ export default async function FilmProjectDetailPage({ params }: Props) {
         </div>
 
         {film.note && (
-          <div className="mt-4 p-4 bg-purple-50 border border-purple-300 rounded-lg">
+          <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-300 dark:border-purple-700 rounded-lg">
             <div className="flex items-start gap-2">
-              <svg className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
               <div>
-                <p className="font-semibold text-purple-900 text-sm">Hinweis</p>
-                <p className="text-purple-800 text-sm mt-1 whitespace-pre-wrap">{film.note}</p>
+                <p className="font-semibold text-purple-900 dark:text-purple-200 text-sm">Hinweis</p>
+                <p className="text-purple-800 dark:text-purple-300 text-sm mt-1 whitespace-pre-wrap">{film.note}</p>
               </div>
             </div>
           </div>
@@ -386,12 +386,12 @@ export default async function FilmProjectDetailPage({ params }: Props) {
 
       {/* Quick Links to Website Projects */}
       {websiteProjects.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
             </svg>
-            <h2 className="font-semibold text-gray-900">Verknüpfte Webseitenprojekte</h2>
+            <h2 className="font-semibold text-gray-900 dark:text-white">Verknüpfte Webseitenprojekte</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             {websiteProjects.map((wp) => {
@@ -403,7 +403,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                 <Link
                   key={wp.id}
                   href={`/projects/${wp.id}`}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
                 >
                   <span>🌐 {wp.title}</span>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border ${statusColor}`}>
@@ -419,9 +419,9 @@ export default async function FilmProjectDetailPage({ params }: Props) {
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Projekt-Informationen */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -431,7 +431,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Umfang</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Umfang</dt>
                 <FilmInlineCell
                   id={project.id}
                   name="scope"
@@ -444,11 +444,11 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                     { value: "FILM_FOTO", label: "Film & Foto" },
                   ]}
                   canEdit={canEdit}
-                  displayClassName="mt-1 text-sm text-gray-900"
+                  displayClassName="mt-1 text-sm text-gray-900 dark:text-white"
                 />
               </div>
               <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Priorität</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Priorität</dt>
                 <FilmInlineCell
                   id={project.id}
                   name="priority"
@@ -462,13 +462,13 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                     { value: "PRIO_3", label: "Prio 3" },
                   ]}
                   canEdit={canEdit}
-                  displayClassName="mt-1 text-sm text-gray-900"
+                  displayClassName="mt-1 text-sm text-gray-900 dark:text-white"
                 />
               </div>
             </div>
 
             <div>
-              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Produktionsstatus</dt>
+              <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Produktionsstatus</dt>
               <FilmInlineCell
                 id={project.id}
                 name="status"
@@ -488,7 +488,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
             </div>
 
             <div>
-              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Filmer</dt>
+              <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Filmer</dt>
               <FilmInlineCell
                 id={project.id}
                 name="filmerId"
@@ -500,12 +500,12 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                   ...agents.map(a => ({ value: a.id, label: a.name ?? a.email ?? "" }))
                 ]}
                 canEdit={canEdit}
-                displayClassName="mt-1 text-sm text-gray-900"
+                displayClassName="mt-1 text-sm text-gray-900 dark:text-white"
               />
             </div>
 
             <div>
-              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Wiedervorlage am</dt>
+              <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Wiedervorlage am</dt>
               <FilmInlineCell
                 id={project.id}
                 name="reminderAt"
@@ -513,12 +513,12 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                 display={formatDate(film.reminderAt)}
                 value={film.reminderAt?.toISOString() ?? undefined}
                 canEdit={canEdit}
-                displayClassName="mt-1 text-sm font-medium text-gray-900"
+                displayClassName="mt-1 text-sm font-medium text-gray-900 dark:text-white"
               />
             </div>
 
             <div>
-              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Hinweise</dt>
+              <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Hinweise</dt>
               <FilmInlineCell
                 id={project.id}
                 name="note"
@@ -526,16 +526,16 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                 display={film.note || "-"}
                 value={film.note ?? undefined}
                 canEdit={canEdit}
-                displayClassName="mt-1 text-sm text-gray-900 whitespace-pre-wrap"
+                displayClassName="mt-1 text-sm text-gray-900 dark:text-white whitespace-pre-wrap"
               />
             </div>
           </div>
         </div>
 
         {/* Timeline */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -544,9 +544,9 @@ export default async function FilmProjectDetailPage({ params }: Props) {
           </div>
           <div className="p-6 grid grid-cols-1 gap-4">
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-gray-500"></div>
+              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-gray-500 dark:bg-gray-400"></div>
               <div className="flex-1">
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Vertragsbeginn</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Vertragsbeginn</dt>
                 <FilmInlineCell
                   id={project.id}
                   name="contractStart"
@@ -554,15 +554,15 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                   display={formatDate(film.contractStart)}
                   value={film.contractStart?.toISOString() ?? undefined}
                   canEdit={canEdit}
-                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                  displayClassName="mt-1 text-sm font-medium text-gray-900 dark:text-white"
                 />
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-blue-500"></div>
+              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-blue-500 dark:bg-blue-400"></div>
               <div className="flex-1">
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Scouting</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Scouting</dt>
                 <FilmInlineCell
                   id={project.id}
                   name="scouting"
@@ -570,15 +570,15 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                   display={formatDateTime(film.scouting)}
                   value={film.scouting?.toISOString() ?? undefined}
                   canEdit={canEdit}
-                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                  displayClassName="mt-1 text-sm font-medium text-gray-900 dark:text-white"
                 />
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-indigo-500"></div>
+              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-indigo-500 dark:bg-indigo-400"></div>
               <div className="flex-1">
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Skript an Kunden</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Skript an Kunden</dt>
                 <FilmInlineCell
                   id={project.id}
                   name="scriptToClient"
@@ -586,15 +586,15 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                   display={formatDate(film.scriptToClient)}
                   value={film.scriptToClient?.toISOString() ?? undefined}
                   canEdit={canEdit}
-                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                  displayClassName="mt-1 text-sm font-medium text-gray-900 dark:text-white"
                 />
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-purple-500"></div>
+              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-purple-500 dark:bg-purple-400"></div>
               <div className="flex-1">
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Skriptfreigabe</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Skriptfreigabe</dt>
                 <FilmInlineCell
                   id={project.id}
                   name="scriptApproved"
@@ -602,15 +602,15 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                   display={formatDate(film.scriptApproved)}
                   value={film.scriptApproved?.toISOString() ?? undefined}
                   canEdit={canEdit}
-                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                  displayClassName="mt-1 text-sm font-medium text-gray-900 dark:text-white"
                 />
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-orange-500"></div>
+              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-orange-500 dark:bg-orange-400"></div>
               <div className="flex-1">
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Dreh-/Fototermin</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Dreh-/Fototermin</dt>
                 <FilmInlineCell
                   id={project.id}
                   name="shootDate"
@@ -618,15 +618,15 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                   display={formatDateTime(film.shootDate)}
                   value={film.shootDate?.toISOString() ?? undefined}
                   canEdit={canEdit}
-                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                  displayClassName="mt-1 text-sm font-medium text-gray-900 dark:text-white"
                 />
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-teal-500"></div>
+              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-teal-500 dark:bg-teal-400"></div>
               <div className="flex-1">
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Finalversion an Kunden</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Finalversion an Kunden</dt>
                 <FilmInlineCell
                   id={project.id}
                   name="finalToClient"
@@ -634,7 +634,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                   display={formatDate(film.finalToClient)}
                   value={film.finalToClient?.toISOString() ?? undefined}
                   canEdit={canEdit}
-                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                  displayClassName="mt-1 text-sm font-medium text-gray-900 dark:text-white"
                   extraField={{
                     name: "finalLink",
                     label: "Link zur Finalversion",
@@ -647,9 +647,9 @@ export default async function FilmProjectDetailPage({ params }: Props) {
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-green-500"></div>
+              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-green-500 dark:bg-green-400"></div>
               <div className="flex-1">
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Online</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Online</dt>
                 <FilmInlineCell
                   id={project.id}
                   name="onlineDate"
@@ -657,7 +657,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                   display={formatDate(film.onlineDate)}
                   value={film.onlineDate?.toISOString() ?? undefined}
                   canEdit={canEdit}
-                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                  displayClassName="mt-1 text-sm font-medium text-gray-900 dark:text-white"
                   extraField={{
                     name: "onlineLink",
                     label: "Link zum Online-Video",
@@ -670,9 +670,9 @@ export default async function FilmProjectDetailPage({ params }: Props) {
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-gray-400"></div>
+              <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-gray-400 dark:bg-gray-500"></div>
               <div className="flex-1">
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Letzter Kontakt</dt>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Letzter Kontakt</dt>
                 <FilmInlineCell
                   id={project.id}
                   name="lastContact"
@@ -680,7 +680,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                   display={formatDate(film.lastContact)}
                   value={film.lastContact?.toISOString() ?? undefined}
                   canEdit={canEdit}
-                  displayClassName="mt-1 text-sm font-medium text-gray-900"
+                  displayClassName="mt-1 text-sm font-medium text-gray-900 dark:text-white"
                 />
               </div>
             </div>
@@ -692,14 +692,14 @@ export default async function FilmProjectDetailPage({ params }: Props) {
       {/* Vorabversionen & Finalversion */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Vorabversionen */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
               </svg>
               Vorabversionen an Kunden
-              <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                 {film.previewVersions.length}
               </span>
             </h2>
@@ -707,10 +707,10 @@ export default async function FilmProjectDetailPage({ params }: Props) {
           <div className="p-6">
             {film.previewVersions.length === 0 ? (
             <div className="text-center py-8">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
               </svg>
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 {film.firstCutToClient
                   ? `Erste Version: ${formatDate(film.firstCutToClient)} (Legacy-Eintrag)`
                   : "Noch keine Vorabversionen versendet"}
@@ -727,10 +727,10 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                 />
               ))}
               {isAdmin && film.firstCutToClient && film.previewVersions.length > 0 && (
-                <div className="flex items-center gap-3 p-3 rounded-lg border border-dashed bg-gray-50">
-                  <Badge variant="outline" className="font-mono bg-gray-100">Legacy</Badge>
-                  <span className="text-sm font-medium">{formatDate(film.firstCutToClient)}</span>
-                  <span className="text-xs text-gray-500">(Alter Eintrag vor Versionierung)</span>
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50">
+                  <Badge variant="outline" className="font-mono bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-500">Legacy</Badge>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{formatDate(film.firstCutToClient)}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">(Alter Eintrag vor Versionierung)</span>
                 </div>
               )}
             </div>
@@ -747,9 +747,9 @@ export default async function FilmProjectDetailPage({ params }: Props) {
         </div>
 
         {/* Finalversion & Online-Link */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
@@ -761,13 +761,13 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               // When status is ONLINE, only show Online-Link
               onlineLinkData ? (
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Online (Hauptlink)</dt>
+                  <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Online (Hauptlink)</dt>
                   <dd className="mt-1">
                     <a
                       href={onlineLinkData.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline flex items-center gap-1 text-sm break-all"
+                      className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 text-sm break-all"
                     >
                       {onlineLinkData.label}
                       <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -778,10 +778,10 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                   </svg>
-                  <p className="mt-2 text-sm text-gray-500">Noch kein Online-Link</p>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Noch kein Online-Link</p>
                 </div>
               )
             ) : (
@@ -789,13 +789,13 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               <>
                 {finalLinkData ? (
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Finalversion</dt>
+                    <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Finalversion</dt>
                     <dd className="mt-1">
                       <a
                         href={finalLinkData.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline flex items-center gap-1 text-sm break-all"
+                        className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 text-sm break-all"
                       >
                         {finalLinkData.label}
                         <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -806,21 +806,21 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                     </svg>
-                    <p className="mt-2 text-sm text-gray-500">Noch keine Finalversion</p>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Noch keine Finalversion</p>
                   </div>
                 )}
                 {onlineLinkData && (
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Online (Hauptlink)</dt>
+                    <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Online (Hauptlink)</dt>
                     <dd className="mt-1">
                       <a
                         href={onlineLinkData.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline flex items-center gap-1 text-sm break-all"
+                        className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 text-sm break-all"
                       >
                         {onlineLinkData.label}
                         <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -840,10 +840,10 @@ export default async function FilmProjectDetailPage({ params }: Props) {
       {(finalLinkData || onlineLinkData) && (
         <div className="space-y-6">
           {onlineLinkData && getYouTubeEmbedUrl(onlineLinkData.href) && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+              <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+                <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <svg className="w-5 h-5 text-red-600 dark:text-red-500" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                   </svg>
                   Online-Video
@@ -864,10 +864,10 @@ export default async function FilmProjectDetailPage({ params }: Props) {
           )}
 
           {finalLinkData && getYouTubeEmbedUrl(finalLinkData.href) && finalLinkData.href !== onlineLinkData?.href && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+              <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+                <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <svg className="w-5 h-5 text-red-600 dark:text-red-500" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                   </svg>
                   Finalversion

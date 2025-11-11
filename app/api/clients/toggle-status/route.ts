@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
 
     // If setting client to "finished", also mark all their projects as finished
     if (validatedField === "finished" && newValue === true) {
+      console.log(`[toggle-status] Client ${clientId} set to finished, updating all projects...`);
+
       // Get all projects for this client
       const projects = await prisma.project.findMany({
         where: { clientId },
@@ -65,26 +67,61 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      console.log(`[toggle-status] Found ${projects.length} projects for client ${clientId}`);
+
       // Update each project based on its type
+      let updatedCount = 0;
       for (const project of projects) {
-        if (project.type === "FILM" && project.film) {
-          await prisma.projectFilm.update({
-            where: { projectId: project.id },
-            data: { status: "BEENDET" },
-          });
-        } else if (project.type === "WEBSITE" && project.website) {
-          await prisma.projectWebsite.update({
-            where: { projectId: project.id },
-            data: { pStatus: "BEENDET" },
-          });
-        } else if (project.type === "SOCIAL") {
-          // Social projects don't have a specific status field, set main status to ONLINE
-          await prisma.project.update({
-            where: { id: project.id },
-            data: { status: "ONLINE" },
-          });
+        try {
+          if (project.type === "FILM") {
+            // Check if film relation exists, if not create it first
+            if (!project.film) {
+              console.log(`[toggle-status] Creating missing ProjectFilm for project ${project.id}`);
+              await prisma.projectFilm.create({
+                data: {
+                  projectId: project.id,
+                  status: "BEENDET",
+                },
+              });
+            } else {
+              await prisma.projectFilm.update({
+                where: { projectId: project.id },
+                data: { status: "BEENDET" },
+              });
+            }
+            updatedCount++;
+          } else if (project.type === "WEBSITE") {
+            // Check if website relation exists, if not create it first
+            if (!project.website) {
+              console.log(`[toggle-status] Creating missing ProjectWebsite for project ${project.id}`);
+              await prisma.projectWebsite.create({
+                data: {
+                  projectId: project.id,
+                  pStatus: "BEENDET",
+                },
+              });
+            } else {
+              await prisma.projectWebsite.update({
+                where: { projectId: project.id },
+                data: { pStatus: "BEENDET" },
+              });
+            }
+            updatedCount++;
+          } else if (project.type === "SOCIAL") {
+            // Social projects don't have a specific status field, set main status to ONLINE
+            await prisma.project.update({
+              where: { id: project.id },
+              data: { status: "ONLINE" },
+            });
+            updatedCount++;
+          }
+        } catch (error) {
+          console.error(`[toggle-status] Error updating project ${project.id}:`, error);
+          // Continue with other projects even if one fails
         }
       }
+
+      console.log(`[toggle-status] Successfully updated ${updatedCount}/${projects.length} projects`);
     }
 
     return NextResponse.json({

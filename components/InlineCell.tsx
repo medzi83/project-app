@@ -121,7 +121,7 @@ export default function InlineCell({
     );
 
     const baseButtonClass = "inline-flex w-full items-start justify-start gap-2 rounded px-2 py-1 text-left cursor-pointer bg-transparent min-h-[2rem]";
-    const interactiveClass = "transition-all duration-150 hover:bg-blue-50 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500";
+    const interactiveClass = "transition-all duration-150 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:focus-visible:outline-blue-400";
     const buttonClassName = `${baseButtonClass} ${interactiveClass}`;
 
     return (
@@ -150,7 +150,7 @@ export default function InlineCell({
           name="value"
           defaultValue={vStr}
           ref={(el: HTMLSelectElement | null) => { inputRef.current = el; }}
-          className="p-1 border rounded"
+          className="p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           onBlur={() => formRef.current?.requestSubmit()}
           onKeyDown={(e) => {
             if (e.key === "Escape") { e.preventDefault(); cancel(); }
@@ -170,7 +170,7 @@ export default function InlineCell({
           name="value"
           defaultValue={vStr}
           ref={(el: HTMLSelectElement | null) => { inputRef.current = el; }}
-          className="p-1 border rounded"
+          className="p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           onBlur={() => formRef.current?.requestSubmit()}
           onKeyDown={(e) => {
             if (e.key === "Escape") { e.preventDefault(); cancel(); }
@@ -194,7 +194,7 @@ export default function InlineCell({
           name="value" type="number" defaultValue={vStr}
           step={0.5} min={0} inputMode="decimal"
           ref={(el: HTMLInputElement | null) => { inputRef.current = el; }}
-          className="w-24 p-1 border rounded"
+          className="w-24 p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           onBlur={() => formRef.current?.requestSubmit()}
           onKeyDown={(e) => {
             if (e.key === "Escape") { e.preventDefault(); cancel(); }
@@ -207,7 +207,7 @@ export default function InlineCell({
         <input
           name="value" type="date" defaultValue={vStr}
           ref={(el: HTMLInputElement | null) => { inputRef.current = el; }}
-          className="p-1 border rounded"
+          className="p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           onChange={() => {
             // Submit immediately when date is selected from calendar
             formRef.current?.requestSubmit();
@@ -224,7 +224,7 @@ export default function InlineCell({
         <input
           name="value" type="datetime-local" defaultValue={vStr}
           ref={(el: HTMLInputElement | null) => { inputRef.current = el; }}
-          className="p-1 border rounded"
+          className="p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           onChange={() => {
             // Submit immediately when datetime is selected
             formRef.current?.requestSubmit();
@@ -242,7 +242,7 @@ export default function InlineCell({
           <input
             name="value" type="datetime-local" defaultValue={vStr}
             ref={(el: HTMLInputElement | null) => { inputRef.current = el; }}
-            className="p-1 border rounded"
+            className="p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
             onKeyDown={(e) => {
               if (e.key === "Escape") { e.preventDefault(); cancel(); }
             }}
@@ -264,13 +264,13 @@ export default function InlineCell({
             <button
               type="button"
               onClick={cancel}
-              className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
+              className="px-2 py-1 text-xs border rounded hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
             >
               Abbrechen
             </button>
             <button
               type="submit"
-              className="px-2 py-1 text-xs bg-black text-white rounded hover:bg-gray-800"
+              className="px-2 py-1 text-xs bg-black dark:bg-gray-700 text-white rounded hover:bg-gray-800 dark:hover:bg-gray-600"
             >
               Speichern
             </button>
@@ -282,7 +282,7 @@ export default function InlineCell({
         <input
           name="value" type="text" defaultValue={vStr}
           ref={(el: HTMLInputElement | null) => { inputRef.current = el; }}
-          className="p-1 border rounded"
+          className="p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           onBlur={() => formRef.current?.requestSubmit()}
           onKeyDown={(e) => {
             if (e.key === "Escape") { e.preventDefault(); cancel(); }
@@ -296,7 +296,7 @@ export default function InlineCell({
           name="value"
           defaultValue={vStr}
           ref={(el: HTMLTextAreaElement | null) => { inputRef.current = el; }}
-          className="w-56 p-1 border rounded"
+          className="w-56 p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
           rows={4}
           onBlur={() => formRef.current?.requestSubmit()}
           onKeyDown={(e) => {

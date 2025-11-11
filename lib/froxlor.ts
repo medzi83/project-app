@@ -207,13 +207,14 @@ export class FroxlorClient {
    */
   private async request<T = unknown>(
     command: string,
-    params: Record<string, unknown> = {}
+    params: Record<string, unknown> = {},
+    timeoutMs: number = 10000
   ): Promise<FroxlorResponse<T>> {
     const apiUrl = `${this.config.url.replace(/\/$/, '')}/api.php`;
 
     // Create an AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     // Determine API version (default to 2.0+)
     const isLegacyApi = this.config.version === '1.x';
@@ -242,7 +243,21 @@ export class FroxlorClient {
         });
       } else {
         // Modern Froxlor 2.0+: HTTP Basic Authentication
-        const authString = Buffer.from(`${this.config.apiKey}:${this.config.apiSecret}`).toString('base64');
+        // Validate and sanitize API credentials to prevent invalid header errors
+        const apiKey = this.config.apiKey?.trim() || '';
+        const apiSecret = this.config.apiSecret?.trim() || '';
+
+        if (!apiKey || !apiSecret) {
+          throw new Error('API key and secret are required for authentication');
+        }
+
+        // Check for invalid characters that could cause "Invalid request header" errors
+        const invalidCharsPattern = /[\r\n\0]/;
+        if (invalidCharsPattern.test(apiKey) || invalidCharsPattern.test(apiSecret)) {
+          throw new Error('API credentials contain invalid characters (newlines or null bytes)');
+        }
+
+        const authString = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
 
         response = await fetch(apiUrl, {
           method: 'POST',
@@ -278,7 +293,7 @@ export class FroxlorClient {
       // Provide more specific error messages
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          throw new Error('Froxlor API request timeout (10s)');
+          throw new Error(`Froxlor API request timeout (${timeoutMs / 1000}s)`);
         }
         if (error.message.includes('fetch failed')) {
           throw new Error(`Connection to ${apiUrl} failed - check URL and network`);
@@ -380,7 +395,13 @@ export class FroxlorClient {
 
       return null;
     } catch (error) {
-      console.error('Error finding customer:', error);
+      // Only log unexpected errors, not credential issues
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (!errorMessage.includes('Invalid request header') &&
+          !errorMessage.includes('API credentials') &&
+          !errorMessage.includes('API key and secret')) {
+        console.error('Error finding customer:', error);
+      }
       return null;
     }
   }
@@ -795,7 +816,8 @@ export class FroxlorClient {
     try {
       // Primary method: List databases, find by name, delete with ID + customerid
       // This is the proven method that works with Froxlor
-      const listResult = await this.request<FroxlorListingPayload<FroxlorDatabase>>('Mysqls.listing');
+      // Use 30s timeout for database operations (listing can be slow with many DBs)
+      const listResult = await this.request<FroxlorListingPayload<FroxlorDatabase>>('Mysqls.listing', {}, 30000);
 
       if (!listResult.data) {
         return {
@@ -815,10 +837,11 @@ export class FroxlorClient {
       }
 
       // Delete with ID + customerid (this is the working method)
+      // Use 30s timeout for delete operation
       const result = await this.request('Mysqls.delete', {
         id: database.id,
         customerid: database.customerid,
-      });
+      }, 30000);
 
       if (result.data !== undefined) {
         return {

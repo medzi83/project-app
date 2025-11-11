@@ -300,6 +300,42 @@ export async function POST(request: NextRequest) {
               });
           });
         });
+
+        // Verify files were actually copied
+        console.log(`Verifying copied files...`);
+        const verifyCommands = [
+          `test -f ${targetPath}/kickstart.php && echo "kickstart.php: OK" || echo "kickstart.php: MISSING"`,
+          `test -f ${targetPath}/${backupFileName} && echo "${backupFileName}: OK" || echo "${backupFileName}: MISSING"`
+        ].join(" && ");
+
+        await new Promise<void>((resolve, reject) => {
+          sshClient.exec(verifyCommands, (err: Error, stream: any) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+
+            let stdout = "";
+            let stderr = "";
+
+            stream
+              .on("close", (code: number) => {
+                console.log(`Verification output: ${stdout.trim()}`);
+                if (code !== 0 || stdout.includes("MISSING")) {
+                  reject(new Error(`File verification failed. One or more files are missing: ${stdout.trim()}`));
+                } else {
+                  console.log(`✓ All files verified successfully`);
+                  resolve();
+                }
+              })
+              .on("data", (data: Buffer) => {
+                stdout += data.toString();
+              })
+              .stderr.on("data", (data: Buffer) => {
+                stderr += data.toString();
+              });
+          });
+        });
       } else {
         console.log(`✓ Different servers - streaming files via SFTP`);
 
@@ -415,6 +451,24 @@ export async function POST(request: NextRequest) {
         } catch (streamError) {
           console.error(`Stream transfer failed:`, streamError);
           throw new Error(`Failed to stream backup file: ${streamError instanceof Error ? streamError.message : 'Unknown error'}`);
+        }
+
+        // Verify files were actually uploaded via SFTP
+        console.log(`Verifying uploaded files...`);
+        try {
+          const kickstartExists = await sftpTarget.exists(`${targetPath}/kickstart.php`);
+          const backupExists = await sftpTarget.exists(`${targetPath}/${backupFileName}`);
+
+          if (!kickstartExists) {
+            throw new Error(`kickstart.php not found after upload at ${targetPath}/kickstart.php`);
+          }
+          if (!backupExists) {
+            throw new Error(`${backupFileName} not found after upload at ${targetPath}/${backupFileName}`);
+          }
+
+          console.log(`✓ All files verified successfully (kickstart.php and ${backupFileName})`);
+        } catch (verifyError) {
+          throw new Error(`File verification failed: ${verifyError instanceof Error ? verifyError.message : 'Unknown error'}`);
         }
       }
 
