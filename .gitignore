@@ -41,7 +41,3 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
-
-# storage (Joomla backups, uploads, etc.)
-/storage/*
-!/storage/.gitkeep
