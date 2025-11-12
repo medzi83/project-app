@@ -9,12 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import InlineCell from "@/components/InlineCell";
-import DangerActionButton from "@/components/DangerActionButton";
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import CheckboxFilterGroup from "@/components/CheckboxFilterGroup";
 import { SaveFilterButton } from "@/components/SaveFilterButton";
 import { ProjectRow } from "./ProjectRow";
-import { deleteAllProjects, deleteProject } from "./actions";
+import { deleteProject } from "./actions";
 import {
   buildWebsiteStatusWhere,
   deriveProjectStatus,
@@ -557,9 +556,6 @@ export default async function ProjectsPage({ searchParams }: Props) {
             {total} {total === 1 ? 'Projekt' : 'Projekte'} gesamt
           </p>
         </div>
-        {role === "ADMIN" && session.user.role === "ADMIN" && (
-          <DangerActionButton action={deleteAllProjects} confirmText="Wirklich ALLE Projekte dauerhaft löschen?">ALLE Projekte löschen</DangerActionButton>
-        )}
       </div>
 
       {/* Filter */}

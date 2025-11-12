@@ -289,11 +289,11 @@ export default async function FilmProjectDetailPage({ params }: Props) {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-2 md:p-6 space-y-4 md:space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <Link href="/film-projects" className="inline-flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
-          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="flex items-center justify-between px-2 md:px-0">
+        <Link href="/film-projects" className="inline-flex items-center text-xs md:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+          <svg className="w-3 h-3 md:w-4 md:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Zurück zur Übersicht
@@ -301,8 +301,75 @@ export default async function FilmProjectDetailPage({ params }: Props) {
       </div>
 
       {/* Project Header Card */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl border border-green-200 dark:border-green-700 p-6 shadow-sm">
-        <div className="flex items-start justify-between gap-6">
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl md:rounded-2xl border border-green-200 dark:border-green-700 p-3 md:p-6 shadow-sm">
+        {/* Mobile: Stacked Layout */}
+        <div className="md:hidden space-y-3">
+          {/* Icon and Title */}
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1 break-words">{getProjectDisplayName(project)}</h1>
+            </div>
+          </div>
+
+          {/* Badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold border ${getStatusColor(derivedStatus)}`}>
+              {DERIVED_STATUS_LABELS[derivedStatus]}
+            </span>
+            {project.client?.workStopped && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-800 border border-orange-300">
+                ⚠️ Arbeitsstopp
+              </span>
+            )}
+            {project.client?.finished && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-800 border border-gray-300">
+                Beendet
+              </span>
+            )}
+          </div>
+
+          {/* Client Info */}
+          <div className="flex flex-col gap-2 text-xs text-gray-600 dark:text-gray-300">
+            <div className="flex items-center gap-2">
+              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              <Link href={`/clients/${project.clientId}`} className="font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline truncate">
+                {project.client?.name || "Unbekannter Kunde"}
+              </Link>
+            </div>
+            {project.client?.customerNo && (
+              <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 w-fit">
+                Kd-Nr: {project.client.customerNo}
+              </span>
+            )}
+          </div>
+
+          {/* Action Button */}
+          {derivedStatus === "ONLINE" && onlineLinkData && (
+            <a
+              href={onlineLinkData.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-white bg-gradient-to-r from-red-600 to-red-700 rounded-lg hover:from-red-700 hover:to-red-800 shadow-lg transition-all w-full"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              </svg>
+              Zum Film
+            </a>
+          )}
+        </div>
+
+        {/* Desktop: Original Layout */}
+        <div className="hidden md:flex items-start justify-between gap-6">
           {/* Large Film Icon */}
           <div className="flex-shrink-0">
             <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
