@@ -26,15 +26,20 @@ export function FeedbackNotificationProvider({ children }: { children: ReactNode
     // Fetch initial count
     fetchCount();
 
-    // Only poll every 30 seconds when on the dashboard
+    // Only do limited polling (max 3 total attempts) when on the dashboard
     const isDashboard = pathname === "/dashboard";
     if (!isDashboard) {
       return; // No polling on other pages
     }
 
-    const interval = setInterval(fetchCount, 30000);
+    // Poll 2 more times (total 3 attempts): after 2s and 5s
+    const timeout1 = setTimeout(fetchCount, 2000);
+    const timeout2 = setTimeout(fetchCount, 5000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timeout1);
+      clearTimeout(timeout2);
+    };
   }, [pathname]);
 
   // Refresh count when navigating away from kummerkasten

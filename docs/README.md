@@ -15,7 +15,8 @@ Willkommen zur Dokumentation der Projektverwaltungs-Anwendung.
 
 ### Deployment & Infrastruktur
 
-- **[Deployment Guide](DEPLOYMENT.md)** - Anleitung für Deployment und Infrastruktur
+- **[Deployment Guide](DEPLOYMENT.md)** - Anleitung für Deployment auf Vercel und Troubleshooting
+- **[Naive Date Formatting](NAIVE_DATE_FORMATTING.md)** - Zeitzonenprobleme vermeiden durch direkte ISO-String-Extraktion
 
 ### Codebase
 

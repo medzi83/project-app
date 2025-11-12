@@ -91,28 +91,96 @@ export default function AppShell({ user, counts, devMode, agencies, children }: 
 
   return (
     <FeedbackNotificationProvider>
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <div className="sticky top-0 z-40 border-b border-white/20 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg shadow-sm">
-        <div className="flex w-full items-center gap-3 px-4 py-3">
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-80">
-              <SheetHeader className="px-4 py-3 text-left">
-                <SheetTitle>Navigation</SheetTitle>
-              </SheetHeader>
-              <Separator />
-              <Sidebar user={user} counts={counts} onNavigate={() => setOpen(false)} collapsed={false} />
-            </SheetContent>
-          </Sheet>
+        {/* Mobile: Two-row layout */}
+        <div className="md:hidden">
+          {/* First row: Menu, Logo, User */}
+          <div className="flex w-full items-center justify-between gap-2 px-2 py-2 border-b border-white/20 dark:border-slate-700/30">
+            <div className="flex items-center gap-2">
+              <Sheet open={open} onOpenChange={setOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-80">
+                  <SheetHeader className="px-4 py-3 text-left">
+                    <SheetTitle>Navigation</SheetTitle>
+                  </SheetHeader>
+                  <Separator />
+                  <Sidebar user={user} counts={counts} onNavigate={() => setOpen(false)} collapsed={false} />
+                </SheetContent>
+              </Sheet>
 
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2">
+              <Link href="/" className="flex items-center gap-2">
+                <PSNLogo size="small" animated={false} />
+                <span className="font-bold text-base bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent tracking-tight">Projektverwaltung</span>
+              </Link>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {mounted && <UserPill user={user} />}
+            </div>
+          </div>
+
+          {/* Second row: Action buttons */}
+          <div className="flex w-full items-center gap-2 px-2 py-2">
+            {(navigationRole === "ADMIN" || navigationRole === "AGENT" || navigationRole === "SALES") && (
+              <div className="flex-1">
+                <GlobalClientSearch />
+              </div>
+            )}
+
+            {(navigationRole === "ADMIN" || navigationRole === "AGENT") && (
+              <Button asChild size="sm" className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600 text-white shadow-md hover:shadow-lg transition-all shrink-0">
+                <Link href="/projects/new">
+                  <PlusCircle className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+            {(navigationRole === "ADMIN" || navigationRole === "AGENT") && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="shrink-0">
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <a href="https://eventomaxx.freshdesk.com/a/dashboard/default" target="_blank" rel="noopener noreferrer" className="flex items-center cursor-pointer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      <span>Eventomaxx</span>
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <a href="https://vendoweb.freshdesk.com/a/dashboard/default" target="_blank" rel="noopener noreferrer" className="flex items-center cursor-pointer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      <span>Vendoweb</span>
+                    </a>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {mounted && devMode && devMode.availableAgents.length > 0 && (
+              <DevModeToggle
+                currentUserId={devMode.currentViewUserId}
+                currentUserName={devMode.currentViewUserName}
+                agents={devMode.availableAgents}
+              />
+            )}
+            {mounted && (
+              <FeedbackDialog />
+            )}
+          </div>
+        </div>
+
+        {/* Desktop: Single row layout */}
+        <div className="hidden md:flex w-full items-center gap-3 px-4 py-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Link href="/" className="flex items-center gap-2 min-w-0">
               <PSNLogo size="small" animated={false} />
-              <span className="font-bold text-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent tracking-tight">Projektverwaltung</span>
+              <span className="font-bold text-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent tracking-tight truncate">Projektverwaltung</span>
             </Link>
             {agencies && agencies.length > 0 && (
               <div className="flex items-center gap-2">
@@ -145,7 +213,7 @@ export default function AppShell({ user, counts, devMode, agencies, children }: 
               <Button asChild size="sm" className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600 text-white shadow-md hover:shadow-lg transition-all">
                 <Link href="/projects/new">
                   <PlusCircle className="h-4 w-4" />
-                  Projekt anlegen
+                  <span className="hidden lg:inline">Projekt anlegen</span>
                 </Link>
               </Button>
             )}
@@ -154,7 +222,7 @@ export default function AppShell({ user, counts, devMode, agencies, children }: 
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
                     <ExternalLink className="h-4 w-4" />
-                    Ticketsystem
+                    <span className="hidden xl:inline">Ticketsystem</span>
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -189,12 +257,12 @@ export default function AppShell({ user, counts, devMode, agencies, children }: 
         </div>
       </div>
 
-      <div className={`grid w-full grid-cols-1 ${sidebarCollapsed ? 'md:grid-cols-[60px_1fr]' : 'md:grid-cols-[260px_1fr]'} transition-all duration-300`}>
+      <div className={`flex-1 grid w-full grid-cols-1 ${sidebarCollapsed ? 'md:grid-cols-[60px_1fr]' : 'md:grid-cols-[260px_1fr]'} transition-all duration-300`}>
         <aside className="hidden border-r border-white/40 dark:border-slate-700/50 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md md:block shadow-sm">
           <Sidebar user={user} counts={counts} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
         </aside>
 
-        <main className="min-h-[calc(100vh-56px)] w-full p-4 md:p-6">
+        <main className="w-full p-4 md:p-6">
           {children}
         </main>
       </div>
@@ -227,7 +295,7 @@ function Sidebar({ user, counts, onNavigate, collapsed, onToggleCollapse }: { us
   const adminItems: NavItem[] = navigationRole === "ADMIN"
     ? [
         { label: "Admins", href: "/admin/admins", icon: Shield },
-        { label: "Agenten", href: "/admin/agents", icon: Users, badge: counts ? String(counts.agentsActive ?? 0) : undefined },
+        { label: "Agenten", href: "/admin/agents", icon: Users },
         { label: "Vertrieb", href: "/admin/vertrieb", icon: Handshake },
         { label: "Agenturen", href: "/admin/agencies", icon: Landmark },
         { label: "Hinweise", href: "/admin/notices", icon: Megaphone },
@@ -258,7 +326,7 @@ function Sidebar({ user, counts, onNavigate, collapsed, onToggleCollapse }: { us
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex h-[calc(100vh-56px)] flex-col">
+      <div className="flex h-full flex-col">
         <div className={`px-4 py-4 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
           {!collapsed && <h2 className="text-sm font-medium text-muted-foreground dark:text-slate-400">Navigation</h2>}
           {onToggleCollapse && (
@@ -285,7 +353,7 @@ function Sidebar({ user, counts, onNavigate, collapsed, onToggleCollapse }: { us
         </div>
         <Separator className="dark:bg-slate-700/50" />
 
-        <ScrollArea className="h-full">
+        <ScrollArea className="flex-1">
           <nav className="px-2 py-3">
             <NavSection label="Allgemein" items={baseItems} activePath={pathname} onNavigate={onNavigate} collapsed={collapsed} />
 

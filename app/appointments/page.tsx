@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Calendar, Video, Globe, User, Building2, ArrowRight, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, CalendarRange, Video, Globe, User, Building2, ArrowRight, MapPin, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
@@ -300,17 +300,18 @@ export default async function AppointmentsPage({ searchParams }: Props) {
   const defaultTab = spRaw.tab as string || "calendar";
   const monthParam = spRaw.month ? parseInt(spRaw.month as string) : new Date().getMonth();
   const yearParam = spRaw.year ? parseInt(spRaw.year as string) : new Date().getFullYear();
+  const weekOffsetParam = spRaw.weekOffset ? parseInt(spRaw.weekOffset as string) : 0;
 
   return (
-    <div className="w-full space-y-6 py-6 px-6">
+    <div className="w-full space-y-4 md:space-y-6 py-2 md:py-6 px-2 md:px-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">
-          <Calendar className="h-6 w-6" />
+      <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">
+          <Calendar className="h-5 w-5 md:h-6 md:w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">Termine</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Termine</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">
             {appointments.length} anstehende Termine
           </p>
         </div>
@@ -318,16 +319,39 @@ export default async function AppointmentsPage({ searchParams }: Props) {
 
       {/* Appointments Tabs */}
       <Tabs defaultValue={defaultTab} className="w-full">
-        <TabsList className="grid w-full max-w-3xl grid-cols-5">
-          <TabsTrigger value="calendar">Kalender</TabsTrigger>
-          <TabsTrigger value="all">Alle ({appointments.length})</TabsTrigger>
-          <TabsTrigger value="web">Webtermine ({webtermine.length})</TabsTrigger>
-          <TabsTrigger value="scouting">Scouting ({scoutingtermine.length})</TabsTrigger>
-          <TabsTrigger value="film">Drehtermine ({drehtermine.length})</TabsTrigger>
+        <TabsList className="grid w-full max-w-4xl grid-cols-3 md:grid-cols-6 h-auto">
+          <TabsTrigger value="calendar" className="text-xs md:text-sm py-2">
+            <CalendarDays className="h-3.5 w-3.5 md:mr-1.5" />
+            <span className="hidden md:inline">Kalender</span>
+          </TabsTrigger>
+          <TabsTrigger value="week" className="text-xs md:text-sm py-2">
+            <CalendarRange className="h-3.5 w-3.5 md:mr-1.5" />
+            <span className="hidden md:inline">Woche</span>
+          </TabsTrigger>
+          <TabsTrigger value="all" className="text-xs md:text-sm py-2">
+            Alle
+            <span className="ml-1">({appointments.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="web" className="text-xs md:text-sm py-2">
+            <Globe className="h-3 w-3 md:hidden" />
+            <span className="hidden md:inline">Web ({webtermine.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="scouting" className="text-xs md:text-sm py-2">
+            <MapPin className="h-3 w-3 md:hidden" />
+            <span className="hidden md:inline">Scout ({scoutingtermine.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="film" className="text-xs md:text-sm py-2">
+            <Video className="h-3 w-3 md:hidden" />
+            <span className="hidden md:inline">Dreh ({drehtermine.length})</span>
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="calendar" className="mt-6">
+        <TabsContent value="calendar" className="mt-4 md:mt-6">
           <CalendarView appointments={appointments} currentMonth={monthParam} currentYear={yearParam} />
+        </TabsContent>
+
+        <TabsContent value="week" className="mt-4 md:mt-6">
+          <WeekView appointments={appointments} weekOffset={weekOffsetParam} />
         </TabsContent>
 
         <TabsContent value="all" className="space-y-4 mt-6">
@@ -418,24 +442,24 @@ function AppointmentCard({ appointment }: { appointment: Appointment }) {
 
   return (
     <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4 flex-1">
+      <CardContent className="p-3 md:p-6">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 md:gap-4">
+          <div className="flex items-start gap-3 md:gap-4 flex-1">
             {/* Icon */}
-            <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${cardColor}`}>
+            <div className={`flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-lg flex-shrink-0 ${cardColor}`}>
               {isWebtermin ? (
-                <Globe className="h-6 w-6" />
+                <Globe className="h-5 w-5 md:h-6 md:w-6" />
               ) : isScouting ? (
-                <MapPin className="h-6 w-6" />
+                <MapPin className="h-5 w-5 md:h-6 md:w-6" />
               ) : (
-                <Video className="h-6 w-6" />
+                <Video className="h-5 w-5 md:h-6 md:w-6" />
               )}
             </div>
 
             {/* Content */}
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-1.5 md:space-y-2 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant={badgeVariant}>
+                <Badge variant={badgeVariant} className="text-xs">
                   {badgeLabel}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
@@ -444,17 +468,17 @@ function AppointmentCard({ appointment }: { appointment: Appointment }) {
               </div>
 
               <div>
-                <h3 className="font-semibold text-lg">
+                <h3 className="font-semibold text-base md:text-lg truncate">
                   {appointment.clientName}
                 </h3>
                 {appointment.projectTitle && (
-                  <p className="text-sm text-muted-foreground">{appointment.projectTitle}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">{appointment.projectTitle}</p>
                 )}
               </div>
 
-              <div className="flex items-center gap-4 text-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs md:text-sm">
                 <div className="flex items-center gap-1.5">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <Building2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
                   <span className="text-muted-foreground">Kd.-Nr.:</span>
                   <Link
                     href={`/clients/${appointment.clientId}`}
@@ -466,14 +490,14 @@ function AppointmentCard({ appointment }: { appointment: Appointment }) {
 
                 {appointment.agentName && (
                   <div className="flex items-center gap-1.5">
-                    <User className="h-4 w-4 text-muted-foreground" />
+                    <User className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
                     <span className="text-muted-foreground">Agent:</span>
-                    <span className="font-medium">{appointment.agentName}</span>
+                    <span className="font-medium truncate">{appointment.agentName}</span>
                   </div>
                 )}
               </div>
 
-              <div className="text-sm text-muted-foreground">
+              <div className="hidden md:block text-sm text-muted-foreground">
                 {formatDateFull(appointment.date)}
               </div>
             </div>
@@ -482,10 +506,10 @@ function AppointmentCard({ appointment }: { appointment: Appointment }) {
           {/* Action */}
           <Link
             href={projectUrl}
-            className="flex items-center gap-2 rounded-lg border bg-background px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
+            className="flex items-center justify-center gap-2 rounded-lg border bg-background px-3 md:px-4 py-2 text-xs md:text-sm font-medium hover:bg-accent transition-colors w-full md:w-auto"
           >
-            Zum Projekt
-            <ArrowRight className="h-4 w-4" />
+            <span>Zum Projekt</span>
+            <ArrowRight className="h-3.5 w-3.5 md:h-4 md:w-4" />
           </Link>
         </div>
       </CardContent>
@@ -547,25 +571,27 @@ function CalendarView({ appointments, currentMonth, currentYear }: { appointment
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-2xl">
+      <CardHeader className="p-3 md:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <CardTitle className="text-lg md:text-2xl">
             {monthNames[currentMonth]} {currentYear}
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2">
             <Button
               variant="outline"
               size="sm"
               asChild
+              className="h-8 w-8 md:h-9 md:w-9 p-0"
             >
               <Link href={`/appointments?tab=calendar&month=${prevMonth}&year=${prevYear}`}>
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Link>
             </Button>
             <Button
               variant="outline"
               size="sm"
               asChild
+              className="h-8 md:h-9 px-2 md:px-3 text-xs md:text-sm"
             >
               <Link href={`/appointments?tab=calendar`}>
                 Heute
@@ -575,21 +601,22 @@ function CalendarView({ appointments, currentMonth, currentYear }: { appointment
               variant="outline"
               size="sm"
               asChild
+              className="h-8 w-8 md:h-9 md:w-9 p-0"
             >
               <Link href={`/appointments?tab=calendar&month=${nextMonth}&year=${nextYear}`}>
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </Link>
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-7 gap-2">
+      <CardContent className="p-2 md:p-6">
+        <div className="grid grid-cols-7 gap-1 md:gap-2">
           {/* Weekday headers */}
           {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((day) => (
             <div
               key={day}
-              className="text-center text-sm font-semibold text-muted-foreground py-2"
+              className="text-center text-xs md:text-sm font-semibold text-muted-foreground py-1 md:py-2"
             >
               {day}
             </div>
@@ -599,7 +626,7 @@ function CalendarView({ appointments, currentMonth, currentYear }: { appointment
           {days.map((day, index) => (
             <div
               key={index}
-              className={`min-h-[120px] border rounded-lg p-2 ${
+              className={`min-h-[80px] md:min-h-[120px] border rounded-lg p-1 md:p-2 ${
                 day.date === null
                   ? "bg-muted/30"
                   : isToday(day.date)
@@ -609,12 +636,12 @@ function CalendarView({ appointments, currentMonth, currentYear }: { appointment
             >
               {day.date !== null && (
                 <>
-                  <div className={`text-sm font-medium mb-2 ${
+                  <div className={`text-xs md:text-sm font-medium mb-1 md:mb-2 ${
                     isToday(day.date) ? "text-blue-600 dark:text-blue-400" : ""
                   }`}>
                     {day.date}
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1 md:space-y-1.5">
                     {day.appointments.map((apt) => {
                       const isWebtermin = apt.type === "WEBTERMIN";
                       const isScouting = apt.type === "SCOUTING";
@@ -634,33 +661,33 @@ function CalendarView({ appointments, currentMonth, currentYear }: { appointment
                         <Link
                           key={apt.id}
                           href={projectUrl}
-                          className={`block text-xs text-white rounded px-2 py-1.5 ${bgColor} transition-colors`}
+                          className={`block text-[10px] md:text-xs text-white rounded px-1 md:px-2 py-1 md:py-1.5 ${bgColor} transition-colors`}
                           title={`${apt.clientName} (${apt.customerNo}) - ${formatTime(apt.date)}${apt.agentName ? ` - ${apt.agentName}` : ''}`}
                         >
                           <div className="space-y-0.5">
                             {/* First row: Time and Type */}
-                            <div className="flex items-center justify-between gap-1">
-                              <div className="flex items-center gap-1 flex-shrink-0">
+                            <div className="flex items-center justify-between gap-0.5 md:gap-1">
+                              <div className="flex items-center gap-0.5 md:gap-1 flex-shrink-0">
                                 {isWebtermin ? (
-                                  <Globe className="h-3 w-3" />
+                                  <Globe className="h-2 w-2 md:h-3 md:w-3" />
                                 ) : isScouting ? (
-                                  <MapPin className="h-3 w-3" />
+                                  <MapPin className="h-2 w-2 md:h-3 md:w-3" />
                                 ) : (
-                                  <Video className="h-3 w-3" />
+                                  <Video className="h-2 w-2 md:h-3 md:w-3" />
                                 )}
-                                <span className="font-semibold">{formatTime(apt.date)}</span>
+                                <span className="font-semibold text-[10px] md:text-xs">{formatTime(apt.date)}</span>
                               </div>
-                              <span className="text-[10px] opacity-90 uppercase font-medium">{typeLabel}</span>
+                              <span className="hidden md:inline text-[10px] opacity-90 uppercase font-medium">{typeLabel}</span>
                             </div>
                             {/* Second row: Client name */}
-                            <div className="font-medium truncate">
+                            <div className="font-medium truncate text-[10px] md:text-xs">
                               {apt.clientName}
                             </div>
-                            {/* Third row: Customer number and agent */}
-                            <div className="flex items-center justify-between gap-1 text-[10px] opacity-90">
+                            {/* Third row: Customer number (hide agent on mobile) */}
+                            <div className="flex items-center justify-between gap-1 text-[9px] md:text-[10px] opacity-90">
                               <span className="truncate">Kd. {apt.customerNo}</span>
                               {apt.agentName && (
-                                <span className="truncate flex items-center gap-0.5">
+                                <span className="hidden md:flex truncate items-center gap-0.5">
                                   <User className="h-2.5 w-2.5" />
                                   {apt.agentName.split(' ')[0]}
                                 </span>
@@ -675,6 +702,153 @@ function CalendarView({ appointments, currentMonth, currentYear }: { appointment
               )}
             </div>
           ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function WeekView({ appointments, weekOffset }: { appointments: Appointment[]; weekOffset: number }) {
+  const today = new Date();
+  const currentDayOfWeek = today.getDay();
+  const adjustedDay = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - adjustedDay + (weekOffset * 7));
+  monday.setHours(0, 0, 0, 0);
+
+  const prevWeekOffset = weekOffset - 1;
+  const nextWeekOffset = weekOffset + 1;
+
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + i);
+    return day;
+  });
+
+  const weekdayNames = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+  const weekdayShort = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+  const isToday = (date: Date) => {
+    return date.getDate() === today.getDate() &&
+           date.getMonth() === today.getMonth() &&
+           date.getFullYear() === today.getFullYear();
+  };
+
+  const getAppointmentsForDay = (date: Date) => {
+    return appointments.filter(apt => {
+      const dateStr = apt.date instanceof Date ? apt.date.toISOString() : apt.date;
+      const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!match) return false;
+      const [, year, month, day] = match;
+      return parseInt(day) === date.getDate() &&
+             parseInt(month) - 1 === date.getMonth() &&
+             parseInt(year) === date.getFullYear();
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader className="p-3 md:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <CardTitle className="text-lg md:text-2xl">
+            Woche {monday.getDate()}.{monday.getMonth() + 1}.{monday.getFullYear()} - {weekDays[6].getDate()}.{weekDays[6].getMonth() + 1}.{weekDays[6].getFullYear()}
+          </CardTitle>
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="h-8 w-8 md:h-9 md:w-9 p-0"
+            >
+              <Link href={`/appointments?tab=week&weekOffset=${prevWeekOffset}`}>
+                <ChevronLeft className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="h-8 md:h-9 px-2 md:px-3 text-xs md:text-sm"
+            >
+              <Link href={`/appointments?tab=week`}>
+                Heute
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="h-8 w-8 md:h-9 md:w-9 p-0"
+            >
+              <Link href={`/appointments?tab=week&weekOffset=${nextWeekOffset}`}>
+                <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-2 md:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-2 md:gap-3">
+          {weekDays.map((date, index) => {
+            const dayAppointments = getAppointmentsForDay(date);
+            const isTodayDay = isToday(date);
+
+            return (
+              <div
+                key={index}
+                className={`border rounded-lg p-2 md:p-3 ${isTodayDay ? "bg-blue-50 dark:bg-blue-950/20 border-blue-500" : "bg-card"}`}
+              >
+                <div className="mb-2 md:mb-3">
+                  <div className={`text-xs md:text-sm font-semibold ${isTodayDay ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"}`}>
+                    <span className="hidden md:inline">{weekdayNames[index]}</span>
+                    <span className="md:hidden">{weekdayShort[index]}</span>
+                  </div>
+                  <div className={`text-lg md:text-2xl font-bold ${isTodayDay ? "text-blue-600 dark:text-blue-400" : ""}`}>
+                    {date.getDate()}.{date.getMonth() + 1}.
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {dayAppointments.length === 0 ? (
+                    <div className="text-xs text-muted-foreground text-center py-4">
+                      Keine Termine
+                    </div>
+                  ) : (
+                    dayAppointments.map((apt) => {
+                      const isWebtermin = apt.type === "WEBTERMIN";
+                      const isScouting = apt.type === "SCOUTING";
+                      const projectUrl = isWebtermin ? `/projects/${apt.id}` : `/film-projects/${apt.id}`;
+                      const bgColor = isWebtermin ? "bg-blue-500 hover:bg-blue-600" : isScouting ? "bg-amber-500 hover:bg-amber-600" : "bg-purple-500 hover:bg-purple-600";
+
+                      return (
+                        <Link
+                          key={apt.id}
+                          href={projectUrl}
+                          className={`block text-white rounded-lg p-2 md:p-3 ${bgColor} transition-colors`}
+                          title={`${apt.clientName} (${apt.customerNo})${apt.agentName ? ` - ${apt.agentName}` : ''}`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              {isWebtermin ? <Globe className="h-3 w-3 md:h-4 md:w-4" /> : isScouting ? <MapPin className="h-3 w-3 md:h-4 md:w-4" /> : <Video className="h-3 w-3 md:h-4 md:w-4" />}
+                              <span className="font-bold text-sm md:text-base">{formatTime(apt.date)}</span>
+                            </div>
+                            <div className="font-medium text-xs md:text-sm line-clamp-2">{apt.clientName}</div>
+                            <div className="text-[10px] md:text-xs opacity-90">Kd. {apt.customerNo}</div>
+                            {apt.agentName && (
+                              <div className="flex items-center gap-1 text-[10px] md:text-xs opacity-90">
+                                <User className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                                <span className="truncate">{apt.agentName}</span>
+                              </div>
+                            )}
+                          </div>
+                        </Link>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
