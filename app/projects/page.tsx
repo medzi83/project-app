@@ -724,7 +724,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
               if (ended) rowClasses.push("opacity-60");
               return (
                 <ProjectRow key={p.id} rowClasses={rowClasses.join(" ")} projectId={p.id}>
-                  <TableCell className={statusGreen ? "bg-green-500/20 dark:bg-green-500/30 font-semibold rounded-lg" : ""}>
+                  <TableCell>
                     <span className={statusGreen ? "inline-flex items-center px-2 py-1 rounded-md bg-green-500/30 dark:bg-green-500/40 text-green-900 dark:text-green-100 text-xs font-semibold" : ""}>{statusLabel}</span>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">

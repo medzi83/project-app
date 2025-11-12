@@ -257,6 +257,7 @@ export default async function DashboardPage({
             onlineLink: true,
             finalLink: true,
             onlineDate: true,
+            scope: true,
           },
         },
       },
@@ -351,6 +352,7 @@ export default async function DashboardPage({
             onlineLink: p.film?.onlineLink ?? null,
             finalLink: p.film?.finalLink ?? null,
             onlineDate: p.film?.onlineDate ?? null,
+            scope: p.film?.scope ?? null,
             agencyId: p.client.agency?.id ?? null,
             agencyName: p.client.agency?.name ?? null,
           }))}
