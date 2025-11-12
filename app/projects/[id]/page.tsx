@@ -7,10 +7,32 @@ import InlineCell from "@/components/InlineCell";
 import ClientReassignment from "@/components/ClientReassignment";
 import type { WebsitePriority, ProductionStatus, MaterialStatus, SEOStatus, TextitStatus, CMS as PrismaCMS } from "@prisma/client";
 
-const fmtDate = (d?: Date | string | null) =>
-  d ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(d)) : "-";
-const fmtDateTime = (d?: Date | string | null) =>
-  d ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(d)) : "-";
+// Naive date/time formatting - extracts components directly from ISO string without timezone conversion
+const fmtDate = (d?: Date | string | null) => {
+  if (!d) return "-";
+  try {
+    const dateStr = typeof d === 'string' ? d : d.toISOString();
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return "-";
+    const [, year, month, day] = match;
+    return `${day}.${month}.${year}`;
+  } catch {
+    return "-";
+  }
+};
+
+const fmtDateTime = (d?: Date | string | null) => {
+  if (!d) return "-";
+  try {
+    const dateStr = typeof d === 'string' ? d : d.toISOString();
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!match) return "-";
+    const [, year, month, day, hours, minutes] = match;
+    return `${day}.${month}.${year}, ${hours}:${minutes}`;
+  } catch {
+    return "-";
+  }
+};
 const mm = (n?: number | null) => (n ? `${Math.floor(n / 60)}h ${n % 60}m` : "-");
 const yesNo = (v?: boolean | null) => (v === true ? "Ja" : v === false ? "Nein" : "-");
 const linkify = (u?: string | null) => {

@@ -86,12 +86,12 @@ const agentBadgeStyle = (color?: string | null): CSSProperties | undefined => {
 const formatDate = (value?: Date | string | null) => {
   if (!value) return "-";
   try {
-    const date = new Date(value);
-    // All dates are stored as midnight Berlin time, so display in Berlin timezone
-    return new Intl.DateTimeFormat("de-DE", {
-      dateStyle: "medium",
-      timeZone: "Europe/Berlin"
-    }).format(date);
+    // Naive formatting - extract date components directly without timezone conversion
+    const dateStr = typeof value === 'string' ? value : value.toISOString();
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return "-";
+    const [, year, month, day] = match;
+    return `${day}.${month}.${year}`;
   } catch {
     return "-";
   }
@@ -857,10 +857,11 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
       {renderPagination("mt-4")}
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg border shadow-sm bg-card">
-        <Table className="min-w-[1400px]">
-              <TableHeader>
-                <TableRow>
+      <div className="rounded-lg border shadow-sm bg-card">
+        <div className="overflow-x-auto max-h-[calc(100vh-300px)] overflow-y-auto">
+          <Table className="min-w-[1400px]">
+                <TableHeader>
+                  <TableRow>
                   <Th href={mkSort("filmStatus")} active={sp.sort==="filmStatus"} dir={sp.dir}>Status</Th>
                   <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir}>Kd.-Nr.</Th>
                   <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir}>Name / Firma</Th>
@@ -882,7 +883,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                   <Th href={mkSort("onlineDate")} active={sp.sort==="onlineDate"} dir={sp.dir}>Online</Th>
                   <Th href={mkSort("lastContact")} active={sp.sort==="lastContact"} dir={sp.dir}>Letzter Kontakt</Th>
                   <Th href={mkSort("status")} active={sp.sort==="status"} dir={sp.dir}>P-Status</Th>
-                  <Th href={mkSort("reminderAt")} active={sp.sort==="reminderAt"} dir={sp.dir}>Wiedervorlage am</Th>
                   <Th>Hinweis</Th>
                   {canDelete && <Th>Löschen</Th>}
                 </TableRow>
@@ -1143,16 +1143,6 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                     <TableCell>
                       <FilmInlineCell
                         id={project.id}
-                        name="reminderAt"
-                        type="date"
-                        display={row.reminderAt}
-                        value={film?.reminderAt?.toISOString() ?? null}
-                        canEdit={canEdit}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <FilmInlineCell
-                        id={project.id}
                         name="note"
                         type="textarea"
                         display={row.note.length > 200 ? `${row.note.slice(0, 200)}...` : row.note}
@@ -1178,13 +1168,14 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
               })}
               {rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={21} className="py-8 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={20} className="py-8 text-center text-sm text-muted-foreground">
                     Noch keine Filmprojekte hinterlegt.
                   </TableCell>
                 </TableRow>
               )}
               </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
 
       {renderPagination("mt-4")}

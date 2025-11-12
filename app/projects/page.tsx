@@ -654,10 +654,11 @@ export default async function ProjectsPage({ searchParams }: Props) {
       {renderPagination("mt-4")}
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg border shadow-sm bg-card">
-        <Table className="min-w-[1200px]">
-              <TableHeader>
-                <TableRow>
+      <div className="rounded-lg border shadow-sm bg-card">
+        <div className="overflow-x-auto max-h-[calc(100vh-300px)] overflow-y-auto">
+          <Table className="min-w-[1200px]">
+                <TableHeader>
+                  <TableRow>
                   <Th href={mkSort("status")} active={sp.sort==="status"} dir={sp.dir}>Status</Th>
                   <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir} width={120}>Kundennr.</Th>
                   <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir} width={200}>Kunde</Th>
@@ -806,7 +807,8 @@ export default async function ProjectsPage({ searchParams }: Props) {
               </TableRow>
             )}
               </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
 
       {renderPagination("mt-4")}

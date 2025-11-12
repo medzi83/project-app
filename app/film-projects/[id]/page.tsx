@@ -16,7 +16,12 @@ type Props = {
 const formatDate = (value?: Date | string | null) => {
   if (!value) return "-";
   try {
-    return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(value));
+    // Naive formatting - extract date components directly without timezone conversion
+    const dateStr = typeof value === 'string' ? value : value.toISOString();
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return "-";
+    const [, year, month, day] = match;
+    return `${day}.${month}.${year}`;
   } catch {
     return "-";
   }

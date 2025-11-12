@@ -1,10 +1,7 @@
-import { Metadata } from "next";
-import { Calendar, CheckCircle2, Sparkles } from "lucide-react";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Changelog - Projektverwaltung",
-  description: "Übersicht über alle Änderungen und Verbesserungen",
-};
+import { useState } from "react";
+import { Calendar, CheckCircle2, Sparkles, ChevronDown } from "lucide-react";
 
 /**
  * HINWEIS für neue Changelog-Einträge:
@@ -26,6 +23,54 @@ type ChangelogEntry = {
 };
 
 const changelog: ChangelogEntry[] = [
+  {
+    date: "12.11.2024",
+    version: "2.3.5",
+    changes: [
+      {
+        title: "Termin-Kalender mit Übersicht aller Kundentermine",
+        description:
+          "Neuer Bereich 'Termine' in der Navigation! Hier findest du alle anstehenden Kundentermine übersichtlich in einem Kalender. Der Kalender zeigt Webtermine (blau), Drehtermine (lila) und Scouting-Termine (orange) auf einen Blick. Für jeden Termin siehst du direkt die Uhrzeit, den Kundennamen, die Kundennummer und den zuständigen Agenten. Ein Klick auf einen Termin führt dich direkt zum Projekt. Zusätzlich zur Kalenderansicht gibt es auch gefilterte Listen für jede Terminart (Alle, Webtermine, Scouting, Drehtermine). Die Termine werden automatisch aus den Projekten geladen, sobald ein Datum gesetzt ist.",
+        type: "feature",
+      },
+      {
+        title: "Korrekte Zeitanzeige ohne Zeitzonenverschiebung",
+        description:
+          "Alle Datums- und Zeitanzeigen in der App zeigen jetzt die korrekten Werte ohne Zeitzonenverschiebung an. Ein Termin um 14:00 Uhr wird jetzt auch überall als 14:00 Uhr angezeigt, nicht mehr als 15:00 Uhr. Das betrifft die Projekt-Listen, Detailseiten, den neuen Termin-Kalender und alle Filmprojekte. Die interne Datumsverarbeitung wurde komplett überarbeitet, um eine konsistente Anzeige in der gesamten Anwendung zu garantieren.",
+        type: "fix",
+      },
+    ],
+  },
+  {
+    date: "12.11.2024",
+    version: "2.3.4",
+    changes: [
+      {
+        title: "Verbesserte Filter-Auswahl mit Live-Feedback",
+        description:
+          "Die Filter in den Projekt- und Film-Listen zeigen jetzt sofort, wenn du Änderungen vornimmst! Sobald du Checkboxen an- oder abhakst, wird die Anzahl der ausgewählten Filter live aktualisiert. Wenn deine Auswahl von den aktuell angewendeten Filtern abweicht, wird der Filter-Button blau hervorgehoben - so erkennst du sofort, dass Änderungen vorgenommen wurden, die erst nach Klick auf 'Anwenden' wirksam werden.",
+        type: "improvement",
+      },
+      {
+        title: "Scrollbare Tabellen mit fester Höhe",
+        description:
+          "Die Projekt- und Filmlisten scrollen jetzt innerhalb eines Containers mit fester Höhe. Das bedeutet, dass Filter und Pagination immer sichtbar bleiben, während du durch die Tabelle scrollst. Die Tabelle passt sich automatisch an die Bildschirmhöhe an und lässt genug Platz für Navigation und Filter.",
+        type: "improvement",
+      },
+      {
+        title: "Wiedervorlage-Spalte ausgeblendet",
+        description:
+          "Die Spalte 'Wiedervorlage am' wurde aus der Filmprojekt-Liste entfernt, um die Übersichtlichkeit zu verbessern. Das Feld ist weiterhin in der Datenbank vorhanden und kann über die Detailansicht einzelner Filmprojekte bearbeitet werden.",
+        type: "improvement",
+      },
+      {
+        title: "Dark Mode für Kundenbearbeitung",
+        description:
+          "Alle Bearbeitungsfelder auf der Kundenseite (Basisdaten und Froxlor-Daten) unterstützen jetzt vollständig den Dark Mode. Alle Eingabefelder, Auswahlmenüs und Textareas haben nun die richtigen Farben für helle und dunkle Themes und sind dadurch deutlich besser lesbar.",
+        type: "improvement",
+      },
+    ],
+  },
   {
     date: "11.11.2024",
     version: "2.3.3",
@@ -305,6 +350,20 @@ const typeLabels = {
 };
 
 export default function ChangelogPage() {
+  const [openChanges, setOpenChanges] = useState<Set<string>>(new Set());
+
+  const toggleChange = (key: string) => {
+    setOpenChanges((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8">
@@ -339,32 +398,52 @@ export default function ChangelogPage() {
             </div>
 
             {/* Changes */}
-            <div className="ml-[52px] space-y-4">
-              {entry.changes.map((change, changeIndex) => (
-                <div
-                  key={changeIndex}
-                  className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">{change.title}</h3>
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
-                            typeColors[change.type]
-                          }`}
-                        >
-                          {typeLabels[change.type]}
-                        </span>
+            <div className="ml-[52px] space-y-2">
+              {entry.changes.map((change, changeIndex) => {
+                const changeKey = `${entryIndex}-${changeIndex}`;
+                const isOpen = openChanges.has(changeKey);
+
+                return (
+                  <div
+                    key={changeIndex}
+                    className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                  >
+                    {/* Accordion Header */}
+                    <button
+                      onClick={() => toggleChange(changeKey)}
+                      className="w-full px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 dark:text-gray-100">{change.title}</h3>
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
+                              typeColors[change.type]
+                            }`}
+                          >
+                            {typeLabels[change.type]}
+                          </span>
+                        </div>
                       </div>
-                      <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
-                        {change.description}
-                      </p>
-                    </div>
+                      <ChevronDown
+                        className={`h-5 w-5 text-gray-400 dark:text-gray-500 flex-shrink-0 transition-transform ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {/* Accordion Content */}
+                    {isOpen && (
+                      <div className="px-5 pb-4 pt-1 border-t border-gray-100 dark:border-gray-700">
+                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+                          {change.description}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}

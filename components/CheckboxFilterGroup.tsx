@@ -25,6 +25,7 @@ export default function CheckboxFilterGroup({
   columns = 2,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
+  const [currentCount, setCurrentCount] = useState(selected.length);
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
@@ -41,6 +42,13 @@ export default function CheckboxFilterGroup({
     };
   }, []);
 
+  const updateCount = () => {
+    const checkboxes = detailsRef.current?.querySelectorAll<HTMLInputElement>(
+      `input[name="${name}"]:checked`
+    );
+    setCurrentCount(checkboxes?.length ?? 0);
+  };
+
   const handleSelectAll = () => {
     const checkboxes = detailsRef.current?.querySelectorAll<HTMLInputElement>(
       `input[name="${name}"]`
@@ -48,6 +56,7 @@ export default function CheckboxFilterGroup({
     checkboxes?.forEach((cb) => {
       cb.checked = true;
     });
+    updateCount();
   };
 
   const handleClearAll = () => {
@@ -57,14 +66,21 @@ export default function CheckboxFilterGroup({
     checkboxes?.forEach((cb) => {
       cb.checked = false;
     });
+    updateCount();
   };
+
+  const hasUnappliedChanges = currentCount !== selected.length;
 
   return (
     <details ref={detailsRef} className={`relative ${width} shrink-0`}>
-      <summary className="flex items-center justify-between px-2 py-1 text-xs border rounded bg-background text-foreground cursor-pointer select-none shadow-sm hover:bg-muted transition-colors [&::-webkit-details-marker]:hidden">
+      <summary className={`flex items-center justify-between px-2 py-1 text-xs border rounded cursor-pointer select-none shadow-sm hover:bg-muted transition-colors [&::-webkit-details-marker]:hidden ${
+        hasUnappliedChanges
+          ? 'bg-blue-50 dark:bg-blue-950 border-blue-500 dark:border-blue-600'
+          : 'bg-background text-foreground border-border'
+      }`}>
         <span className="font-medium">{label}</span>
-        <span className="text-muted-foreground">
-          {selected.length ? `${selected.length} ausgewählt` : "Alle"}
+        <span className={hasUnappliedChanges ? 'text-blue-600 dark:text-blue-400 font-semibold' : 'text-muted-foreground'}>
+          {currentCount ? `${currentCount} ausgewählt` : "Alle"}
         </span>
       </summary>
       <div className="absolute left-0 z-10 mt-1 w-64 rounded border bg-popover text-popover-foreground shadow-lg max-h-72 overflow-auto">
@@ -96,6 +112,7 @@ export default function CheckboxFilterGroup({
                   name={name}
                   value={option.value}
                   defaultChecked={selected.includes(option.value)}
+                  onChange={updateCount}
                   className="cursor-pointer"
                 />
                 <span>{option.label}</span>
