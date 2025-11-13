@@ -24,6 +24,30 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "13.11.2024",
+    version: "2.3.6",
+    changes: [
+      {
+        title: "FTP-Passwörter direkt bearbeiten",
+        description:
+          "Admins können jetzt FTP-Passwörter direkt auf der Kundenseite ändern! Bei jedem FTP-Account gibt es einen 'Bearbeiten'-Button. Nach dem Klick öffnet sich ein Eingabefeld mit Anzeige-/Verbergen-Funktion für das neue Passwort (mindestens 8 Zeichen). Das geänderte Passwort wird sowohl in Froxlor als auch in der Datenbank gespeichert, sodass es beim nächsten Besuch wieder angezeigt wird. So hast du immer Zugriff auf die aktuellen FTP-Zugangsdaten.",
+        type: "feature",
+      },
+      {
+        title: "Alle Serverdaten beim Kunden anzeigen",
+        description:
+          "Die Kundenseite zeigt jetzt alle Server-Informationen auf einen Blick! Wenn ein Kunde auf mehreren Servern liegt, werden alle Serverdaten automatisch in Tabs dargestellt. Jeder Tab enthält die kompletten Froxlor-Daten: Kundendaten (Login, Name, Firma, Status), Domains mit Zuweisungsmöglichkeit zu Online-Projekten, FTP-Accounts mit Passwort-Bearbeitung und Datenbanken (inkl. Passwörter für selbst erstellte DBs). Die Darstellung ist kompakt und übersichtlich - alle wichtigen Server-Informationen sind schnell erreichbar.",
+        type: "feature",
+      },
+      {
+        title: "Berechtigte Personen hinterlegen",
+        description:
+          "Du kannst jetzt beim Kunden festhalten, welche Personen Zugriff auf die Webseite haben! Im neuen Bereich 'Berechtigte Personen' (neben den Basisdaten) kannst du beliebig viele Kontaktpersonen hinzufügen. Für jede Person speicherst du: Anrede, Vorname, Nachname, E-Mail, Telefon, Position und optionale Notizen. Die Liste ist übersichtlich als Tabelle dargestellt. Mit dem Mülleimer-Button kannst du Einträge wieder löschen. Perfekt um alle wichtigen Ansprechpartner und deren Kontaktdaten zentral zu verwalten.",
+        type: "feature",
+      },
+    ],
+  },
+  {
     date: "12.11.2024",
     version: "2.3.5",
     changes: [

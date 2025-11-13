@@ -355,3 +355,47 @@ export async function updateFtpAccountPassword(formData: FormData) {
     };
   }
 }
+
+export async function deleteProject(formData: FormData) {
+  const session = await getAuthSession();
+
+  // Only admins can delete projects
+  if (!session?.user || session.user.role !== "ADMIN") {
+    return { success: false, message: "Nicht autorisiert" };
+  }
+
+  const projectId = String(formData.get("projectId") ?? "").trim();
+  const clientId = String(formData.get("clientId") ?? "").trim();
+
+  if (!projectId) {
+    return { success: false, message: "Projekt-ID fehlt" };
+  }
+
+  try {
+    // Delete project and all related data in a transaction
+    await prisma.$transaction([
+      prisma.projectNote.deleteMany({ where: { projectId } }),
+      prisma.projectDomainHistory.deleteMany({ where: { projectId } }),
+      prisma.projectWebsite.deleteMany({ where: { projectId } }),
+      prisma.projectFilm.deleteMany({ where: { projectId } }),
+      prisma.project.delete({ where: { id: projectId } }),
+    ]);
+
+    // Revalidate relevant paths
+    revalidatePath("/projects");
+    revalidatePath(`/projects/${projectId}`);
+    revalidatePath("/dashboard");
+
+    if (clientId) {
+      revalidatePath(`/clients/${clientId}`);
+    }
+
+    return { success: true, message: "Projekt erfolgreich gelöscht" };
+  } catch (error) {
+    console.error("Error deleting project:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Fehler beim Löschen des Projekts"
+    };
+  }
+}

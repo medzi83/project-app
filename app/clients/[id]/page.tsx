@@ -19,6 +19,7 @@ import { ProjectDomainAssignment } from "./ProjectDomainAssignment";
 import { FtpPasswordEditor } from "./FtpPasswordEditor";
 import { DomainProjectAssignment } from "./DomainProjectAssignment";
 import { DeleteInstallationButton } from "./DeleteInstallationButton";
+import { DeleteProjectButton } from "./DeleteProjectButton";
 import { isFavoriteClient } from "@/app/actions/favorites";
 import { AuthorizedPersons } from "./AuthorizedPersons";
 
@@ -941,6 +942,17 @@ export default async function ClientDetailPage({ params }: Props) {
                               domain: p.website?.domain || null,
                             }))
                           }
+                        />
+                      </div>
+                    )}
+
+                    {/* Delete Project Button (Admin Only) */}
+                    {isAdmin && (
+                      <div className="mt-3 pt-3 border-t">
+                        <DeleteProjectButton
+                          projectId={project.id}
+                          projectTitle={project.title}
+                          clientId={client.id}
                         />
                       </div>
                     )}
