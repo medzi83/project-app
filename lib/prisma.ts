@@ -7,7 +7,6 @@ const globalForPrisma = globalThis as unknown as GlobalPrismaCache;
 const createClient = () =>
   new PrismaClient({
     log: ["error", "warn"],
-    datasourceUrl: process.env.DATABASE_URL + "?pgbouncer=true&connect_timeout=15",
   });
 
 const needsNewClient = (client: PrismaClient | undefined) => {
