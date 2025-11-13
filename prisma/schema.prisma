@@ -72,6 +72,7 @@ model Client {
   lastname            String?
   salutation          String?
   uploadLinks         Json?
+  ftpPasswords        Json?                // JSON object: { "ftpId": "password", ... }
   agency              Agency?              @relation(fields: [agencyId], references: [id])
   server              Server?              @relation(fields: [serverId], references: [id])
   emailLogs           EmailLog[]

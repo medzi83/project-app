@@ -16,6 +16,7 @@ import { ClientDetailHeader } from "@/components/ClientDetailHeader";
 import { FroxlorDataEditor } from "./FroxlorDataEditor";
 import { ClientDataEditor } from "./ClientDataEditor";
 import { ProjectDomainAssignment } from "./ProjectDomainAssignment";
+import { FtpPasswordEditor } from "./FtpPasswordEditor";
 import { DomainProjectAssignment } from "./DomainProjectAssignment";
 import { DeleteInstallationButton } from "./DeleteInstallationButton";
 import { isFavoriteClient } from "@/app/actions/favorites";
@@ -1071,10 +1072,17 @@ export default async function ClientDetailPage({ params }: Props) {
                         <span className="text-muted-foreground">Benutzername:</span>
                         <span className="font-mono text-foreground">{ftp.username}</span>
                       </div>
-                      <div className="grid grid-cols-[auto,1fr] gap-2">
-                        <span className="text-muted-foreground">Passwort:</span>
-                        <span className="font-mono text-foreground">{ftp.password}</span>
-                      </div>
+                      <FtpPasswordEditor
+                        ftpAccount={ftp}
+                        serverId={client.server!.id}
+                        clientId={client.id}
+                        storedPassword={
+                          client.ftpPasswords
+                            ? (client.ftpPasswords as Record<string, string>)[ftp.id.toString()]
+                            : undefined
+                        }
+                        isAdmin={isAdmin}
+                      />
                       <div className="grid grid-cols-[auto,1fr] gap-2">
                         <span className="text-muted-foreground">Home-Verzeichnis:</span>
                         <span className="font-mono text-[11px] text-foreground break-all">{ftp.homedir}</span>

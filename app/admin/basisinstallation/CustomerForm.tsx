@@ -44,6 +44,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
     email: "server@eventomaxx.de",
     loginname: "",
     password: "dkNM95z31Z31",
+    ftp_password: "dkNM95z31Z31", // FTP password for primary FTP account
     diskspace_gb: "2",
     mysqls: "1",
     ftps: "1",
@@ -117,6 +118,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
       email: "server@eventomaxx.de",
       loginname: normalizedCustomerNo,
       password: "dkNM95z31Z31",
+      ftp_password: "dkNM95z31Z31",
       diskspace_gb: "2",
       mysqls: "1",
       ftps: "1",
@@ -200,6 +202,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
         email: response.customer.email || "server@eventomaxx.de",
         loginname: response.customer.loginname || "",
         password: "dkNM95z31Z31",
+        ftp_password: "dkNM95z31Z31", // Default FTP password for existing customers
         diskspace_gb: diskspaceGB.toString(),
         mysqls: response.customer.mysqls?.toString() || "1",
         ftps: response.customer.ftps?.toString() || "1",
@@ -419,17 +422,37 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
             </Field>
 
             {!existingCustomer && (
-              <Field label="Passwort">
-                <input
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full rounded border p-2"
-                  required
-                  minLength={8}
-                />
-              </Field>
+              <>
+                <Field label="Kundenpasswort">
+                  <input
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full rounded border p-2"
+                    required
+                    minLength={8}
+                  />
+                  <span className="text-xs text-gray-500 mt-1">
+                    Passwort für Froxlor-Login
+                  </span>
+                </Field>
+
+                <Field label="FTP-Passwort">
+                  <input
+                    name="ftp_password"
+                    type="password"
+                    value={formData.ftp_password}
+                    onChange={(e) => setFormData({ ...formData, ftp_password: e.target.value })}
+                    className="w-full rounded border p-2"
+                    required
+                    minLength={8}
+                  />
+                  <span className="text-xs text-gray-500 mt-1">
+                    Passwort für FTP-Zugang
+                  </span>
+                </Field>
+              </>
             )}
 
             <Field label="Speicherplatz (GB)">

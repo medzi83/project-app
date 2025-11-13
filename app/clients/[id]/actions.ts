@@ -290,3 +290,68 @@ export async function updateFroxlorCustomerData(formData: FormData) {
     };
   }
 }
+
+export async function updateFtpAccountPassword(formData: FormData) {
+  const session = await getAuthSession();
+
+  // Only admins can update FTP passwords
+  if (!session?.user || session.user.role !== "ADMIN") {
+    return { success: false, message: "Nicht autorisiert" };
+  }
+
+  const serverId = formData.get("serverId") as string;
+  const ftpId = formData.get("ftpId") as string;
+  const customerId = formData.get("customerId") as string;
+  const clientId = formData.get("clientId") as string;
+  const newPassword = formData.get("newPassword") as string;
+
+  if (!serverId || !ftpId || !customerId || !clientId || !newPassword) {
+    return { success: false, message: "Fehlende Parameter" };
+  }
+
+  try {
+    const server = await prisma.server.findUnique({
+      where: { id: serverId },
+    });
+
+    if (!server) {
+      return { success: false, message: "Server nicht gefunden" };
+    }
+
+    const froxlorClient = createFroxlorClientFromServer(server);
+
+    if (!froxlorClient) {
+      return { success: false, message: "Froxlor-Konfiguration unvollständig" };
+    }
+
+    const result = await froxlorClient.updateFtpPassword(parseInt(ftpId), parseInt(customerId), newPassword);
+
+    if (result.success) {
+      // Save password in database
+      const client = await prisma.client.findUnique({
+        where: { id: clientId }
+      });
+
+      if (client) {
+        const ftpPasswords = (client.ftpPasswords as Record<string, string>) || {};
+        ftpPasswords[ftpId] = newPassword;
+
+        await prisma.client.update({
+          where: { id: clientId },
+          data: { ftpPasswords }
+        });
+      }
+
+      // No revalidation needed - page will be reloaded by component
+      return { success: true, message: "FTP-Passwort erfolgreich aktualisiert" };
+    }
+
+    return { success: false, message: result.message };
+  } catch (error) {
+    console.error("Error updating FTP password:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Fehler beim Aktualisieren des FTP-Passworts"
+    };
+  }
+}

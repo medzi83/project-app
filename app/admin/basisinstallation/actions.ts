@@ -347,6 +347,7 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
   const email = formData.get("email") as string;
   const loginname = formData.get("loginname") as string;
   const password = formData.get("password") as string;
+  const ftp_password = formData.get("ftp_password") as string;
   const diskspace_gb = formData.get("diskspace_gb") as string;
   const mysqls = formData.get("mysqls") as string;
   const ftps = formData.get("ftps") as string;
@@ -478,6 +479,42 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
         phpenabled: 1,
         openbasedir: 1,
       });
+    }
+  }
+
+  // Set FTP password for the primary FTP account if customer was created successfully
+  if (result.success && result.customer && ftp_password) {
+    try {
+      // Small delay to ensure Froxlor has finished creating the FTP account
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Get FTP accounts for the customer
+      const ftpAccounts = await client.getCustomerFtpAccounts(result.customer.customerid);
+
+      if (ftpAccounts.length > 0) {
+        // Update the first (primary) FTP account with the user-specified password
+        const primaryFtpAccount = ftpAccounts[0];
+        await client.updateFtpPassword(primaryFtpAccount.id, result.customer.customerid, ftp_password);
+        console.log(`✓ FTP password set for account ${primaryFtpAccount.username}`);
+
+        // Save FTP password in database for later retrieval
+        // Find the client by customerNo to save the password
+        const dbClient = await prisma.client.findUnique({
+          where: { customerNo: customerNumber }
+        });
+
+        if (dbClient) {
+          const ftpPasswords = { [primaryFtpAccount.id.toString()]: ftp_password };
+          await prisma.client.update({
+            where: { id: dbClient.id },
+            data: { ftpPasswords }
+          });
+          console.log(`✓ FTP password saved to database for client ${dbClient.name}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to set FTP password:', error);
+      // Don't fail the entire customer creation if FTP password update fails
     }
   }
 

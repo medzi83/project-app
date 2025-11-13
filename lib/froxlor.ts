@@ -617,6 +617,32 @@ export class FroxlorClient {
   }
 
   /**
+   * Update FTP account password
+   * @param ftpId - FTP account ID
+   * @param customerId - Customer ID (required when called as admin)
+   * @param newPassword - New password to set
+   */
+  async updateFtpPassword(ftpId: number, customerId: number, newPassword: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const result = await this.request('Ftps.update', {
+        id: ftpId,
+        customerid: customerId,
+        ftp_password: newPassword,
+      });
+
+      return {
+        success: true,
+        message: 'FTP-Passwort erfolgreich aktualisiert',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Aktualisieren des FTP-Passworts',
+      };
+    }
+  }
+
+  /**
    * Get all domains for a customer
    */
   async getCustomerDomains(customerId: number | string): Promise<FroxlorDomain[]> {
