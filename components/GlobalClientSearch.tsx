@@ -4,13 +4,23 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, User } from "lucide-react";
 
+type AuthorizedPerson = {
+  id: string;
+  firstname: string;
+  lastname: string;
+  email: string;
+  phone: string | null;
+};
+
 type Client = {
   id: string;
   name: string;
   customerNo: string | null;
-  contact: string | null;
+  firstname: string | null;
+  lastname: string | null;
   email: string | null;
   phone: string | null;
+  authorizedPersons: AuthorizedPerson[];
 };
 
 export function GlobalClientSearch() {
@@ -31,7 +41,7 @@ export function GlobalClientSearch() {
     }
   }, [isOpen]);
 
-  // Filter clients based on search term (including contact information)
+  // Filter clients based on search term (including contact information and authorized persons)
   useEffect(() => {
     if (searchTerm.trim() === "") {
       setFilteredClients([]);
@@ -40,13 +50,24 @@ export function GlobalClientSearch() {
 
     const searchLower = searchTerm.toLowerCase();
     const filtered = clients.filter((client) => {
-      return (
+      // Search in client data
+      const clientMatch =
         client.name.toLowerCase().includes(searchLower) ||
         (client.customerNo && client.customerNo.toLowerCase().includes(searchLower)) ||
-        (client.contact && client.contact.toLowerCase().includes(searchLower)) ||
+        (client.firstname && client.firstname.toLowerCase().includes(searchLower)) ||
+        (client.lastname && client.lastname.toLowerCase().includes(searchLower)) ||
         (client.email && client.email.toLowerCase().includes(searchLower)) ||
-        (client.phone && client.phone.toLowerCase().includes(searchLower))
+        (client.phone && client.phone.toLowerCase().includes(searchLower));
+
+      // Search in authorized persons
+      const authorizedPersonMatch = client.authorizedPersons.some((person) =>
+        person.firstname.toLowerCase().includes(searchLower) ||
+        person.lastname.toLowerCase().includes(searchLower) ||
+        person.email.toLowerCase().includes(searchLower) ||
+        (person.phone && person.phone.toLowerCase().includes(searchLower))
       );
+
+      return clientMatch || authorizedPersonMatch;
     });
 
     setFilteredClients(filtered.slice(0, 10)); // Limit to 10 results
@@ -197,14 +218,35 @@ export function GlobalClientSearch() {
                           {client.customerNo && (
                             <div>Kunden-Nr: {client.customerNo}</div>
                           )}
-                          {client.contact && (
-                            <div>Kontakt: {client.contact}</div>
+                          {(client.firstname || client.lastname) && (
+                            <div>Kontakt: {[client.firstname, client.lastname].filter(Boolean).join(' ')}</div>
                           )}
                           {client.email && (
                             <div>{client.email}</div>
                           )}
                           {client.phone && (
                             <div>{client.phone}</div>
+                          )}
+                          {/* Show matching authorized person */}
+                          {client.authorizedPersons.some((person) => {
+                            const match =
+                              person.firstname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              person.lastname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              person.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              (person.phone && person.phone.toLowerCase().includes(searchTerm.toLowerCase()));
+                            return match;
+                          }) && (
+                            <div className="text-blue-600 dark:text-blue-400 font-medium">
+                              via {client.authorizedPersons
+                                .filter((person) =>
+                                  person.firstname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  person.lastname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  person.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  (person.phone && person.phone.toLowerCase().includes(searchTerm.toLowerCase()))
+                                )
+                                .map(p => `${p.firstname} ${p.lastname}`)
+                                .join(', ')}
+                            </div>
                           )}
                         </div>
                       </div>

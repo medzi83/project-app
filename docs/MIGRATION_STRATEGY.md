@@ -1,8 +1,28 @@
 # Migrationsstrategie und Best Practices
 
 **Erstellt:** 01. November 2024
+**Letzte Aktualisierung:** 13. November 2024
 **Status:** 📋 Aktiv
 **Kategorie:** Development Guidelines
+
+---
+
+> **⚠️ WICHTIG: Vercel Deployment Setup**
+>
+> Dieses Dokument beschreibt **allgemeine Best Practices** für Prisma-Migrationen.
+>
+> **Für unser spezifisches Vercel-Setup** (automatische Deployments mit gemeinsamer DB) siehe:
+> **→ [PRISMA_MIGRATIONS_VERCEL.md](./PRISMA_MIGRATIONS_VERCEL.md)**
+>
+> **Kurzfassung für Solo-Entwickler mit Vercel:**
+> ```bash
+> # 1. Schema ändern
+> # 2. npx prisma migrate dev --name xyz
+> # 3. git push
+> # 4. Vercel deployed automatisch ✅
+> ```
+
+---
 
 ## Problemstellung
 
@@ -174,6 +194,8 @@ WHERE contact IS NOT NULL
 - ✅ Daten wurden sicher migriert
 
 ## Best Practices für zukünftige Migrationen
+
+> **💡 Für Vercel-Deployments:** Diese Best Practices gelten zusätzlich zu den [Vercel-spezifischen Workflows](./PRISMA_MIGRATIONS_VERCEL.md).
 
 ### 1. Niemals manuell Migrations-Dateien erstellen
 
@@ -425,11 +447,33 @@ fullName: string | null     // new
 
 ## Weitere Ressourcen
 
+- **[PRISMA_MIGRATIONS_VERCEL.md](./PRISMA_MIGRATIONS_VERCEL.md)** - Vercel-spezifischer Workflow (Solo-Entwickler)
 - [Prisma Migrate Dokumentation](https://www.prisma.io/docs/concepts/components/prisma-migrate)
 - [MIGRATION_CONTACT_FIELD.md](./MIGRATION_CONTACT_FIELD.md) - Beispiel einer erfolgreichen Migration
-- [Deployment-Prozess](./DEPLOYMENT.md)
+- [FROXLOR_2X_MIGRATION.md](./FROXLOR_2X_MIGRATION.md) - Froxlor API Änderungen
+
+## Dokumenten-Übersicht
+
+### Wann welches Dokument verwenden?
+
+**[MIGRATION_STRATEGY.md](./MIGRATION_STRATEGY.md)** (dieses Dokument)
+- ✅ Multi-Phasen-Migrationen (additive changes)
+- ✅ Data Migration Scripts
+- ✅ Komplexe Schema-Änderungen
+- ✅ Team-Entwicklung Best Practices
+
+**[PRISMA_MIGRATIONS_VERCEL.md](./PRISMA_MIGRATIONS_VERCEL.md)**
+- ✅ Vercel Deployment Workflow
+- ✅ Solo-Entwickler Setup
+- ✅ Automatische Deployments
+- ✅ Gemeinsame DB (Lokal + Vercel)
+
+**[FROXLOR_2X_MIGRATION.md](./FROXLOR_2X_MIGRATION.md)**
+- ✅ Froxlor API Parameter-Änderungen
+- ✅ FTP Password Management
+- ✅ MySQL Server Selection
 
 ---
 
-**Letzte Aktualisierung:** 01. November 2024
+**Letzte Aktualisierung:** 13. November 2024
 **Verantwortlich:** Development Team

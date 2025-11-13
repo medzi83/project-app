@@ -149,6 +149,20 @@ export function FroxlorDataEditor({ customer, serverId, isAdmin }: Props) {
     );
   }
 
+  // Extra security check: Only allow editing if user is admin
+  if (!isAdmin) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-medium">Froxlor Kundendaten</h2>
+        </div>
+        <div className="rounded border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-3 text-sm text-red-700 dark:text-red-400">
+          Keine Berechtigung zum Bearbeiten der Serverdaten.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">

@@ -504,8 +504,8 @@ export function UnifiedProjectForm({
                     <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
                       <SelectField name="websiteAgentId" label="Agent" options={websiteAgentOptions} defaultValue="" />
                       <SelectField name="cms" label="CMS *" options={CMS_OPTIONS} defaultValue="JOOMLA" />
-                      <SelectField name="seo" label="SEO *" options={SEO_OPTIONS} defaultValue="" />
-                      <SelectField name="textit" label="Texte vorhanden?" options={TEXTIT_OPTIONS} defaultValue="" />
+                      <SelectField name="seo" label="SEO *" options={SEO_OPTIONS} defaultValue="NEIN" />
+                      <SelectField name="textit" label="Textit *" options={TEXTIT_OPTIONS} defaultValue="NEIN" />
                       <div className="flex flex-col gap-1">
                         <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Webtermin (Datum + Zeit)</span>
                         <input type="datetime-local" name="webDate" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" />
@@ -595,7 +595,7 @@ export function UnifiedProjectForm({
                       options={MATERIAL_STATUS_OPTIONS}
                       defaultValue="ANGEFORDERT"
                     />
-                    <SelectField name="seo" label="SEO" options={SEO_OPTIONS} defaultValue="" />
+                    <SelectField name="seo" label="SEO" options={SEO_OPTIONS} defaultValue="NEIN" />
                     <SelectField name="accessible" label="Barrierefrei" options={TRI} defaultValue="unknown" />
                   </div>
 

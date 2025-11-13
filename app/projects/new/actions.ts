@@ -27,17 +27,21 @@ const MaterialStatus = z.enum(["ANGEFORDERT", "TEILWEISE", "VOLLSTAENDIG", "NV"]
 const WebsitePriority = z.enum(["NONE", "PRIO_1", "PRIO_2", "PRIO_3"]);
 const CMS = z.enum(["SHOPWARE", "WORDPRESS", "JOOMLA", "LOGO", "PRINT", "CUSTOM", "OTHER"]);
 const ProductionStatus = z.enum(["NONE", "BEENDET", "MMW", "VOLLST_A_K"]);
-const SEOStatus = z.string().transform((v) => {
-  if (!v || v.trim() === "") return null;
+const SEOStatus = z.string().optional().transform((v) => {
+  if (!v || v.trim() === "") return "NEIN";
   const val = v.trim();
-  if (["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"].includes(val)) return val as "NEIN" | "NEIN_NEIN" | "JA_NEIN" | "JA_JA" | "JA";
-  return null;
+  if (["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"].includes(val)) {
+    return val as "NEIN" | "NEIN_NEIN" | "JA_NEIN" | "JA_JA" | "JA";
+  }
+  return "NEIN"; // Fallback to default if invalid value
 });
-const TextitStatus = z.string().transform((v) => {
-  if (!v || v.trim() === "") return null;
+const TextitStatus = z.string().optional().transform((v) => {
+  if (!v || v.trim() === "") return "NEIN";
   const val = v.trim();
-  if (["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"].includes(val)) return val as "NEIN" | "NEIN_NEIN" | "JA_NEIN" | "JA_JA" | "JA";
-  return null;
+  if (["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"].includes(val)) {
+    return val as "NEIN" | "NEIN_NEIN" | "JA_NEIN" | "JA_JA" | "JA";
+  }
+  return "NEIN"; // Fallback to default if invalid value
 });
 const WebterminType = z.enum(["TELEFONISCH", "BEIM_KUNDEN", "IN_DER_AGENTUR"]).nullable();
 const FilmScope = z.enum(["FILM", "DROHNE", "NACHDREH", "FILM_UND_DROHNE"]);
@@ -143,8 +147,8 @@ const WebsiteProjectSchema = z.object({
   effortDemoMin: z.string().optional().transform(toMinutesFromHours),
 
   materialStatus: MaterialStatus.default("ANGEFORDERT"),
-  seo: SEOStatus.default("NEIN"),
-  textit: TextitStatus.default("NEIN"),
+  seo: SEOStatus,
+  textit: TextitStatus,
   accessible: triState.default(null),
 
   note: z.string().optional().transform((v) => v?.trim() || null),
@@ -348,8 +352,8 @@ const UnifiedProjectSchema = z.object({
   effortBuildMin: z.string().optional().transform(toMinutesFromHours),
   effortDemoMin: z.string().optional().transform(toMinutesFromHours),
   materialStatus: MaterialStatus.optional(),
-  seo: SEOStatus.optional(),
-  textit: TextitStatus.optional(),
+  seo: SEOStatus,
+  textit: TextitStatus,
   accessible: triState.optional(),
   websiteNote: z.string().optional().transform((v) => v?.trim() || null),
   demoLink: z.string().optional().transform((v) => v?.trim() || null),

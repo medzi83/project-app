@@ -16,6 +16,11 @@ type Agency = {
   name: string;
 };
 
+type ClientServer = {
+  server: Server;
+  customerNo: string | null;
+};
+
 type ClientData = {
   id: string;
   name: string;
@@ -33,6 +38,7 @@ type ClientData = {
   finished: boolean;
   createdAt: Date;
   server: Server | null;
+  clientServers: ClientServer[];
 };
 
 type Props = {
@@ -212,10 +218,23 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
           <div>
             <div className="text-xs text-gray-500">Server</div>
             <div>
-              {client.server ? (
-                <Badge variant="outline" className="font-mono text-xs">
-                  {client.server.hostname || client.server.name}
-                </Badge>
+              {client.clientServers && client.clientServers.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {client.clientServers.map((cs) => (
+                    <Badge
+                      key={cs.server.id}
+                      variant="outline"
+                      className="font-mono text-xs flex items-center gap-1.5"
+                    >
+                      <span>{cs.server.hostname || cs.server.name}</span>
+                      {client.serverId === cs.server.id && (
+                        <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-blue-500 text-white">
+                          PRIMARY
+                        </span>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
               ) : "-"}
             </div>
           </div>

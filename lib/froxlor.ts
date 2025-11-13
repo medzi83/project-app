@@ -117,8 +117,10 @@ export type FroxlorDatabase = {
   id: number;
   databasename: string;
   description: string;
-  dbserver: number;
+  dbserver: number | string;
   customerid: number;
+  password?: string;
+  databasename_prefix?: string;
 };
 
 export type FroxlorFtpAccount = {

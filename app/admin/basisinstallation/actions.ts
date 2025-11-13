@@ -315,14 +315,47 @@ export async function checkCustomerNumber(serverId: string, customerNumber: stri
       agencyId = eventomaxxAgency.id;
     }
 
-    // Update server reference and agency assignment
-    await prisma.client.updateMany({
+    // Find all clients with this customer number
+    const clients = await prisma.client.findMany({
       where: { customerNo: customerNumber },
-      data: {
-        serverId: serverId,
-        ...(agencyId ? { agencyId } : {}),
-      },
     });
+
+    // Update agency assignment and create/update ClientServer entries
+    for (const client of clients) {
+      // Update agency if needed
+      if (agencyId && client.agencyId !== agencyId) {
+        await prisma.client.update({
+          where: { id: client.id },
+          data: { agencyId },
+        });
+      }
+
+      // Create or update ClientServer entry
+      await prisma.clientServer.upsert({
+        where: {
+          clientId_serverId: {
+            clientId: client.id,
+            serverId: serverId,
+          },
+        },
+        create: {
+          clientId: client.id,
+          serverId: serverId,
+          customerNo: customerNumber,
+        },
+        update: {
+          customerNo: customerNumber,
+        },
+      });
+
+      // Also update the legacy serverId field for backwards compatibility (if not already set)
+      if (!client.serverId) {
+        await prisma.client.update({
+          where: { id: client.id },
+          data: { serverId: serverId },
+        });
+      }
+    }
   }
 
   return {

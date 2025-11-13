@@ -1,11 +1,11 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -63,7 +63,7 @@ model Client {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   customerNo          String?              @unique
-  serverId            String?
+  serverId            String?              // @deprecated Use clientServers relation instead
   finished            Boolean              @default(false)
   workStopped         Boolean              @default(false)
   agencyId            String?
@@ -74,12 +74,14 @@ model Client {
   uploadLinks         Json?
   ftpPasswords        Json?                // JSON object: { "ftpId": "password", ... }
   agency              Agency?              @relation(fields: [agencyId], references: [id])
-  server              Server?              @relation(fields: [serverId], references: [id])
+  server              Server?              @relation("ClientToServer", fields: [serverId], references: [id])
   emailLogs           EmailLog[]
   joomlaInstallations JoomlaInstallation[]
   projects            Project[]
   users               User[]
   favoritedBy         FavoriteClient[]
+  authorizedPersons   AuthorizedPerson[]
+  clientServers       ClientServer[]       // Many-to-many relation to servers
 
   @@index([name])
   @@index([agencyId])
@@ -242,7 +244,8 @@ model Server {
   sshPort             Int?                 @default(22)
   sshUsername         String?
   froxlorVersion      String?              @default("2.0+")
-  clients             Client[]
+  clients             Client[]             @relation("ClientToServer")
+  clientServers       ClientServer[]       // Many-to-many relation to clients
   databaseServers     DatabaseServer[]
   joomlaInstallations JoomlaInstallation[]
 }
@@ -638,4 +641,37 @@ model FavoriteClient {
   @@unique([userId, clientId])
   @@index([userId])
   @@index([clientId])
+}
+
+model AuthorizedPerson {
+  id         String   @id @default(cuid())
+  clientId   String
+  salutation String?
+  firstname  String
+  lastname   String
+  email      String
+  position   String?
+  phone      String?
+  notes      String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model ClientServer {
+  id              String   @id @default(cuid())
+  clientId        String
+  serverId        String
+  customerNo      String?  // Froxlor customer number on this server
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, serverId])
+  @@index([clientId])
+  @@index([serverId])
+  @@index([customerNo])
 }

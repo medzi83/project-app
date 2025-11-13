@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const minimal = searchParams.get("minimal") === "true";
 
     if (minimal) {
-      // Return minimal client data for search including contact information
+      // Return minimal client data for search including contact information and authorized persons
       const clients = await prisma.client.findMany({
         select: {
           id: true,
@@ -26,6 +26,15 @@ export async function GET(req: NextRequest) {
           lastname: true,
           email: true,
           phone: true,
+          authorizedPersons: {
+            select: {
+              id: true,
+              firstname: true,
+              lastname: true,
+              email: true,
+              phone: true,
+            },
+          },
         },
         orderBy: {
           name: "asc",
