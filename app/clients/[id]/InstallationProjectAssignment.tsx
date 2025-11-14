@@ -194,18 +194,18 @@ export function InstallationProjectAssignment({
         <button
           onClick={handleRemove}
           disabled={saving}
-          className="text-xs px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100 disabled:opacity-50 whitespace-nowrap font-medium"
+          className="text-xs px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700 rounded hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-50 whitespace-nowrap font-medium"
         >
           {saving ? "Entfernen..." : "Projektzuordnung entfernen"}
         </button>
         <button
           onClick={() => setShowDropdown(true)}
           disabled={saving}
-          className="text-xs px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 disabled:opacity-50 whitespace-nowrap"
+          className="text-xs px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 whitespace-nowrap"
         >
           Ändern
         </button>
-        {error && <span className="text-xs text-red-600">{error}</span>}
+        {error && <span className="text-xs text-red-600 dark:text-red-400">{error}</span>}
       </div>
     );
   }
@@ -216,7 +216,7 @@ export function InstallationProjectAssignment({
       <select
         value={selectedProjectId}
         onChange={(e) => setSelectedProjectId(e.target.value)}
-        className="text-xs border rounded px-2 py-1 bg-white flex-1 min-w-0"
+        className="text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 flex-1 min-w-0"
         disabled={saving}
       >
         <option value="">Kein Projekt zugeordnet</option>
@@ -239,7 +239,7 @@ export function InstallationProjectAssignment({
         <button
           onClick={handleAssign}
           disabled={saving}
-          className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
+          className="text-xs px-2 py-1 bg-blue-600 dark:bg-blue-700 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 whitespace-nowrap"
         >
           {saving ? "Speichern..." : "Speichern"}
         </button>
@@ -248,12 +248,12 @@ export function InstallationProjectAssignment({
         <button
           onClick={() => setShowDropdown(false)}
           disabled={saving}
-          className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 whitespace-nowrap"
+          className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 whitespace-nowrap"
         >
           Abbrechen
         </button>
       )}
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && <span className="text-xs text-red-600 dark:text-red-400">{error}</span>}
     </div>
   );
 }

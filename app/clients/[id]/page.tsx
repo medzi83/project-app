@@ -405,6 +405,7 @@ export default async function ClientDetailPage({ params }: Props) {
     ftpAccounts: FroxlorFtpAccount[];
     databases: FroxlorDatabase[];
     phpConfigs: Record<string, string>;
+    mysqlServers: Record<string, string>;
     error: string | null;
   };
 
@@ -428,6 +429,7 @@ export default async function ClientDetailPage({ params }: Props) {
       ftpAccounts: [],
       databases: [],
       phpConfigs: {},
+      mysqlServers: {},
       error: null,
     };
 
@@ -512,6 +514,13 @@ export default async function ClientDetailPage({ params }: Props) {
         const phpConfigs = await froxlorClient.getPhpConfigs();
         serverData.phpConfigs = phpConfigs.reduce((acc, config) => {
           acc[config.id.toString()] = config.description;
+          return acc;
+        }, {} as Record<string, string>);
+
+        // Load MySQL servers
+        const mysqlServers = await froxlorClient.getMysqlServers();
+        serverData.mysqlServers = mysqlServers.reduce((acc, server) => {
+          acc[server.id.toString()] = server.caption;
           return acc;
         }, {} as Record<string, string>);
       } else {
@@ -1083,7 +1092,22 @@ export default async function ClientDetailPage({ params }: Props) {
                           </div>
                           <InstallationProjectAssignment
                             installationId={installation.id}
-                            clientProjects={client.projects.filter((p) => p.type === "WEBSITE")}
+                            clientProjects={client.projects.filter((p) => {
+                              // Only show WEBSITE projects
+                              if (p.type !== "WEBSITE") return false;
+
+                              // Always show currently assigned project
+                              if (p.id === installation.project?.id) return true;
+
+                              // Exclude projects with domain or manual demo link
+                              if (p.website?.domain || p.website?.demoLink) return false;
+
+                              // Exclude projects assigned to other installations
+                              const isAssignedElsewhere = client.joomlaInstallations.some(
+                                inst => inst.projectId === p.id && inst.id !== installation.id
+                              );
+                              return !isAssignedElsewhere;
+                            })}
                             currentProjectId={installation.project?.id}
                           />
                         </div>
@@ -1120,240 +1144,13 @@ export default async function ClientDetailPage({ params }: Props) {
             <div className="rounded-lg border border-border bg-card p-8 text-center">
               <p className="text-muted-foreground">Keine Server-Daten verfügbar</p>
             </div>
-          ) : serverDataList.length === 1 ? (
-            // Single server: Show directly without nested tabs
-            <div className="space-y-4 max-w-5xl">
-              {(() => {
-                const serverData = serverDataList[0];
-                return (
-                  <>
-                    {/* Server Header */}
-                    <div className="flex items-center gap-2 pb-2 border-b">
-                      <h2 className="text-lg font-semibold text-foreground">
-                        {serverData.server.name}
-                      </h2>
-                      {serverData.server.ip && (
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          {serverData.server.ip}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Error Message */}
-                    {serverData.error && (
-                      <div className="rounded border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-xs text-red-700 dark:text-red-400">
-                        {serverData.error}
-                      </div>
-                    )}
-
-                    {/* Grid Layout for Cards */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {/* Froxlor Customer Data */}
-                      <section className="rounded-lg border border-border bg-card p-4">
-                        {serverData.customer ? (
-                          <FroxlorDataEditor
-                            customer={serverData.customer}
-                            serverId={serverData.server.id}
-                            isAdmin={isAdmin}
-                          />
-                        ) : (
-                          <>
-                            <h2 className="text-base font-medium text-foreground mb-2">Kundendaten</h2>
-                            <p className="text-sm text-muted-foreground">Keine Kundendaten verfügbar</p>
-                          </>
-                        )}
-                      </section>
-
-                      {/* Databases */}
-                      <section className="rounded-lg border border-border bg-card p-4">
-                        <h2 className="text-base font-medium text-foreground mb-3">
-                          Datenbanken ({serverData.databases.length})
-                        </h2>
-                        {serverData.databases.length > 0 ? (
-                          <div className="space-y-2">
-                            {serverData.databases.map((db) => (
-                              <div key={db.id} className="rounded border border-border p-3 bg-muted/50">
-                                <div className="flex items-start justify-between gap-2 mb-1">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="font-medium text-sm text-foreground">{db.databasename}</span>
-                                    </div>
-                                    {db.description && (
-                                      <div className="text-xs text-muted-foreground mb-2">{db.description}</div>
-                                    )}
-                                    <div className="space-y-1.5 text-xs">
-                                      <div>
-                                        <span className="text-muted-foreground">DB-Server: </span>
-                                        <span className="text-foreground">{db.dbserver === "0" || db.dbserver === 0 ? "local" : db.dbserver}</span>
-                                      </div>
-                                      {db.password && (
-                                        <div>
-                                          <span className="text-muted-foreground">Passwort: </span>
-                                          <span className="font-mono text-foreground">{db.password}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  {isAdmin && (
-                                    <DeleteDatabaseButton
-                                      serverId={serverData.server.id}
-                                      databaseName={db.databasename}
-                                      clientId={client.id}
-                                    />
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">Keine Datenbanken vorhanden</p>
-                        )}
-                      </section>
-                    </div>
-
-                    {/* Domains */}
-                    {serverData.domains.length > 0 && (
-                      <section className="rounded-lg border border-border bg-card p-4">
-                        <h2 className="text-base font-medium text-foreground mb-3">
-                          Domains ({serverData.domains.length})
-                        </h2>
-                        <div className="space-y-2">
-                          {serverData.domains.map((domain) => {
-                            const isStandard =
-                              serverData.customer?.standardsubdomain != null
-                                ? Number.parseInt(domain.id, 10) === Number.parseInt(serverData.customer.standardsubdomain, 10)
-                                : false;
-                            const assignedProject = client.projects.find(
-                              (p) => p.type === "WEBSITE" && p.website?.domain === domain.domain
-                            );
-
-                            return (
-                              <div key={domain.id} className="rounded border border-border bg-card p-3">
-                                <div className="flex items-center gap-2 mb-1">
-                                  {isStandard && (
-                                    <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                                      Standard
-                                    </Badge>
-                                  )}
-                                  <span className="font-medium text-sm text-foreground">{domain.domain}</span>
-                                  {domain.deactivated === "1" && (
-                                    <Badge variant="destructive" className="text-xs">Deaktiviert</Badge>
-                                  )}
-                                </div>
-                                {!isStandard && (
-                                  <div className="font-mono text-xs text-muted-foreground mb-1 break-all">{domain.documentroot}</div>
-                                )}
-                                <div className="flex gap-3 text-xs text-muted-foreground">
-                                  <span>SSL: {domain.ssl_redirect === "1" ? "Ja" : "Nein"}</span>
-                                  <span>LE: {domain.letsencrypt === "1" ? "Ja" : "Nein"}</span>
-                                  <span>PHP: {serverData.phpConfigs[domain.phpsettingid] || domain.phpsettingid}</span>
-                                </div>
-
-                                {!isStandard && (
-                                  <div className="mt-2 pt-2 border-t">
-                                    {assignedProject ? (
-                                      <div className="flex items-center gap-2 text-xs">
-                                        <svg className="h-3.5 w-3.5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        <span className="text-muted-foreground">Zugeordnet zu:</span>
-                                        <Link
-                                          href={`/projects/${assignedProject.id}`}
-                                          className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                                        >
-                                          {getProjectDisplayName(assignedProject)}
-                                        </Link>
-                                      </div>
-                                    ) : (
-                                      isAdmin && (
-                                        <DomainProjectAssignment
-                                          domain={domain.domain}
-                                          onlineProjects={client.projects
-                                            .filter(p => p.type === "WEBSITE" && p.status === "ONLINE" && p.website)
-                                            .map(p => ({
-                                              id: p.id,
-                                              title: p.title,
-                                              domain: p.website?.domain || null,
-                                            }))
-                                          }
-                                        />
-                                      )
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </section>
-                    )}
-
-                    {/* FTP Accounts */}
-                    {serverData.ftpAccounts.length > 0 && (
-                      <section className="rounded-lg border border-border bg-card p-4">
-                        <h2 className="text-base font-medium text-foreground mb-3">
-                          FTP-Zugänge ({serverData.ftpAccounts.length})
-                        </h2>
-                        <div className="space-y-2">
-                          {serverData.ftpAccounts.map((ftp) => (
-                            <div key={ftp.id} className="rounded border border-border p-3 bg-muted/50">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="font-medium text-sm text-foreground">{ftp.username}</span>
-                                {ftp.login_enabled === "0" && (
-                                  <Badge variant="destructive" className="text-xs">Deaktiviert</Badge>
-                                )}
-                                {ftp.description && (
-                                  <span className="text-xs text-muted-foreground">- {ftp.description}</span>
-                                )}
-                              </div>
-                              <div className="grid gap-2 text-xs">
-                                <div className="grid grid-cols-[auto,1fr] gap-2">
-                                  <span className="text-muted-foreground">Benutzername:</span>
-                                  <span className="font-mono text-foreground">{ftp.username}</span>
-                                </div>
-                                <FtpPasswordEditor
-                                  ftpAccount={ftp}
-                                  serverId={serverData.server.id}
-                                  clientId={client.id}
-                                  storedPassword={
-                                    client.ftpPasswords
-                                      ? (client.ftpPasswords as Record<string, string>)[ftp.id.toString()]
-                                      : undefined
-                                  }
-                                  isAdmin={isAdmin}
-                                />
-                                <div className="grid grid-cols-[auto,1fr] gap-2">
-                                  <span className="text-muted-foreground">Home-Verzeichnis:</span>
-                                  <span className="font-mono text-[11px] text-foreground break-all">{ftp.homedir}</span>
-                                </div>
-                                {ftp.last_login && (
-                                  <div className="grid grid-cols-[auto,1fr] gap-2">
-                                    <span className="text-muted-foreground">Letzter Login:</span>
-                                    <span className="text-foreground">{formatDate(ftp.last_login)}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </section>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
           ) : (
-            // Multiple servers: Use nested tabs for compact display
+            // Always use tabs for consistent display
             <Tabs defaultValue={client.serverId || serverDataList[0].server.id} className="w-full max-w-5xl">
               <TabsList className="grid" style={{ gridTemplateColumns: `repeat(${serverDataList.length}, minmax(0, 1fr))`, maxWidth: '500px' }}>
                 {serverDataList.map((serverData) => (
-                  <TabsTrigger key={serverData.server.id} value={serverData.server.id} className="flex items-center gap-1.5 text-sm">
-                    <span>{serverData.server.name}</span>
-                    {client.serverId === serverData.server.id && (
-                      <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-blue-500 text-white">
-                        PRIMARY
-                      </span>
-                    )}
+                  <TabsTrigger key={serverData.server.id} value={serverData.server.id} className="text-sm">
+                    {serverData.server.name}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -1414,7 +1211,9 @@ export default async function ClientDetailPage({ params }: Props) {
                                   )}
                                   <div className="space-y-1">
                                     <div className="text-[11px] text-muted-foreground">
-                                      DB-Server: {db.dbserver === "0" || db.dbserver === 0 ? "local" : db.dbserver}
+                                      DB-Server: {db.dbserver === "0" || db.dbserver === 0
+                                        ? "local"
+                                        : serverData.mysqlServers[db.dbserver.toString()] || db.dbserver}
                                     </div>
                                     {db.password && (
                                       <div className="text-[11px]">
