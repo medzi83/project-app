@@ -28,7 +28,7 @@ export default function TemplateCreationTabs({ variableGroups, signatureOptions 
 
   return (
     <div>
-      <div role="tablist" aria-label="Vorlagen und Signatur" className="flex items-end gap-2 border-b border-gray-200">
+      <div role="tablist" aria-label="Vorlagen und Signatur" className="flex items-end gap-2 border-b border-gray-200 dark:border-gray-700">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -41,8 +41,8 @@ export default function TemplateCreationTabs({ variableGroups, signatureOptions 
               className={[
                 "rounded-t-md px-4 py-2 text-sm font-semibold transition",
                 isActive
-                  ? "border border-gray-200 border-b-white bg-white text-black -mb-[1px]"
-                  : "border border-transparent text-gray-500 hover:text-gray-800",
+                  ? "border border-gray-200 dark:border-gray-700 border-b-card bg-card text-foreground -mb-[1px]"
+                  : "border border-transparent text-muted-foreground hover:text-foreground",
               ].join(" ")}
             >
               {tab.label}

@@ -45,7 +45,7 @@ export default function TemplatesByCategory({ templates, variableGroups, agencie
   return (
     <div className="space-y-4">
       {/* Category Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 dark:border-gray-700">
         <nav className="-mb-px flex space-x-8" aria-label="Kategorien">
           {templatesByCategory.map(({ key, label, count }) => (
             <button
@@ -53,16 +53,16 @@ export default function TemplatesByCategory({ templates, variableGroups, agencie
               onClick={() => setActiveCategory(key)}
               className={`group inline-flex items-center border-b-2 px-1 py-4 text-sm font-medium transition-colors ${
                 activeCategory === key
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  ? "border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400"
+                  : "border-transparent text-muted-foreground hover:border-gray-300 dark:hover:border-gray-600 hover:text-foreground"
               }`}
             >
               <span>{label}</span>
               <span
                 className={`ml-2 rounded-full px-2.5 py-0.5 text-xs font-medium ${
                   activeCategory === key
-                    ? "bg-blue-100 text-blue-600"
-                    : "bg-gray-100 text-gray-600 group-hover:bg-gray-200"
+                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 group-hover:bg-gray-200 dark:group-hover:bg-gray-700"
                 }`}
               >
                 {count}
@@ -76,7 +76,7 @@ export default function TemplatesByCategory({ templates, variableGroups, agencie
       {activeCategoryData && (
         <div>
           {activeCategoryData.templates.length === 0 ? (
-            <p className="text-sm text-gray-500">Keine Vorlagen in dieser Kategorie.</p>
+            <p className="text-sm text-muted-foreground">Keine Vorlagen in dieser Kategorie.</p>
           ) : (
             <div className="space-y-3">
               {activeCategoryData.templates.map((template) => (
@@ -96,11 +96,11 @@ export default function TemplatesByCategory({ templates, variableGroups, agencie
                     agencies={agencies}
                   />
 
-                  <form action={deleteEmailTemplate} className="mt-6 border-t pt-6">
+                  <form action={deleteEmailTemplate} className="mt-6 border-t dark:border-gray-700 pt-6">
                     <input type="hidden" name="id" value={template.id} />
                     <ConfirmSubmit
                       confirmText="Diese Vorlage wirklich löschen? Dies kann nicht rückgängig gemacht werden."
-                      className="rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+                      className="rounded border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/30 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40"
                     >
                       Vorlage löschen
                     </ConfirmSubmit>

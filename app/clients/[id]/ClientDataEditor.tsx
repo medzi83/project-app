@@ -224,14 +224,9 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
                     <Badge
                       key={cs.server.id}
                       variant="outline"
-                      className="font-mono text-xs flex items-center gap-1.5"
+                      className="font-mono text-xs"
                     >
-                      <span>{cs.server.hostname || cs.server.name}</span>
-                      {client.serverId === cs.server.id && (
-                        <span className="text-[9px] font-medium px-1 py-0.5 rounded bg-blue-500 text-white">
-                          PRIMARY
-                        </span>
-                      )}
+                      {cs.server.hostname || cs.server.name}
                     </Badge>
                   ))}
                 </div>

@@ -294,19 +294,19 @@ function Sidebar({ user, counts, onNavigate, collapsed, onToggleCollapse }: { us
 
   const adminItems: NavItem[] = navigationRole === "ADMIN"
     ? [
+        { label: "Statistik", href: "/admin/statistics", icon: BarChart3 },
         { label: "Admins", href: "/admin/admins", icon: Shield },
         { label: "Agenten", href: "/admin/agents", icon: Users },
         { label: "Vertrieb", href: "/admin/vertrieb", icon: Handshake },
         { label: "Agenturen", href: "/admin/agencies", icon: Landmark },
         { label: "Hinweise", href: "/admin/notices", icon: Megaphone },
         { label: "Kummerkasten", href: "/admin/kummerkasten", icon: MessageSquareHeart, badge: counts?.feedbackOpen ? String(counts.feedbackOpen) : undefined },
-        { label: "Statistik", href: "/admin/statistics", icon: BarChart3 },
-        { label: "Server", href: "/admin/server", icon: Server },
         { label: "Emailvorlagen", href: "/admin/email-templates", icon: Mail },
         { label: "E-Mail Trigger", href: "/admin/email-triggers", icon: Zap },
         { label: "Basisinstallation", href: "/admin/basisinstallation", icon: Package },
         { label: "Joomla Backup", href: "/admin/joomla-backup", icon: HardDrive },
         { label: "Orgamax ERP", href: "/admin/orgamax", icon: Database },
+        { label: "Server", href: "/admin/server", icon: Server },
       ]
     : [];
 

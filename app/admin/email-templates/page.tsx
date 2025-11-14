@@ -136,17 +136,17 @@ export default async function EmailTemplatesAdminPage({ searchParams }: Props) {
   return (
     <div className="space-y-8 p-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">E-Mail-Vorlagen</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-2xl font-semibold text-foreground">E-Mail-Vorlagen</h1>
+        <p className="text-sm text-muted-foreground">
           Verwalte bestehende Vorlagen und lege neue Vorlagen für automatisierte E-Mails an.
         </p>
-        {successMessage && <p className="text-sm text-green-700">{successMessage}</p>}
-        {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
+        {successMessage && <p className="text-sm text-green-700 dark:text-green-400">{successMessage}</p>}
+        {errorMessage && <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>}
       </header>
 
-      <section className="rounded-lg border bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">Vorlagen & Signatur</h2>
-        <p className="text-sm text-gray-500">
+      <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-foreground">Vorlagen & Signatur</h2>
+        <p className="text-sm text-muted-foreground">
           Lege neue Vorlagen an oder pflege Signaturen pro Agentur. Nutze die Tabs, um zwischen den Bereichen zu wechseln.
         </p>
         <div className="mt-4">
@@ -154,14 +154,14 @@ export default async function EmailTemplatesAdminPage({ searchParams }: Props) {
         </div>
       </section>
 
-      <section className="space-y-4 rounded-lg border bg-white p-6 shadow-sm">
+      <section className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Bestehende Vorlagen</h2>
-          <span className="text-sm text-gray-500">{templates.length} Einträge</span>
+          <h2 className="text-lg font-semibold text-foreground">Bestehende Vorlagen</h2>
+          <span className="text-sm text-muted-foreground">{templates.length} Einträge</span>
         </div>
 
         {templates.length === 0 ? (
-          <p className="text-sm text-gray-500">Es sind noch keine Vorlagen vorhanden.</p>
+          <p className="text-sm text-muted-foreground">Es sind noch keine Vorlagen vorhanden.</p>
         ) : (
           <TemplatesByCategory
             templates={templates}

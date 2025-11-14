@@ -1118,6 +1118,16 @@ export default async function DashboardPage({
                 none: {},
               },
             },
+            {
+              website: {
+                is: {
+                  OR: [
+                    { demoLink: null },
+                    { demoLink: "" },
+                  ],
+                },
+              },
+            },
           ],
         },
         select: {

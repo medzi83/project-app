@@ -25,10 +25,35 @@ type Props = {
   onCustomerCreated?: (customerNo: string) => void;
 };
 
+// Generate a random password with 10 characters (uppercase, lowercase, numbers)
+function generateRandomPassword(): string {
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const allChars = uppercase + lowercase + numbers;
+
+  let password = '';
+
+  // Ensure at least one of each type
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+  password += lowercase[Math.floor(Math.random() * lowercase.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+
+  // Fill remaining 7 characters randomly
+  for (let i = 0; i < 7; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+
+  // Shuffle the password
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+}
+
 export default function CustomerForm({ serverId, clientName, clientCustomerNo, onCustomerCreated }: Props) {
   const [customerNumber, setCustomerNumber] = useState(clientCustomerNo || "");
   const [checking, setChecking] = useState(false);
   const [existingCustomer, setExistingCustomer] = useState<FroxlorCustomer | null>(null);
+  const [ftpAccount, setFtpAccount] = useState<any>(null);
+  const [storedFtpPassword, setStoredFtpPassword] = useState<string | undefined>();
   const [phpConfigs, setPhpConfigs] = useState<FroxlorPhpConfig[]>([]);
   const [selectedPhpConfigs, setSelectedPhpConfigs] = useState<number[]>([1]);
   const [mysqlServers, setMysqlServers] = useState<FroxlorMysqlServer[]>([]);
@@ -136,6 +161,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
 
         if (response.exists && response.customer) {
           setExistingCustomer(response.customer);
+          setFtpAccount(response.ftpAccount || null);
+          setStoredFtpPassword(response.storedFtpPassword);
+
           // Convert diskspace from KB to GB (diskspace is in KB in Froxlor)
           // Froxlor stores in KB: 5 GB = 5000 MB × 1024 = 5120000 KB
           const diskspaceGB = response.customer.diskspace
@@ -156,6 +184,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
             email: response.customer.email || "server@eventomaxx.de",
             loginname: response.customer.loginname || "",
             password: "dkNM95z31Z31",
+            ftp_password: "", // Empty for existing customers - only filled if user wants to change
             diskspace_gb: diskspaceGB.toString(),
             mysqls: response.customer.mysqls?.toString() || "1",
             ftps: response.customer.ftps?.toString() || "1",
@@ -182,6 +211,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
 
     if (response.exists && response.customer) {
       setExistingCustomer(response.customer);
+      setFtpAccount(response.ftpAccount || null);
+      setStoredFtpPassword(response.storedFtpPassword);
+
       // Convert diskspace from KB to GB (diskspace is in KB in Froxlor)
       // Froxlor stores in KB: 5 GB = 5000 MB × 1024 = 5120000 KB
       const diskspaceGB = response.customer.diskspace
@@ -202,7 +234,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
         email: response.customer.email || "server@eventomaxx.de",
         loginname: response.customer.loginname || "",
         password: "dkNM95z31Z31",
-        ftp_password: "dkNM95z31Z31", // Default FTP password for existing customers
+        ftp_password: "", // Empty for existing customers - only filled if user wants to change
         diskspace_gb: diskspaceGB.toString(),
         mysqls: response.customer.mysqls?.toString() || "1",
         ftps: response.customer.ftps?.toString() || "1",
@@ -215,6 +247,8 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
       loadCustomerDomains(response.customer.customerid);
     } else {
       setExistingCustomer(null);
+      setFtpAccount(null);
+      setStoredFtpPassword(undefined);
       // Prefill with client name and customer number if available
       setFormData({
         ...formData,
@@ -337,17 +371,17 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
         </div>
 
         {existingCustomer && (
-          <div className="mt-3 rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
+          <div className="mt-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 p-4 text-sm text-blue-800 dark:text-blue-200">
             <div className="font-medium">✓ Kunde gefunden (ID: {existingCustomer.customerid})</div>
             <div className="mt-1">
               Kundennummer: {existingCustomer.customernumber} | Login: {existingCustomer.loginname}
             </div>
-            <div className="mt-2 text-xs">Die vorhandenen Daten werden unten angezeigt.</div>
+            <div className="mt-2 text-xs text-blue-700 dark:text-blue-300">Die vorhandenen Daten werden unten angezeigt.</div>
           </div>
         )}
 
         {!checking && customerNumber && !existingCustomer && (
-          <div className="mt-3 rounded-lg bg-yellow-50 p-4 text-sm text-yellow-800">
+          <div className="mt-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 p-4 text-sm text-yellow-800 dark:text-yellow-200">
             Kunde nicht gefunden. Neuen Kunden anlegen.
           </div>
         )}
@@ -437,21 +471,6 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
                     Passwort für Froxlor-Login
                   </span>
                 </Field>
-
-                <Field label="FTP-Passwort">
-                  <input
-                    name="ftp_password"
-                    type="password"
-                    value={formData.ftp_password}
-                    onChange={(e) => setFormData({ ...formData, ftp_password: e.target.value })}
-                    className="w-full rounded border p-2"
-                    required
-                    minLength={8}
-                  />
-                  <span className="text-xs text-gray-500 mt-1">
-                    Passwort für FTP-Zugang
-                  </span>
-                </Field>
               </>
             )}
 
@@ -490,7 +509,59 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
                 min="0"
               />
             </Field>
+          </div>
 
+          {/* FTP Section */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h4 className="font-medium mb-4 text-sm">FTP-Zugang</h4>
+
+            {existingCustomer && ftpAccount && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-sm">
+                <div className="font-medium text-blue-900 dark:text-blue-200 mb-2">✓ Vorhandener FTP-Account auf Server</div>
+                <div className="grid gap-1 text-xs text-blue-800 dark:text-blue-300">
+                  <div><span className="font-medium">Benutzername:</span> {ftpAccount.username}</div>
+                  <div><span className="font-medium">Verzeichnis:</span> {ftpAccount.homedir}</div>
+                  {storedFtpPassword && (
+                    <div><span className="font-medium">Gespeichertes Passwort:</span> {storedFtpPassword}</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label={existingCustomer && ftpAccount ? "FTP-Passwort ändern" : "FTP-Passwort"}>
+                <div className="flex gap-2">
+                  <input
+                    name="ftp_password"
+                    type="password"
+                    value={formData.ftp_password}
+                    onChange={(e) => setFormData({ ...formData, ftp_password: e.target.value })}
+                    className="w-full rounded border p-2"
+                    required={!existingCustomer}
+                    minLength={8}
+                    placeholder={existingCustomer ? "Neues Passwort eingeben zum Ändern" : ""}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const randomPassword = generateRandomPassword();
+                      setFormData({ ...formData, ftp_password: randomPassword });
+                    }}
+                    className="rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2 text-sm whitespace-nowrap"
+                  >
+                    Generieren
+                  </button>
+                </div>
+                <span className="text-xs text-gray-500 mt-1">
+                  {existingCustomer
+                    ? "Leer lassen, um Passwort unverändert zu belassen"
+                    : "Passwort für FTP-Zugang"}
+                </span>
+              </Field>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
             <Field label="Document Root">
               <input
                 name="documentroot"

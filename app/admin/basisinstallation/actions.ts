@@ -358,10 +358,38 @@ export async function checkCustomerNumber(serverId: string, customerNumber: stri
     }
   }
 
+  // If customer exists, also fetch FTP accounts and stored passwords
+  let ftpAccount: any = null;
+  let storedFtpPassword: string | undefined;
+
+  if (customer) {
+    try {
+      const ftpAccounts = await client.getCustomerFtpAccounts(customer.customerid);
+      if (ftpAccounts.length > 0) {
+        ftpAccount = ftpAccounts[0]; // Get primary FTP account
+
+        // Try to find stored password in database
+        const dbClient = await prisma.client.findFirst({
+          where: { customerNo: customerNumber },
+        });
+
+        if (dbClient && dbClient.ftpPasswords) {
+          const ftpPasswords = dbClient.ftpPasswords as Record<string, string>;
+          storedFtpPassword = ftpPasswords[ftpAccount.id.toString()];
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch FTP accounts:', error);
+      // Don't fail the entire customer check if FTP fetch fails
+    }
+  }
+
   return {
     success: true,
     exists: !!customer,
     customer: customer || undefined,
+    ftpAccount: ftpAccount || undefined,
+    storedFtpPassword: storedFtpPassword || undefined,
     message: customer ? "Kunde gefunden" : "Kunde nicht gefunden",
   };
 }
@@ -452,6 +480,43 @@ export async function createOrUpdateFroxlorCustomer(formData: FormData) {
     }
 
     const result = await client.updateCustomer(parseInt(existingCustomerId), updateData);
+
+    // Update FTP password if provided (for existing customers)
+    if (result.success && ftp_password && ftp_password.trim()) {
+      try {
+        // Small delay to ensure Froxlor has finished updating
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Get FTP accounts for the customer
+        const ftpAccounts = await client.getCustomerFtpAccounts(parseInt(existingCustomerId));
+
+        if (ftpAccounts.length > 0) {
+          // Update the first (primary) FTP account with the new password
+          const primaryFtpAccount = ftpAccounts[0];
+          await client.updateFtpPassword(primaryFtpAccount.id, parseInt(existingCustomerId), ftp_password);
+          console.log(`✓ FTP password updated for account ${primaryFtpAccount.username}`);
+
+          // Save FTP password in database for later retrieval
+          const dbClient = await prisma.client.findFirst({
+            where: { customerNo: customerNumber }
+          });
+
+          if (dbClient) {
+            const existingPasswords = (dbClient.ftpPasswords as Record<string, string>) || {};
+            const ftpPasswords = { ...existingPasswords, [primaryFtpAccount.id.toString()]: ftp_password };
+            await prisma.client.update({
+              where: { id: dbClient.id },
+              data: { ftpPasswords }
+            });
+            console.log(`✓ FTP password saved to database for client ${dbClient.name}`);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to update FTP password:', error);
+        // Don't fail the entire customer update if FTP password update fails
+      }
+    }
+
     return result;
   }
 

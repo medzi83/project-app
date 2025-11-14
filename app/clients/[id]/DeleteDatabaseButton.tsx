@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { deleteDatabase } from "./database-actions";
 
@@ -35,9 +35,13 @@ export function DeleteDatabaseButton({ serverId, databaseName, clientId }: Props
       onClick={handleDelete}
       disabled={deleting}
       className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 h-7 px-2"
-      title="Datenbank löschen"
+      title={deleting ? "Löscht..." : "Datenbank löschen"}
     >
-      <Trash2 className="h-3.5 w-3.5" />
+      {deleting ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Trash2 className="h-3.5 w-3.5" />
+      )}
     </Button>
   );
 }

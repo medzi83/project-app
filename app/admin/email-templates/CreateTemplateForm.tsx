@@ -36,7 +36,7 @@ export default function CreateTemplateForm() {
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             required
-            className="w-full rounded border px-3 py-2 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             placeholder="z. B. onboarding_willkommen"
           />
         </Field>
@@ -46,7 +46,7 @@ export default function CreateTemplateForm() {
             value={category}
             onChange={(event) => setCategory(event.target.value as EmailTemplateCategoryKey)}
             required
-            className="w-full rounded border px-3 py-2 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           >
             {Object.entries(EMAIL_TEMPLATE_CATEGORIES).map(([key, { label }]) => (
               <option key={key} value={key}>
@@ -61,7 +61,7 @@ export default function CreateTemplateForm() {
             value={subject}
             onChange={(event) => setSubject(event.target.value)}
             required
-            className="w-full rounded border px-3 py-2 text-sm"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             placeholder="Willkommen bei Projektverwaltung"
           />
         </Field>
@@ -77,7 +77,7 @@ export default function CreateTemplateForm() {
           <button
             type="button"
             onClick={openPreview}
-            className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="rounded border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             Vorschau anzeigen
           </button>
@@ -87,46 +87,46 @@ export default function CreateTemplateForm() {
 
       {previewOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 p-4"
           role="dialog"
           aria-modal="true"
           onClick={closePreview}
         >
           <div
-            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white dark:bg-gray-900 p-6 shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold">Vorlagenvorschau</h3>
-                <p className="text-sm text-gray-500">
+                <h3 className="text-lg font-semibold text-foreground">Vorlagenvorschau</h3>
+                <p className="text-sm text-muted-foreground">
                   Platzhalter werden in der finalen E-Mail automatisch ersetzt.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={closePreview}
-                className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
+                className="rounded border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
               >
                 Schliessen
               </button>
             </div>
             <div className="mt-4 space-y-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Titel</p>
-                <p className="text-sm text-gray-800">{title || "-"}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Titel</p>
+                <p className="text-sm text-foreground">{title || "-"}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Kategorie</p>
-                <p className="text-sm text-gray-800">{EMAIL_TEMPLATE_CATEGORIES[category].label}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kategorie</p>
+                <p className="text-sm text-foreground">{EMAIL_TEMPLATE_CATEGORIES[category].label}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Betreff</p>
-                <p className="text-sm text-gray-800">{subject || "-"}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Betreff</p>
+                <p className="text-sm text-foreground">{subject || "-"}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">HTML-Inhalt</p>
-                <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-4 text-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">HTML-Inhalt</p>
+                <div className="mt-2 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4 text-sm">
                   <div dangerouslySetInnerHTML={{ __html: previewBody }} />
                 </div>
               </div>
@@ -141,7 +141,7 @@ export default function CreateTemplateForm() {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="flex flex-col gap-1 text-sm">
-      <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</span>
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
       {children}
     </label>
   );
