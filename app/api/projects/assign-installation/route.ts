@@ -102,50 +102,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Option 2: Create new installation with custom path
+    // Option 2: Set custom demo link (full URL)
     if (customPath) {
-      // Get default domain from mail server
-      const mailServer = project.client?.agency?.mailServers?.[0];
-      if (!mailServer?.host) {
-        return NextResponse.json(
-          { error: "Keine Standard-Domain gefunden (Mail-Server fehlt)" },
-          { status: 400 }
-        );
-      }
-
-      const defaultDomain = mailServer.host;
-      const installUrl = `${defaultDomain}${customPath}`;
-      const folderName = customPath.replace(/^\//, ""); // Remove leading slash
-
-      // For custom installations, we need a server - get the first available server
-      const server = await prisma.server.findFirst({
-        orderBy: { createdAt: "desc" },
-      });
-
-      if (!server) {
-        return NextResponse.json(
-          { error: "Kein Server gefunden für die Installation" },
-          { status: 400 }
-        );
-      }
-
-      // Create new installation
-      const newInstallation = await prisma.joomlaInstallation.create({
-        data: {
-          clientId: project.clientId,
+      // customPath is now the full demo link URL
+      // Update the project's demoLink field instead of creating a Joomla installation
+      await prisma.projectWebsite.upsert({
+        where: { projectId },
+        update: {
+          demoLink: customPath,
+        },
+        create: {
           projectId,
-          serverId: server.id,
-          customerNo: project.client?.customerNo || "",
-          folderName,
-          installPath: `/var/www/${folderName}`,
-          installUrl,
-          standardDomain: defaultDomain,
-          databaseName: `db_${folderName}`,
-          databasePassword: Math.random().toString(36).substring(2, 15),
+          demoLink: customPath,
         },
       });
 
-      // Check for email triggers after installation creation
+      // Check for email triggers after demo link is set
       let queueIds: string[] = [];
       if (project.website?.demoDate) {
         try {
@@ -161,7 +133,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        installationId: newInstallation.id,
+        demoLink: customPath,
         queueIds: queueIds.length > 0 ? queueIds : undefined,
       });
     }

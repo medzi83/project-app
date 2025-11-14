@@ -24,9 +24,10 @@ type Props = {
   clientId: string;
   authorizedPersons: AuthorizedPerson[];
   isAdmin: boolean;
+  canEdit?: boolean; // Allow editing for Admins and Agents
 };
 
-export function AuthorizedPersons({ clientId, authorizedPersons, isAdmin }: Props) {
+export function AuthorizedPersons({ clientId, authorizedPersons, isAdmin, canEdit = isAdmin }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -124,8 +125,8 @@ export function AuthorizedPersons({ clientId, authorizedPersons, isAdmin }: Prop
     }
   };
 
-  if (!isAdmin) {
-    // Non-admin users can only view
+  if (!canEdit) {
+    // Users without edit permission can only view
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Berechtigte Personen</h3>

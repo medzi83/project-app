@@ -557,8 +557,8 @@ export default async function ProjectDetail({ params }: Props) {
               </dd>
             </div>
 
-            {/* Joomla Installation */}
-            {project.joomlaInstallations && project.joomlaInstallations.length > 0 && (
+            {/* Joomla Installation - Only show if no custom demoLink is set */}
+            {!website?.demoLink && project.joomlaInstallations && project.joomlaInstallations.length > 0 && (
               <div>
                 <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   Joomla Installation{project.joomlaInstallations.length > 1 ? "en" : ""}
@@ -603,6 +603,45 @@ export default async function ProjectDetail({ params }: Props) {
                       </div>
                     </div>
                   ))}
+                </dd>
+              </div>
+            )}
+
+            {/* Custom Demo Link - Only show if demoLink is set */}
+            {website?.demoLink && (
+              <div>
+                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  Benutzerdefinierter Demo-Link
+                </dt>
+                <dd>
+                  <div className="rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50/40 dark:bg-blue-900/20 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {website.demoLink}
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 flex-shrink-0">
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                            </svg>
+                            Demo-Link
+                          </span>
+                        </div>
+                      </div>
+                      <a
+                        href={website.demoLink.startsWith("http") ? website.demoLink : `https://${website.demoLink}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition text-xs font-medium whitespace-nowrap flex-shrink-0"
+                      >
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        Öffnen
+                      </a>
+                    </div>
+                  </div>
                 </dd>
               </div>
             )}
@@ -860,23 +899,22 @@ export default async function ProjectDetail({ params }: Props) {
             <div>
               <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Demo-Link</dt>
               <dd className="mt-1 text-sm space-y-3">
-                {/* Editable custom demo link */}
-                <div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Benutzerdefinierter Link:</div>
-                  <InlineCell
-                    target="website"
-                    id={project.id}
-                    name="demoLink"
-                    type="text"
-                    display={website?.demoLink ?? "-"}
-                    value={website?.demoLink ?? ""}
-                    canEdit={canEdit}
-                    displayClassName="text-blue-600 dark:text-blue-400"
-                  />
-                </div>
-
-                {/* Show Joomla installations if they exist */}
-                {project.joomlaInstallations && project.joomlaInstallations.length > 0 && (
+                {/* Show custom demo link OR Joomla installations (not both) */}
+                {website?.demoLink ? (
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Benutzerdefinierter Link:</div>
+                    <InlineCell
+                      target="website"
+                      id={project.id}
+                      name="demoLink"
+                      type="text"
+                      display={website.demoLink}
+                      value={website.demoLink}
+                      canEdit={canEdit}
+                      displayClassName="text-blue-600 dark:text-blue-400"
+                    />
+                  </div>
+                ) : project.joomlaInstallations && project.joomlaInstallations.length > 0 ? (
                   <div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Joomla Installationen:</div>
                     <div className="space-y-1">
@@ -897,6 +935,20 @@ export default async function ProjectDetail({ params }: Props) {
                         </div>
                       ))}
                     </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Benutzerdefinierter Link:</div>
+                    <InlineCell
+                      target="website"
+                      id={project.id}
+                      name="demoLink"
+                      type="text"
+                      display="-"
+                      value=""
+                      canEdit={canEdit}
+                      displayClassName="text-gray-400"
+                    />
                   </div>
                 )}
               </dd>

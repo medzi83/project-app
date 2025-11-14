@@ -20,6 +20,7 @@ import { FtpPasswordEditor } from "./FtpPasswordEditor";
 import { DomainProjectAssignment } from "./DomainProjectAssignment";
 import { DeleteInstallationButton } from "./DeleteInstallationButton";
 import { DeleteProjectButton } from "./DeleteProjectButton";
+import { DeleteDatabaseButton } from "./DeleteDatabaseButton";
 import { isFavoriteClient } from "@/app/actions/favorites";
 import { AuthorizedPersons } from "./AuthorizedPersons";
 
@@ -156,6 +157,13 @@ export default async function ClientDetailPage({ params }: Props) {
                   },
                   take: 1,
                 },
+              },
+            },
+            agent: {
+              select: {
+                id: true,
+                name: true,
+                fullName: true,
               },
             },
             emailLogs: {
@@ -627,6 +635,7 @@ export default async function ClientDetailPage({ params }: Props) {
   const isAdmin = role === "ADMIN";
   const isSales = role === "SALES";
   const canSendEmail = role === "ADMIN" || role === "AGENT";
+  const canEditAuthorizedPersons = role === "ADMIN" || role === "AGENT";
 
   // Check if client is favorited by current user
   const isFavorite = await isFavoriteClient(client.id);
@@ -712,6 +721,7 @@ export default async function ClientDetailPage({ params }: Props) {
             clientId={client.id}
             authorizedPersons={client.authorizedPersons}
             isAdmin={isAdmin}
+            canEdit={canEditAuthorizedPersons}
           />
         </section>
       </div>
@@ -864,6 +874,11 @@ export default async function ClientDetailPage({ params }: Props) {
                       {statusDate && (
                         <div className="text-xs text-muted-foreground mb-2">
                           seit {formatDateOnly(statusDate)}
+                        </div>
+                      )}
+                      {project.agent && (
+                        <div className="text-xs text-muted-foreground mb-1">
+                          <span className="font-medium">Agent:</span> {project.agent.fullName || project.agent.name}
                         </div>
                       )}
                       {project.website && project.website.domain && (
@@ -1107,7 +1122,7 @@ export default async function ClientDetailPage({ params }: Props) {
             </div>
           ) : serverDataList.length === 1 ? (
             // Single server: Show directly without nested tabs
-            <div className="space-y-4">
+            <div className="space-y-4 max-w-5xl">
               {(() => {
                 const serverData = serverDataList[0];
                 return (
@@ -1131,16 +1146,70 @@ export default async function ClientDetailPage({ params }: Props) {
                       </div>
                     )}
 
-                    {/* Froxlor Customer Data */}
-                    {serverData.customer && (
+                    {/* Grid Layout for Cards */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* Froxlor Customer Data */}
                       <section className="rounded-lg border border-border bg-card p-4">
-                        <FroxlorDataEditor
-                          customer={serverData.customer}
-                          serverId={serverData.server.id}
-                          isAdmin={isAdmin}
-                        />
+                        {serverData.customer ? (
+                          <FroxlorDataEditor
+                            customer={serverData.customer}
+                            serverId={serverData.server.id}
+                            isAdmin={isAdmin}
+                          />
+                        ) : (
+                          <>
+                            <h2 className="text-base font-medium text-foreground mb-2">Kundendaten</h2>
+                            <p className="text-sm text-muted-foreground">Keine Kundendaten verfügbar</p>
+                          </>
+                        )}
                       </section>
-                    )}
+
+                      {/* Databases */}
+                      <section className="rounded-lg border border-border bg-card p-4">
+                        <h2 className="text-base font-medium text-foreground mb-3">
+                          Datenbanken ({serverData.databases.length})
+                        </h2>
+                        {serverData.databases.length > 0 ? (
+                          <div className="space-y-2">
+                            {serverData.databases.map((db) => (
+                              <div key={db.id} className="rounded border border-border p-3 bg-muted/50">
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="font-medium text-sm text-foreground">{db.databasename}</span>
+                                    </div>
+                                    {db.description && (
+                                      <div className="text-xs text-muted-foreground mb-2">{db.description}</div>
+                                    )}
+                                    <div className="space-y-1.5 text-xs">
+                                      <div>
+                                        <span className="text-muted-foreground">DB-Server: </span>
+                                        <span className="text-foreground">{db.dbserver === "0" || db.dbserver === 0 ? "local" : db.dbserver}</span>
+                                      </div>
+                                      {db.password && (
+                                        <div>
+                                          <span className="text-muted-foreground">Passwort: </span>
+                                          <span className="font-mono text-foreground">{db.password}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {isAdmin && (
+                                    <DeleteDatabaseButton
+                                      serverId={serverData.server.id}
+                                      databaseName={db.databasename}
+                                      clientId={client.id}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Keine Datenbanken vorhanden</p>
+                        )}
+                      </section>
+                    </div>
 
                     {/* Domains */}
                     {serverData.domains.length > 0 && (
@@ -1335,21 +1404,32 @@ export default async function ClientDetailPage({ params }: Props) {
                         <div className="space-y-2">
                           {serverData.databases.map((db) => (
                             <div key={db.id} className="rounded border border-border p-2.5 bg-muted/50">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-sm text-foreground">{db.databasename}</span>
-                              </div>
-                              {db.description && (
-                                <div className="text-xs text-muted-foreground mb-1">{db.description}</div>
-                              )}
-                              <div className="space-y-1">
-                                <div className="text-[11px] text-muted-foreground">
-                                  DB-Server: {db.dbserver === "0" || db.dbserver === 0 ? "local" : db.dbserver}
-                                </div>
-                                {db.password && (
-                                  <div className="text-[11px]">
-                                    <span className="text-muted-foreground">Passwort: </span>
-                                    <span className="font-mono text-foreground">{db.password}</span>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium text-sm text-foreground">{db.databasename}</span>
                                   </div>
+                                  {db.description && (
+                                    <div className="text-xs text-muted-foreground mb-1">{db.description}</div>
+                                  )}
+                                  <div className="space-y-1">
+                                    <div className="text-[11px] text-muted-foreground">
+                                      DB-Server: {db.dbserver === "0" || db.dbserver === 0 ? "local" : db.dbserver}
+                                    </div>
+                                    {db.password && (
+                                      <div className="text-[11px]">
+                                        <span className="text-muted-foreground">Passwort: </span>
+                                        <span className="font-mono text-foreground">{db.password}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                {isAdmin && (
+                                  <DeleteDatabaseButton
+                                    serverId={serverData.server.id}
+                                    databaseName={db.databasename}
+                                    clientId={client.id}
+                                  />
                                 )}
                               </div>
                             </div>

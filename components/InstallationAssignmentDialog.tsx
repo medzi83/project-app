@@ -81,14 +81,14 @@ export function InstallationAssignmentDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-2xl rounded-xl bg-white dark:bg-gray-800 shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="border-b border-gray-200 px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <h2 className="text-xl font-bold text-gray-900">
-            Demo-Installation zuweisen
+        <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            Demo-Link zuweisen
           </h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Bitte wähle eine Installation aus oder gib einen benutzerdefinierten Pfad ein.
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+            Bitte wähle eine Installation aus oder gib einen benutzerdefinierten Demo-Link ein.
           </p>
         </div>
 
@@ -102,7 +102,7 @@ export function InstallationAssignmentDialog({
 
           {availableInstallations.length > 0 ? (
             <div className="space-y-3">
-              <h3 className="font-semibold text-gray-900">
+              <h3 className="font-semibold text-gray-900 dark:text-white">
                 Verfügbare Installationen
               </h3>
               <div className="space-y-2">
@@ -111,8 +111,8 @@ export function InstallationAssignmentDialog({
                     key={installation.id}
                     className={`flex items-start gap-3 rounded-lg border-2 p-4 cursor-pointer transition-all ${
                       selectedInstallationId === installation.id
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                        ? "border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/30"
+                        : "border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-700"
                     }`}
                   >
                     <input
@@ -124,10 +124,10 @@ export function InstallationAssignmentDialog({
                       className="mt-1"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-gray-900 dark:text-white">
                         {installation.folderName}
                       </div>
-                      <div className="text-sm text-gray-600 break-all">
+                      <div className="text-sm text-gray-600 dark:text-gray-300 break-all">
                         {installation.installUrl}
                       </div>
                     </div>
@@ -137,38 +137,38 @@ export function InstallationAssignmentDialog({
             </div>
           ) : (
             <div className="space-y-3">
-              <h3 className="font-semibold text-gray-900">
-                Benutzerdefinierte Installation
+              <h3 className="font-semibold text-gray-900 dark:text-white">
+                Benutzerdefinierter Demo-Link
               </h3>
-              <p className="text-sm text-gray-600">
-                Keine freien Installationen verfügbar. Bitte gib einen benutzerdefinierten Pfad ein.
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Keine freien Installationen verfügbar. Bitte gib einen benutzerdefinierten Demo-Link ein.
               </p>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-700 font-mono text-sm bg-gray-100 px-3 py-2 rounded border border-gray-300">
-                  {defaultDomain}
-                </span>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Demo-Link URL:
+                </label>
                 <input
                   type="text"
                   value={customPath}
                   onChange={(e) => setCustomPath(e.target.value)}
-                  placeholder="/beispiel-ordner"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                  placeholder="https://demo.beispiel.de/ordner"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 font-mono text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                 />
               </div>
-              <div className="text-xs text-gray-500">
-                Vollständige URL: {defaultDomain}{customPath}
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Gib die vollständige URL zum Demo-Link ein (z.B. https://demo.beispiel.de/ordner)
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex items-center justify-end gap-3">
+        <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 bg-gray-50 dark:bg-gray-700 flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 disabled:opacity-50 transition-colors"
           >
             Abbrechen
           </button>
@@ -179,7 +179,7 @@ export function InstallationAssignmentDialog({
               isSubmitting ||
               (availableInstallations.length === 0 && !customPath.trim())
             }
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 transition-colors"
           >
             {isSubmitting ? "Speichere..." : "Speichern"}
           </button>

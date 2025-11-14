@@ -236,12 +236,12 @@ export default function JoomlaInstallForm({
   };
 
   return (
-    <div className="rounded-lg border bg-white p-6">
-      <h3 className="mb-4 text-lg font-semibold">Joomla installieren</h3>
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+      <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">Joomla installieren</h3>
 
-      <div className="mb-4 rounded bg-blue-50 p-3 text-sm">
-        <div className="font-medium text-blue-900 mb-1">Kundeninformationen</div>
-        <div className="space-y-1 text-blue-800">
+      <div className="mb-4 rounded bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 p-3 text-sm">
+        <div className="font-medium text-blue-900 dark:text-blue-200 mb-1">Kundeninformationen</div>
+        <div className="space-y-1 text-blue-800 dark:text-blue-300">
           <div>Kundennummer: {customerNo}</div>
           <div>Document Root: {customerDocumentRoot}</div>
           <div>Standard-Domain: {standardDomain}</div>
@@ -251,14 +251,14 @@ export default function JoomlaInstallForm({
       <form onSubmit={handleInstall} className="space-y-4">
         {clientProjects.length > 0 && (
           <div>
-            <label htmlFor="projectId" className="block text-sm font-medium mb-2">
+            <label htmlFor="projectId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Projekt zuordnen (optional)
             </label>
             <select
               id="projectId"
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full rounded border p-2"
+              className="w-full rounded border border-gray-300 dark:border-gray-600 p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               disabled={installing || extracting}
             >
               <option value="">Kein Projekt zuordnen</option>
@@ -268,13 +268,13 @@ export default function JoomlaInstallForm({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Wählen Sie ein Projekt aus, um die Installation automatisch zuzuordnen. Die Zeitangabe zeigt, wann das Projekt zuletzt aktualisiert wurde.
             </p>
           </div>
         )}
         <div>
-          <label htmlFor="folderName" className="block text-sm font-medium mb-2">
+          <label htmlFor="folderName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Ordnername für die Installation
           </label>
           <input
@@ -283,17 +283,17 @@ export default function JoomlaInstallForm({
             value={folderName}
             onChange={(e) => setFolderName(e.target.value)}
             placeholder="z.B. website2024"
-            className="w-full rounded border p-2"
+            className="w-full rounded border border-gray-300 dark:border-gray-600 p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
             disabled={installing}
             required
           />
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Nur Buchstaben, Zahlen, Bindestriche und Unterstriche erlaubt
           </p>
           {folderName && (
-            <div className="mt-2 rounded bg-gray-50 p-2 text-sm">
-              <span className="text-gray-600">Installations-URL:</span>{" "}
-              <span className="font-mono text-blue-600">
+            <div className="mt-2 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-2 text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Installations-URL:</span>{" "}
+              <span className="font-mono text-blue-600 dark:text-blue-400">
                 {standardDomain}/{folderName}
               </span>
             </div>
@@ -301,17 +301,17 @@ export default function JoomlaInstallForm({
         </div>
 
         <div>
-          <label htmlFor="mysqlServer" className="block text-sm font-medium mb-2">
-            MySQL-Server für die Datenbank {selectedMysqlServerId === null && <span className="text-red-500">*</span>}
+          <label htmlFor="mysqlServer" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            MySQL-Server für die Datenbank {selectedMysqlServerId === null && <span className="text-red-500 dark:text-red-400">*</span>}
           </label>
           {mysqlServers.length === 0 ? (
-            <div className="text-sm text-gray-500">Lade MySQL-Server...</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Lade MySQL-Server...</div>
           ) : (
             <select
               id="mysqlServer"
               value={selectedMysqlServerId !== null ? selectedMysqlServerId : ""}
               onChange={(e) => setSelectedMysqlServerId(parseInt(e.target.value))}
-              className="w-full rounded border p-2"
+              className="w-full rounded border border-gray-300 dark:border-gray-600 p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               disabled={installing || extracting}
               required
             >
@@ -323,13 +323,13 @@ export default function JoomlaInstallForm({
               ))}
             </select>
           )}
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Wählen Sie den MySQL-Server aus, auf dem die Joomla-Datenbank erstellt werden soll.
           </p>
         </div>
 
         <div>
-          <label htmlFor="dbPassword" className="block text-sm font-medium mb-2">
+          <label htmlFor="dbPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Datenbank-Passwort
           </label>
           <div className="flex gap-2">
@@ -339,7 +339,7 @@ export default function JoomlaInstallForm({
               value={dbPassword}
               onChange={(e) => setDbPassword(e.target.value)}
               placeholder="Sicheres Passwort für die MySQL-Datenbank"
-              className="flex-1 rounded border p-2 font-mono"
+              className="flex-1 rounded border border-gray-300 dark:border-gray-600 p-2 font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
               disabled={installing}
               required
             />
@@ -347,7 +347,7 @@ export default function JoomlaInstallForm({
               type="button"
               onClick={() => setDbPassword(generatePassword())}
               disabled={installing}
-              className="px-4 py-2 rounded border border-blue-600 bg-blue-50 text-blue-700 hover:bg-blue-100 transition font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="px-4 py-2 rounded border border-blue-600 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               title="Neues Passwort generieren"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -355,20 +355,20 @@ export default function JoomlaInstallForm({
               </svg>
             </button>
           </div>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Automatisch generiert: 10 Zeichen mit Groß-/Kleinbuchstaben und Zahlen. Sie können es anpassen oder neu generieren.
           </p>
         </div>
 
         {(installing || extracting) && (
-          <div className="rounded border border-blue-200 bg-blue-50 p-4 text-sm">
+          <div className="rounded border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 p-4 text-sm">
             <div className="flex items-center gap-3">
-              <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+              <div className="animate-spin h-5 w-5 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full"></div>
               <div>
-                <div className="font-medium text-blue-900">
+                <div className="font-medium text-blue-900 dark:text-blue-200">
                   {installing ? "Installation wird vorbereitet..." : "Backup wird extrahiert..."}
                 </div>
-                <div className="text-blue-700 text-xs mt-1">{currentStep}</div>
+                <div className="text-blue-700 dark:text-blue-300 text-xs mt-1">{currentStep}</div>
               </div>
             </div>
           </div>
@@ -378,8 +378,8 @@ export default function JoomlaInstallForm({
           <div
             className={`rounded border p-3 text-sm ${
               result.success
-                ? "border-green-200 bg-green-50 text-green-800"
-                : "border-red-200 bg-red-50 text-red-800"
+                ? "border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200"
+                : "border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300"
             }`}
           >
             <div className="font-medium mb-1">
@@ -387,13 +387,13 @@ export default function JoomlaInstallForm({
             </div>
             <div>{result.message}</div>
             {result.success && result.databaseName && (
-              <div className="mt-3 space-y-2 pt-2 border-t border-green-200">
-                <div className="font-mono text-xs bg-white rounded p-2">
+              <div className="mt-3 space-y-2 pt-2 border-t border-green-200 dark:border-green-700">
+                <div className="font-mono text-xs bg-white dark:bg-gray-800 border border-green-200 dark:border-green-700 rounded p-2 text-gray-900 dark:text-gray-100">
                   <div><strong>Datenbank:</strong> {result.databaseName}</div>
                   <div><strong>Benutzer:</strong> {result.databaseName}</div>
                   <div><strong>Passwort:</strong> {result.databasePassword}</div>
                   {result.filesExtracted && (
-                    <div className="mt-2 pt-2 border-t border-green-200">
+                    <div className="mt-2 pt-2 border-t border-green-200 dark:border-green-700">
                       <div><strong>Extrahierte Dateien:</strong> {result.filesExtracted}</div>
                       {result.bytesProcessed && (
                         <div><strong>Verarbeitete Daten:</strong> {formatBytes(result.bytesProcessed)}</div>
@@ -409,7 +409,7 @@ export default function JoomlaInstallForm({
                   href={result.installUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block rounded bg-green-700 px-4 py-2 text-white font-medium hover:bg-green-800"
+                  className="inline-block rounded bg-green-700 dark:bg-green-600 px-4 py-2 text-white font-medium hover:bg-green-800 dark:hover:bg-green-700 transition-colors"
                 >
                   → Webseite öffnen
                 </a>
@@ -425,8 +425,8 @@ export default function JoomlaInstallForm({
         </div>
       </form>
 
-      <div className="mt-6 rounded bg-gray-50 p-4 text-xs text-gray-600">
-        <div className="font-medium mb-2">Was passiert bei der automatischen Installation?</div>
+      <div className="mt-6 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-4 text-xs text-gray-600 dark:text-gray-400">
+        <div className="font-medium text-gray-700 dark:text-gray-300 mb-2">Was passiert bei der automatischen Installation?</div>
         <ol className="list-decimal list-inside space-y-1">
           <li>Eine MySQL-Datenbank wird in Froxlor automatisch angelegt</li>
           <li>Ein Ordner wird im Document Root des Kunden erstellt</li>

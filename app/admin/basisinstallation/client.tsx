@@ -273,14 +273,14 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
 
         {/* Error Messages */}
         {servers.length === 0 && (
-          <div className="mb-6 rounded-lg bg-yellow-50 border border-yellow-200 p-4">
+          <div className="mb-6 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4">
             <div className="flex items-start gap-3">
-              <svg className="h-5 w-5 text-yellow-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <div>
-                <p className="font-medium text-yellow-800">Keine Server konfiguriert</p>
-                <p className="mt-1 text-sm text-yellow-700">
+                <p className="font-medium text-yellow-800 dark:text-yellow-200">Keine Server konfiguriert</p>
+                <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
                   Bitte legen Sie zunächst Server in der{" "}
                   <a href="/admin/server" className="font-medium underline">
                     Serververwaltung
@@ -331,14 +331,14 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                     </div>
 
                     {showClientDropdown && clientSearchTerm && (
-                      <div className="absolute z-10 mt-2 w-full rounded-lg border border-gray-300 bg-white shadow-lg max-h-64 overflow-y-auto">
+                      <div className="absolute z-10 mt-2 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg max-h-64 overflow-y-auto">
                         {filteredClients.length > 0 ? (
                           <>
                             {filteredClients.map((client) => (
                               <button
                                 key={client.id}
                                 type="button"
-                                className="w-full text-left px-4 py-3 hover:bg-blue-50 transition border-b border-gray-100 last:border-b-0"
+                                className="w-full text-left px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                                 onClick={() => {
                                   setSelectedClient(client.id);
                                   setIsNewCustomer(false); // Deaktiviere "Neuer Kunde"-Modus
@@ -348,15 +348,15 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                                   setShowClientDropdown(false);
                                 }}
                               >
-                                <div className="font-medium text-gray-900">{client.name}</div>
+                                <div className="font-medium text-gray-900 dark:text-gray-100">{client.name}</div>
                                 {client.customerNo && (
-                                  <div className="text-sm text-gray-500">Kundennummer: {client.customerNo}</div>
+                                  <div className="text-sm text-gray-500 dark:text-gray-400">Kundennummer: {client.customerNo}</div>
                                 )}
                               </button>
                             ))}
                           </>
                         ) : (
-                          <div className="px-4 py-3 text-sm text-gray-500">
+                          <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                             Keine Kunden gefunden
                           </div>
                         )}
@@ -365,12 +365,12 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                   </div>
 
                   {selectedClient && client && (
-                    <div className="mt-3 rounded-lg bg-blue-50 border border-blue-200 p-3">
+                    <div className="mt-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-blue-900">{client.name}</p>
+                          <p className="font-medium text-blue-900 dark:text-blue-200">{client.name}</p>
                           {client.customerNo && (
-                            <p className="text-sm text-blue-700">Kundennummer: {client.customerNo}</p>
+                            <p className="text-sm text-blue-700 dark:text-blue-300">Kundennummer: {client.customerNo}</p>
                           )}
                         </div>
                         <button
@@ -379,7 +379,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                             setSelectedClient("");
                             setClientSearchTerm("");
                           }}
-                          className="text-blue-600 hover:text-blue-800 p-1"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
                           title="Auswahl aufheben"
                         >
                           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -390,8 +390,8 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                     </div>
                   )}
 
-                  <div className="mt-3 flex items-start gap-2 text-sm text-gray-500">
-                    <svg className="h-5 w-5 text-gray-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="mt-3 flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <svg className="h-5 w-5 text-gray-400 dark:text-gray-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <p>
@@ -408,7 +408,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                           setIsNewCustomer(true);
                           setClientSearchTerm("");
                         }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-50 border-2 border-green-200 text-green-700 rounded-lg font-medium hover:bg-green-100 hover:border-green-300 transition"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-900/30 border-2 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 rounded-lg font-medium hover:bg-green-100 dark:hover:bg-green-900/40 hover:border-green-300 dark:hover:border-green-600 transition"
                       >
                         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -420,13 +420,13 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
 
                   {/* Anzeige wenn neuer Kunde-Modus aktiv */}
                   {isNewCustomer && !selectedClient && (
-                    <div className="mt-3 rounded-lg bg-green-50 border border-green-200 p-3">
+                    <div className="mt-3 rounded-lg bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 p-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                           </svg>
-                          <p className="font-medium text-green-900">Neuen Kunden anlegen</p>
+                          <p className="font-medium text-green-900 dark:text-green-200">Neuen Kunden anlegen</p>
                         </div>
                         <button
                           type="button"
@@ -434,7 +434,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                             setIsNewCustomer(false);
                             setSelectedServer("");
                           }}
-                          className="text-green-600 hover:text-green-800 p-1"
+                          className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 p-1"
                           title="Abbrechen"
                         >
                           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -442,7 +442,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                           </svg>
                         </button>
                       </div>
-                      <p className="text-sm text-green-700 mt-1">
+                      <p className="text-sm text-green-700 dark:text-green-300 mt-1">
                         Sie können jetzt einen Server auswählen und in Schritt 2 die Kundendaten eingeben.
                       </p>
                     </div>
@@ -451,8 +451,8 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
 
                 {/* Server Availability Check */}
                 {(selectedClient || isNewCustomer) && (
-                  <div className="border-t pt-6">
-                    <h3 className="text-sm font-medium text-gray-700 mb-4">
+                  <div className="border-t dark:border-gray-700 pt-6">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
                       {serversWithCustomer.length > 0
                         ? `Kunde gefunden auf ${serversWithCustomer.length} Server${serversWithCustomer.length > 1 ? 'n' : ''}`
                         : client?.customerNo
@@ -461,27 +461,27 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                     </h3>
 
                     {checkingServers ? (
-                      <div className="flex items-center gap-3 text-gray-600 py-4">
-                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+                      <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400 py-4">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 dark:border-gray-600 border-t-blue-600 dark:border-t-blue-400"></div>
                         <span>Prüfe Server...</span>
                       </div>
                     ) : (
                       <>
                         {serversWithCustomer.length > 0 && !showAllServers && (
-                          <div className="mb-4 rounded-lg bg-green-50 border border-green-200 p-3">
+                          <div className="mb-4 rounded-lg bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 p-3">
                             <div className="flex items-start gap-2">
-                              <svg className="h-5 w-5 text-green-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                               <div className="flex-1">
-                                <p className="text-sm text-green-700">
+                                <p className="text-sm text-green-700 dark:text-green-300">
                                   Kunde bereits vorhanden - Sie können diesen Server für die weitere Konfiguration verwenden
                                 </p>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => setShowAllServers(true)}
-                                className="text-sm text-green-800 hover:text-green-900 font-medium underline whitespace-nowrap"
+                                className="text-sm text-green-800 dark:text-green-200 hover:text-green-900 dark:hover:text-green-100 font-medium underline whitespace-nowrap"
                               >
                                 Anderen Server wählen
                               </button>
@@ -490,20 +490,20 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                         )}
 
                         {serversWithCustomer.length > 0 && showAllServers && (
-                          <div className="mb-4 rounded-lg bg-blue-50 border border-blue-200 p-3">
+                          <div className="mb-4 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 p-3">
                             <div className="flex items-start gap-2">
-                              <svg className="h-5 w-5 text-blue-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                               <div className="flex-1">
-                                <p className="text-sm text-blue-700">
+                                <p className="text-sm text-blue-700 dark:text-blue-300">
                                   Alle Server werden angezeigt - Der Kunde existiert bereits auf markierten Servern
                                 </p>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => setShowAllServers(false)}
-                                className="text-sm text-blue-800 hover:text-blue-900 font-medium underline whitespace-nowrap"
+                                className="text-sm text-blue-800 dark:text-blue-200 hover:text-blue-900 dark:hover:text-blue-100 font-medium underline whitespace-nowrap"
                               >
                                 Nur vorhandene
                               </button>
@@ -530,33 +530,33 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                               disabled={!!error}
                               className={`w-full text-left rounded-lg border-2 p-4 transition ${
                                 selectedServer === server.id
-                                  ? 'border-blue-600 bg-blue-50'
+                                  ? 'border-blue-600 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/30'
                                   : error
-                                  ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-                                  : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                                  ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60'
+                                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/20'
                               }`}
                             >
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <p className="font-medium text-gray-900">{server.name}</p>
+                                    <p className="font-medium text-gray-900 dark:text-gray-100">{server.name}</p>
                                     {selectedServer === server.id && (
-                                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                                      <span className="text-xs bg-blue-600 dark:bg-blue-700 text-white px-2 py-0.5 rounded-full">
                                         Ausgewählt
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-sm text-gray-500 mt-0.5">{server.ip}</p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{server.ip}</p>
 
                                   {checking && (
-                                    <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
-                                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-2">
+                                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 dark:border-gray-600 border-t-blue-600 dark:border-t-blue-400"></div>
                                       Prüfe...
                                     </div>
                                   )}
 
                                   {!checking && exists && (
-                                    <div className="flex items-center gap-2 text-sm text-green-700 mt-2">
+                                    <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-300 mt-2">
                                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                       </svg>
@@ -565,7 +565,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                                   )}
 
                                   {!checking && !exists && !error && (
-                                    <div className="flex items-center gap-2 text-sm text-blue-700 mt-2">
+                                    <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300 mt-2">
                                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                       </svg>
@@ -574,7 +574,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                                   )}
 
                                   {!checking && error && (
-                                    <div className="flex items-center gap-2 text-sm text-red-700 mt-2">
+                                    <div className="flex items-center gap-2 text-sm text-red-700 dark:text-red-400 mt-2">
                                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                       </svg>
@@ -591,14 +591,14 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                     )}
 
                     {selectedServer && connectionStatus.result?.success && (
-                      <div className="mt-4 rounded-lg bg-green-50 border border-green-200 p-4">
+                      <div className="mt-4 rounded-lg bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 p-4">
                         <div className="flex items-start gap-3">
-                          <svg className="h-5 w-5 text-green-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <div>
-                            <p className="font-medium text-green-900">Server bereit</p>
-                            <p className="text-sm text-green-700 mt-1">
+                            <p className="font-medium text-green-900 dark:text-green-200">Server bereit</p>
+                            <p className="text-sm text-green-700 dark:text-green-300 mt-1">
                               {servers.find(s => s.id === selectedServer)?.name} ist einsatzbereit
                             </p>
                           </div>
@@ -609,10 +609,10 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                 )}
 
                 {step1Complete && (
-                  <div className="flex justify-end pt-6 border-t">
+                  <div className="flex justify-end pt-6 border-t dark:border-gray-700">
                     <button
                       onClick={() => setCurrentStep(2)}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
+                      className="px-6 py-3 bg-blue-600 dark:bg-blue-700 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition flex items-center gap-2"
                     >
                       Weiter zu Schritt 2
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -637,10 +637,10 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                   loadCustomerDetailsForServer(customerNo);
                 }}
               />
-              <div className="mt-6 flex justify-between border-t pt-4">
+              <div className="mt-6 flex justify-between border-t dark:border-gray-700 pt-4">
                 <button
                   onClick={() => setCurrentStep(1)}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center gap-2"
+                  className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition flex items-center gap-2"
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
@@ -650,7 +650,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                 {(customerDetails || selectedClient === "" || isNewCustomer) && (
                   <button
                     onClick={() => setCurrentStep(3)}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
+                    className="px-6 py-3 bg-blue-600 dark:bg-blue-700 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition flex items-center gap-2"
                   >
                     Weiter zu Schritt 3
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -665,8 +665,8 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
           {currentStep === 3 && step2Complete && (
             <StepContent title="Schritt 3: Joomla installieren">
               {loadingCustomer && (
-                <div className="flex items-center gap-3 text-gray-600 py-8">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+                <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400 py-8">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 dark:border-gray-600 border-t-blue-600 dark:border-t-blue-400"></div>
                   <span>Lade Kundendaten...</span>
                 </div>
               )}
@@ -683,14 +683,14 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
               )}
 
               {!loadingCustomer && !customerDetails && selectedClient && (
-                <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4">
+                <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4">
                   <div className="flex items-start gap-3">
-                    <svg className="h-5 w-5 text-yellow-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     <div>
-                      <p className="font-medium text-yellow-800">Kundendaten nicht verfügbar</p>
-                      <p className="mt-1 text-sm text-yellow-700">
+                      <p className="font-medium text-yellow-800 dark:text-yellow-200">Kundendaten nicht verfügbar</p>
+                      <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
                         Bitte stelle sicher, dass der Kunde in Froxlor existiert oder lege zuerst einen Kunden in Schritt 2 an.
                       </p>
                     </div>
@@ -698,10 +698,10 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                 </div>
               )}
 
-              <div className="mt-6 border-t pt-4">
+              <div className="mt-6 border-t dark:border-gray-700 pt-4">
                 <button
                   onClick={() => setCurrentStep(2)}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center gap-2"
+                  className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition flex items-center gap-2"
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />

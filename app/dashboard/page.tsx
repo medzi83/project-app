@@ -1475,47 +1475,47 @@ export default async function DashboardPage({
         href={entry.projectUrl}
         className={`block rounded-lg border p-3 transition-colors ${
           entry.isWorkStopped
-            ? "border-orange-200 bg-orange-50 hover:border-orange-400"
-            : "border-blue-200 bg-white hover:border-blue-400"
+            ? "border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30 hover:border-orange-400 dark:hover:border-orange-600"
+            : "border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-800 hover:border-blue-400 dark:hover:border-blue-600"
         }`}
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-sm truncate">{entry.customerLabel}</span>
+              <span className="font-semibold text-sm truncate text-gray-900 dark:text-gray-100">{entry.customerLabel}</span>
               {entry.isWorkStopped && (
-                <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-orange-700 bg-orange-200 rounded">
+                <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-orange-700 dark:text-orange-300 bg-orange-200 dark:bg-orange-900/50 rounded">
                   ARBEITSSTOPP
                 </span>
               )}
               {showInstallationStatus && (
                 entry.hasInstallation ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-green-700 bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-300 rounded-full shadow-sm">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:text-green-300 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 border-2 border-green-300 dark:border-green-700 rounded-full shadow-sm">
                     ✓ Demo installiert
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-amber-700 bg-gradient-to-r from-amber-100 to-yellow-100 border-2 border-amber-400 rounded-full shadow-sm">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900/50 dark:to-yellow-900/50 border-2 border-amber-400 dark:border-amber-600 rounded-full shadow-sm">
                     ⚠ Demo fehlt
                   </span>
                 )
               )}
             </div>
             {entry.title && entry.title !== entry.typeLabel && entry.title !== "Website" && entry.title !== "Film" && entry.title !== "Social Media" && (
-              <div className="text-xs text-gray-600 mt-0.5 truncate">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 truncate">
                 {entry.title}
               </div>
             )}
-            <div className="text-xs font-medium text-blue-700 mt-1">
+            <div className="text-xs font-medium text-blue-700 dark:text-blue-400 mt-1">
               {entry.taskType}
               {entry.taskDate && ` · ${formatDateOnly(entry.taskDate)}`}
             </div>
             {showInstallationStatus && entry.hasInstallation && entry.installationUrl && (
-              <div className="text-xs text-green-600 mt-1 truncate">
+              <div className="text-xs text-green-600 dark:text-green-400 mt-1 truncate">
                 Demo-URL: {entry.installationUrl}
               </div>
             )}
           </div>
-          <span className="text-xs text-blue-700 whitespace-nowrap">Details →</span>
+          <span className="text-xs text-blue-700 dark:text-blue-400 whitespace-nowrap">Details →</span>
         </div>
       </Link>
     );
@@ -1580,14 +1580,14 @@ export default async function DashboardPage({
       </div>
 
       {isAgentView && agentAgendaGroups.length > 0 && (
-        <section className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50/50 p-5 sm:p-6 shadow-lg">
+        <section className="rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-gradient-to-br from-blue-50 to-cyan-50/50 dark:from-blue-950/30 dark:to-cyan-950/30 p-5 sm:p-6 shadow-lg">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 text-2xl">📅</div>
             <div className="flex-1">
-              <h2 className="text-lg font-bold bg-gradient-to-r from-blue-700 to-cyan-600 bg-clip-text text-transparent mb-2">
+              <h2 className="text-lg font-bold bg-gradient-to-r from-blue-700 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent mb-2">
                 Aktuelle Termine und Aufgaben ({agentAgendaEntries.length})
               </h2>
-              <p className="text-sm text-blue-900 font-medium mb-4">
+              <p className="text-sm text-blue-900 dark:text-blue-200 font-medium mb-4">
                 {userCategories.includes("WEBSEITE" as AgentCategory) && userCategories.includes("FILM" as AgentCategory)
                   ? "Webtermine, Projekte in Umsetzung, Scouting-/Drehtermine sowie Skript- und Schnitt-Aufgaben."
                   : userCategories.includes("FILM" as AgentCategory)
@@ -1597,7 +1597,7 @@ export default async function DashboardPage({
               <div className="grid gap-4 md:grid-cols-2">
                 {agentAgendaGroups.map((group) => (
                   <div key={group.key}>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-blue-900 mb-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-blue-900 dark:text-blue-200 mb-2">
                       {group.title}
                     </div>
                     <div className="space-y-2">
@@ -1639,9 +1639,9 @@ export default async function DashboardPage({
           );
         })}
 
-        <div className="rounded-2xl bg-gradient-to-br from-slate-600 to-gray-700 p-5 shadow-lg">
-          <div className="text-xs uppercase tracking-wide text-white/80 font-semibold">Letztes Projekt-Update</div>
-          <div className="mt-3 text-base font-bold text-white sm:text-lg">
+        <div className="rounded-2xl bg-gradient-to-br from-slate-600 to-gray-700 dark:from-slate-700 dark:to-gray-800 p-5 shadow-lg">
+          <div className="text-xs uppercase tracking-wide text-white/80 dark:text-white/70 font-semibold">Letztes Projekt-Update</div>
+          <div className="mt-3 text-base font-bold text-white dark:text-gray-100 sm:text-lg">
             {formatDate(mostRecentProject?.updatedAt)}
           </div>
         </div>
@@ -1703,12 +1703,12 @@ export default async function DashboardPage({
                     <Link
                       key={scope}
                       href={withScope(`/film-projects?scope=${scope}`)}
-                      className="group rounded-xl border-2 border-gray-200 bg-gradient-to-br from-white to-gray-50 p-3 shadow-sm hover:shadow-md hover:border-cyan-400 transition-all transform hover:-translate-y-0.5"
+                      className="group rounded-xl border-2 border-gray-200 dark:border-slate-700 bg-gradient-to-br from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 p-3 shadow-sm hover:shadow-md hover:border-cyan-400 dark:hover:border-cyan-600 transition-all transform hover:-translate-y-0.5"
                     >
-                      <div className="text-xs uppercase tracking-wide text-gray-600 font-semibold group-hover:text-cyan-700 transition-colors">
+                      <div className="text-xs uppercase tracking-wide text-gray-600 dark:text-gray-400 font-semibold group-hover:text-cyan-700 dark:group-hover:text-cyan-400 transition-colors">
                         {label}
                       </div>
-                      <div className="mt-2 text-2xl font-bold text-gray-900 group-hover:text-cyan-600 transition-colors">
+                      <div className="mt-2 text-2xl font-bold text-gray-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
                         {count}
                       </div>
                     </Link>

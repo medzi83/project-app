@@ -174,13 +174,13 @@ export function EmailConfirmationDialog({
         </DialogHeader>
 
         {loading && !emailData && (
-          <div className="py-8 text-center text-sm text-gray-500">
+          <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
             Lade E-Mail-Daten...
           </div>
         )}
 
         {error && (
-          <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div className="rounded border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-300">
             {error}
           </div>
         )}
@@ -188,16 +188,16 @@ export function EmailConfirmationDialog({
         {emailData && (
           <div className="space-y-4">
             {/* Project Info */}
-            <div className="rounded border bg-gray-50 p-3">
+            <div className="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
-                  <div className="text-xs text-gray-500 mb-1">Projekt</div>
-                  <div className="font-medium">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Projekt</div>
+                  <div className="font-medium text-gray-900 dark:text-white">
                     {emailData.project.title}
                     {emailData.client?.customerNo && ` - ${emailData.client.customerNo}`}
                   </div>
                   {emailData.client && (
-                    <div className="text-sm text-gray-600 mt-1">
+                    <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                       Kunde: {emailData.client.name}
                     </div>
                   )}
@@ -209,7 +209,7 @@ export function EmailConfirmationDialog({
                       alt={emailData.client.agency.name}
                       className="w-12 h-12 object-contain rounded"
                     />
-                    <div className="text-xs text-gray-500 text-center">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
                       {emailData.client.agency.name}
                     </div>
                   </div>
@@ -227,7 +227,7 @@ export function EmailConfirmationDialog({
             {/* Email Address (read-only display) */}
             <div className="space-y-2">
               <Label htmlFor="toEmail">An (E-Mail-Adresse)</Label>
-              <div className="rounded border bg-gray-50 p-2 text-sm">
+              <div className="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-2 text-sm text-gray-900 dark:text-white">
                 {toEmail || "-"}
               </div>
             </div>
@@ -236,14 +236,14 @@ export function EmailConfirmationDialog({
             {emailData.ccEmails && (
               <div className="space-y-2">
                 <Label>CC</Label>
-                <div className="text-sm text-gray-600">{emailData.ccEmails}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">{emailData.ccEmails}</div>
               </div>
             )}
 
             {/* Subject */}
             <div className="space-y-2">
               <Label>Betreff</Label>
-              <div className="rounded border bg-gray-50 p-2 text-sm">
+              <div className="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-2 text-sm text-gray-900 dark:text-white">
                 {emailData.subject}
               </div>
             </div>
@@ -267,17 +267,17 @@ export function EmailConfirmationDialog({
                   value={emailBody}
                   onChange={(e) => setEmailBody(e.target.value)}
                   rows={10}
-                  className="font-mono text-sm"
+                  className="font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
                   placeholder="E-Mail-Text (HTML möglich)"
                 />
               ) : (
                 <div
-                  className="rounded border bg-gray-50 p-3 text-sm max-h-64 overflow-y-auto"
+                  className="rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3 text-sm max-h-64 overflow-y-auto text-gray-900 dark:text-white"
                   dangerouslySetInnerHTML={{ __html: emailBody }}
                 />
               )}
               {isEditingBody && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   HTML-Tags werden unterstützt (z.B. &lt;b&gt;fett&lt;/b&gt;, &lt;br/&gt; für Zeilenumbruch)
                 </p>
               )}

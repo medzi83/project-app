@@ -655,11 +655,11 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
 
       {/* Domains Configuration */}
       {existingCustomer && (
-        <div className="mt-8 space-y-4 border-t pt-6">
-          <h3 className="font-medium">Domains ({allDomains.length})</h3>
+        <div className="mt-8 space-y-4 border-t dark:border-gray-700 pt-6">
+          <h3 className="font-medium text-gray-900 dark:text-gray-100">Domains ({allDomains.length})</h3>
 
           {loadingDomains ? (
-            <div className="text-sm text-gray-500">Lade Domains...</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Lade Domains...</div>
           ) : allDomains.length > 0 ? (
             <div className="space-y-3">
               {allDomains.map((domain) => {
@@ -670,35 +670,44 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
                 if (!formData) return null;
 
                 return (
-                  <div key={domain.id} className="rounded-lg border">
+                  <div key={domain.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                     {/* Domain Header - Clickable */}
                     <button
                       type="button"
                       onClick={() => toggleDomain(domain.id)}
-                      className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                     >
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          {isStandard && <span className="text-yellow-500 text-lg">★</span>}
-                          <span className="font-medium">{domain.domain}</span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {isStandard && <span className="text-yellow-500 dark:text-yellow-400 text-lg">★</span>}
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{domain.domain}</span>
                           {domain.deactivated === "1" && (
-                            <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">Deaktiviert</span>
+                            <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 px-2 py-0.5 rounded">Deaktiviert</span>
                           )}
                         </div>
-                        <div className="mt-1 text-xs text-gray-500 space-x-4">
-                          <span>PHP: {phpConfigs.find(c => c.id.toString() === domain.phpsettingid)?.description || domain.phpsettingid}</span>
-                          <span>SSL: {domain.ssl_redirect === "1" ? "✓" : "✗"}</span>
-                          <span>LE: {domain.letsencrypt === "1" ? "✓" : "✗"}</span>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                          <span className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-300">
+                            <span className="font-medium">PHP:</span>
+                            <span className="text-gray-700 dark:text-gray-200">{phpConfigs.find(c => c.id.toString() === domain.phpsettingid)?.description || domain.phpsettingid}</span>
+                          </span>
+                          <span className={`inline-flex items-center gap-1 ${domain.ssl_redirect === "1" ? "text-green-700 dark:text-green-300" : "text-gray-500 dark:text-gray-400"}`}>
+                            <span className="font-medium">SSL:</span>
+                            <span>{domain.ssl_redirect === "1" ? "✓ Aktiv" : "✗ Inaktiv"}</span>
+                          </span>
+                          <span className={`inline-flex items-center gap-1 ${domain.letsencrypt === "1" ? "text-green-700 dark:text-green-300" : "text-gray-500 dark:text-gray-400"}`}>
+                            <span className="font-medium">Let's Encrypt:</span>
+                            <span>{domain.letsencrypt === "1" ? "✓ Aktiv" : "✗ Inaktiv"}</span>
+                          </span>
                         </div>
                       </div>
-                      <div className="ml-4 text-gray-400">
+                      <div className="ml-4 text-gray-400 dark:text-gray-500">
                         {isExpanded ? "▼" : "▶"}
                       </div>
                     </button>
 
                     {/* Domain Details - Expandable */}
                     {isExpanded && (
-                      <div className="border-t p-4 bg-gray-50">
+                      <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900">
                         <div className="grid gap-4 md:grid-cols-2">
                           <Field label="Document Root / Pfad">
                             <input
@@ -707,7 +716,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
                                 ...domainFormData,
                                 [domain.id]: { ...formData, documentroot: e.target.value }
                               })}
-                              className="w-full rounded border p-2 text-sm"
+                              className="w-full rounded border border-gray-300 dark:border-gray-600 p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                               placeholder="/var/customers/webs/..."
                             />
                           </Field>
@@ -719,7 +728,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
                                 ...domainFormData,
                                 [domain.id]: { ...formData, phpsettingid: e.target.value }
                               })}
-                              className="w-full rounded border p-2 text-sm"
+                              className="w-full rounded border border-gray-300 dark:border-gray-600 p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                             >
                               {phpConfigs.map((config) => (
                                 <option key={config.id} value={config.id}>
@@ -739,9 +748,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
                                     ...domainFormData,
                                     [domain.id]: { ...formData, ssl_redirect: e.target.checked }
                                   })}
-                                  className="rounded border"
+                                  className="rounded border border-gray-300 dark:border-gray-600"
                                 />
-                                <span className="text-sm">SSL Redirect (HTTP -&gt; HTTPS)</span>
+                                <span className="text-sm text-gray-700 dark:text-gray-300">SSL Redirect (HTTP -&gt; HTTPS)</span>
                               </label>
                               <label className="flex items-center gap-2">
                                 <input
@@ -751,9 +760,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
                                     ...domainFormData,
                                     [domain.id]: { ...formData, letsencrypt: e.target.checked }
                                   })}
-                                  className="rounded border"
+                                  className="rounded border border-gray-300 dark:border-gray-600"
                                 />
-                                <span className="text-sm">Let&apos;s Encrypt aktiviert</span>
+                                <span className="text-sm text-gray-700 dark:text-gray-300">Let&apos;s Encrypt aktiviert</span>
                               </label>
                             </div>
                           </Field>
@@ -764,7 +773,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
                             type="button"
                             onClick={() => handleDomainSubmit(domain.id)}
                             disabled={submittingDomain}
-                            className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
+                            className="rounded bg-blue-600 dark:bg-blue-700 px-4 py-2 text-sm text-white hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 transition-colors"
                           >
                             {submittingDomain ? "Speichere..." : "Domain aktualisieren"}
                           </button>
@@ -778,7 +787,9 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
               {domainResult && (
                 <div
                   className={`rounded p-3 text-sm ${
-                    domainResult.success ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"
+                    domainResult.success
+                      ? "bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200"
+                      : "bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300"
                   }`}
                 >
                   {domainResult.message}
@@ -786,7 +797,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
               )}
             </div>
           ) : (
-            <div className="text-sm text-gray-500">Keine Domains gefunden</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Keine Domains gefunden</div>
           )}
         </div>
       )}
@@ -797,7 +808,7 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1 text-sm">
-      <span className="text-xs uppercase tracking-wide text-gray-500">{label}</span>
+      <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</span>
       {children}
     </label>
   );
