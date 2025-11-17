@@ -715,6 +715,8 @@ export default async function ProjectsPage({ searchParams }: Props) {
               const textitReady = p.website?.textit === "JA_JA" || p.website?.textit === "NEIN";
               const seoReady = p.website?.seo === "NEIN" || p.website?.seo === "JA_NEIN" || p.website?.seo === "JA_JA";
               const statusGreen = isUmsetzung && textitReady && seoReady;
+              const isDemo = derivedStatus === "DEMO";
+              const statusOnline = derivedStatus === "ONLINE";
 
               const isFavoriteClient = p.clientId && favoriteClientIds.has(p.clientId);
 
@@ -725,7 +727,15 @@ export default async function ProjectsPage({ searchParams }: Props) {
               return (
                 <ProjectRow key={p.id} rowClasses={rowClasses.join(" ")} projectId={p.id}>
                   <TableCell>
-                    <span className={statusGreen ? "inline-flex items-center px-2 py-1 rounded-md bg-green-500/30 dark:bg-green-500/40 text-green-900 dark:text-green-100 text-xs font-semibold" : ""}>{statusLabel}</span>
+                    <span className={
+                      statusOnline
+                        ? "inline-flex items-center px-2 py-1 rounded-md bg-green-500/30 dark:bg-green-500/40 text-green-900 dark:text-green-100 text-xs font-semibold"
+                        : isDemo
+                        ? "inline-flex items-center px-2 py-1 rounded-md bg-cyan-300/40 dark:bg-cyan-400/30 text-cyan-900 dark:text-cyan-100 text-xs font-semibold"
+                        : statusGreen
+                        ? "inline-flex items-center px-2 py-1 rounded-md bg-green-500/30 dark:bg-green-500/40 text-green-900 dark:text-green-100 text-xs font-semibold"
+                        : ""
+                    }>{statusLabel}</span>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <div className="flex flex-col gap-1">
