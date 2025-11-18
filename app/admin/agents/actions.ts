@@ -54,7 +54,7 @@ const CreateAgentSchema = z.object({
   email: EmailField,
   password: z.string().min(8, "Mind. 8 Zeichen"),
   color: ColorField,
-  categories: z.array(z.enum(["WEBSEITE", "FILM", "SOCIALMEDIA"])).default([]),
+  categories: z.array(z.enum(["WEBSEITE", "FILM", "SOCIALMEDIA", "PRINT_DESIGN"])).default([]),
 });
 
 export async function createAgent(formData: FormData) {
@@ -65,7 +65,7 @@ export async function createAgent(formData: FormData) {
 
   // Ensure categories is always an array and filter valid values
   const validCategories = (Array.isArray(categoriesRaw) ? categoriesRaw : [categoriesRaw])
-    .filter((cat): cat is string => typeof cat === "string" && ["WEBSEITE", "FILM", "SOCIALMEDIA"].includes(cat));
+    .filter((cat): cat is string => typeof cat === "string" && ["WEBSEITE", "FILM", "SOCIALMEDIA", "PRINT_DESIGN"].includes(cat));
 
   const parsed = CreateAgentSchema.safeParse({
     ...raw,
@@ -252,7 +252,7 @@ export async function toggleAgentActive(formData: FormData) {
 /* ---------- Agent-Kategorien aktualisieren ---------- */
 const UpdateAgentCategoriesSchema = z.object({
   userId: z.string().min(1),
-  categories: z.array(z.enum(["WEBSEITE", "FILM", "SOCIALMEDIA"])).optional().default([]),
+  categories: z.array(z.enum(["WEBSEITE", "FILM", "SOCIALMEDIA", "PRINT_DESIGN"])).optional().default([]),
 });
 
 export async function updateAgentCategories(formData: FormData) {

@@ -73,3 +73,29 @@ export async function saveFilmProjectsFilter(
     },
   });
 }
+
+export async function savePrintDesignFilter(
+  agent?: string[],
+  status?: string[],
+  projectType?: string[]
+) {
+  const session = await getAuthSession();
+  if (!session?.user?.id) {
+    throw new Error("Not authenticated");
+  }
+
+  await prisma.userPreferences.upsert({
+    where: { userId: session.user.id },
+    update: {
+      printDesignAgentFilter: agent ?? [],
+      printDesignStatusFilter: status ?? [],
+      printDesignProjectTypeFilter: projectType ?? [],
+    },
+    create: {
+      userId: session.user.id,
+      printDesignAgentFilter: agent ?? [],
+      printDesignStatusFilter: status ?? [],
+      printDesignProjectTypeFilter: projectType ?? [],
+    },
+  });
+}

@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { saveProjectsFilter, saveFilmProjectsFilter } from "@/app/actions/user-preferences";
+import {
+  saveProjectsFilter,
+  saveFilmProjectsFilter,
+  savePrintDesignFilter,
+} from "@/app/actions/user-preferences";
 
 type ProjectsProps = {
   type: "projects";
@@ -20,7 +24,14 @@ type FilmProjectsProps = {
   currentScope?: string[];
 };
 
-type Props = ProjectsProps | FilmProjectsProps;
+type PrintDesignProps = {
+  type: "printDesign";
+  currentAgent?: string[];
+  currentStatus?: string[];
+  currentProjectType?: string[];
+};
+
+type Props = ProjectsProps | FilmProjectsProps | PrintDesignProps;
 
 export function SaveFilterButton(props: Props) {
   const [saving, setSaving] = useState(false);
@@ -36,12 +47,18 @@ export function SaveFilterButton(props: Props) {
           props.currentCms,
           props.currentAgent
         );
-      } else {
+      } else if (props.type === "film-projects") {
         await saveFilmProjectsFilter(
           props.currentAgent,
           props.currentStatus,
           props.currentPStatus,
           props.currentScope
+        );
+      } else {
+        await savePrintDesignFilter(
+          props.currentAgent,
+          props.currentStatus,
+          props.currentProjectType
         );
       }
       setSaved(true);

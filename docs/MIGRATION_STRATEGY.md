@@ -1,26 +1,28 @@
 # Migrationsstrategie und Best Practices
 
-**Erstellt:** 01. November 2024
-**Letzte Aktualisierung:** 13. November 2024
-**Status:** 📋 Aktiv
-**Kategorie:** Development Guidelines
+> ## 🚨 ACHTUNG: MIGRATION-ANLEITUNG VERALTET!
+>
+> **Die technischen Anleitungen in diesem Dokument (z.B. `npx prisma migrate dev`) funktionieren NICHT mit unserem pgBouncer-Setup!**
+>
+> ### ✅ AKTUELLE MIGRATIONS-ANLEITUNG:
+> **→ [PRISMA-MIGRATIONS.md](./PRISMA-MIGRATIONS.md)** ← **NUR DIESE VERWENDEN!**
+>
+> ### ⚠️ Was ist noch gültig in diesem Dokument?
+> - ✅ **Konzepte**: Multi-Phasen-Migrationen, additive changes, Data Migration Scripts
+> - ✅ **Best Practices**: Dokumentation, Testing, Rollback-Strategien
+> - ❌ **NICHT GÜLTIG**: Alle `npx prisma migrate dev` Befehle
+> - ❌ **NICHT GÜLTIG**: Workflow mit automatischen Prisma Migrations
+>
+> **Für korrekte Befehle siehe:** [PRISMA-MIGRATIONS.md](./PRISMA-MIGRATIONS.md)
+>
+> **Warum veraltet?** Siehe [DATABASE_MIGRATIONS_AKTUELL.md](./DATABASE_MIGRATIONS_AKTUELL.md)
 
 ---
 
-> **⚠️ WICHTIG: Vercel Deployment Setup**
->
-> Dieses Dokument beschreibt **allgemeine Best Practices** für Prisma-Migrationen.
->
-> **Für unser spezifisches Vercel-Setup** (automatische Deployments mit gemeinsamer DB) siehe:
-> **→ [PRISMA_MIGRATIONS_VERCEL.md](./PRISMA_MIGRATIONS_VERCEL.md)**
->
-> **Kurzfassung für Solo-Entwickler mit Vercel:**
-> ```bash
-> # 1. Schema ändern
-> # 2. npx prisma migrate dev --name xyz
-> # 3. git push
-> # 4. Vercel deployed automatisch ✅
-> ```
+**Erstellt:** 01. November 2024
+**Letzte Aktualisierung:** 18. Januar 2025
+**Status:** ⚠️ TEILWEISE VERALTET - Konzepte gültig, Befehle NICHT
+**Kategorie:** Development Guidelines
 
 ---
 

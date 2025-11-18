@@ -5,6 +5,7 @@ import type { Prisma, ProjectStatus, ProjectType, AgentCategory, FilmScope } fro
 import { prisma } from "@/lib/prisma";
 import { buildWebsiteStatusWhere, DONE_PRODUCTION_STATUSES, deriveProjectStatus, STATUS_LABELS } from "@/lib/project-status";
 import { deriveFilmStatus as deriveFilmStatusFromLib } from "@/lib/film-status";
+import { derivePrintDesignStatus, getPrintDesignStatusDate, PRINT_DESIGN_STATUS_LABELS, type PrintDesignStatus } from "@/lib/print-design-status";
 import { getEffectiveUser, getAuthSession } from "@/lib/authz";
 import { NoticeBoard, type NoticeBoardEntry } from "@/components/NoticeBoard";
 import { InstallationWarningsSlideout } from "./InstallationWarningsSlideout";
@@ -30,6 +31,7 @@ const FILM_SCOPE_LABELS: Record<FilmScope, string> = {
 const PROJECT_TYPES: Array<{ key: ProjectType; label: string; href: string }> = [
   { key: "WEBSITE", label: "Webseitenprojekte", href: "/projects" },
   { key: "FILM", label: "Filmprojekte", href: "/film-projects" },
+  { key: "PRINT_DESIGN", label: "Print & Design", href: "/print-design" },
   { key: "SOCIAL", label: "Social Media Projekte", href: "/social-projects" },
 ];
 
@@ -386,6 +388,7 @@ export default async function DashboardPage({
   const allowedProjectTypes: ProjectType[] = [];
   if (userCategories.includes("WEBSEITE" as AgentCategory)) allowedProjectTypes.push("WEBSITE");
   if (userCategories.includes("FILM" as AgentCategory)) allowedProjectTypes.push("FILM");
+  if (userCategories.includes("PRINT_DESIGN" as AgentCategory)) allowedProjectTypes.push("PRINT_DESIGN");
   if (userCategories.includes("SOCIALMEDIA" as AgentCategory)) allowedProjectTypes.push("SOCIAL");
 
   const now = new Date();
@@ -413,8 +416,13 @@ export default async function DashboardPage({
     status: { not: "ONLINE" },
   };
 
+  const printDesignActiveWhere: Prisma.ProjectWhereInput = {
+    type: "PRINT_DESIGN",
+    printDesign: { is: { pStatus: { not: "BEENDET" } } },
+  };
+
   const baseActiveProjectWhere: Prisma.ProjectWhereInput = {
-    OR: [websiteActiveWhere, filmActiveWhere, socialActiveWhere],
+    OR: [websiteActiveWhere, filmActiveWhere, printDesignActiveWhere, socialActiveWhere],
   };
 
   const activeProjectWhere: Prisma.ProjectWhereInput | undefined = activeEnabled
@@ -480,9 +488,11 @@ export default async function DashboardPage({
     allProjectsCount,
     websiteCount,
     filmCount,
+    printDesignCount,
     socialCount,
     websiteCountUnfiltered,
     filmCountUnfiltered,
+    printDesignCountUnfiltered,
     socialCountUnfiltered,
     nonWebsiteStatusCountsRaw,
     overdueCandidates,
@@ -509,6 +519,11 @@ export default async function DashboardPage({
     }),
     prisma.project.count({
       where: baseWhere
+        ? { AND: [baseWhere, { printDesign: { isNot: null } }] }
+        : { printDesign: { isNot: null } },
+    }),
+    prisma.project.count({
+      where: baseWhere
         ? { AND: [baseWhere, { type: "SOCIAL" }] }
         : { type: "SOCIAL" },
     }),
@@ -522,6 +537,11 @@ export default async function DashboardPage({
       where: activeProjectWhere
         ? { AND: [activeProjectWhere, { film: { isNot: null } }] }
         : { film: { isNot: null } },
+    }),
+    prisma.project.count({
+      where: activeProjectWhere
+        ? { AND: [activeProjectWhere, { printDesign: { isNot: null } }] }
+        : { printDesign: { isNot: null } },
     }),
     prisma.project.count({
       where: activeProjectWhere
@@ -814,9 +834,93 @@ export default async function DashboardPage({
     });
   }
 
+  // Print Design-spezifische Kacheln basierend auf Daten
+  const printDesignProjectsWhere: Prisma.ProjectWhereInput = activeEnabled
+    ? { printDesign: { isNot: null, is: { pStatus: { not: "BEENDET" } } } }
+    : { printDesign: { isNot: null } };
+
+  const printDesignWhereWithAgent = agentFilterWhere
+    ? { AND: [printDesignProjectsWhere, agentFilterWhere] }
+    : printDesignProjectsWhere;
+
+  // Load all print design projects and derive their status
+  const printDesignProjects = await prisma.project.findMany({
+    where: printDesignWhereWithAgent,
+    select: {
+      printDesign: {
+        select: {
+          pStatus: true,
+          webtermin: true,
+          implementation: true,
+          designToClient: true,
+          designApproval: true,
+          finalVersionToClient: true,
+          printRequired: true,
+          printOrderPlaced: true,
+        }
+      },
+      client: {
+        select: {
+          workStopped: true,
+          finished: true,
+        }
+      }
+    }
+  });
+
+  // Count projects by derived status and track stale projects
+  const printDesignStatusCounts: Record<string, number> = {};
+  const printDesignStaleCounts: Record<string, number> = {};
+
+  printDesignProjects.forEach((project) => {
+    const printDesign = project.printDesign;
+    const status = derivePrintDesignStatus({
+      status: printDesign?.pStatus,
+      webtermin: printDesign?.webtermin,
+      implementation: printDesign?.implementation,
+      designToClient: printDesign?.designToClient,
+      designApproval: printDesign?.designApproval,
+      finalVersionToClient: printDesign?.finalVersionToClient,
+      printRequired: printDesign?.printRequired,
+      printOrderPlaced: printDesign?.printOrderPlaced,
+    });
+
+    const isActivePrintDesign = !printDesign?.pStatus || printDesign.pStatus !== "BEENDET";
+    if (activeEnabled && !isActivePrintDesign) {
+      return;
+    }
+
+    // Count total
+    printDesignStatusCounts[status] = (printDesignStatusCounts[status] || 0) + 1;
+
+    // Determine relevant date for this status
+    const relevantDate = getPrintDesignStatusDate(status, {
+      webtermin: printDesign?.webtermin,
+      implementation: printDesign?.implementation,
+      designToClient: printDesign?.designToClient,
+      designApproval: printDesign?.designApproval,
+      finalVersionToClient: printDesign?.finalVersionToClient,
+      printOrderPlaced: printDesign?.printOrderPlaced,
+    });
+
+    // Count stale (older than 4 weeks) only for active projects and skip ABGESCHLOSSEN
+    if (isActivePrintDesign && status !== "ABGESCHLOSSEN" && !project.client?.workStopped && !project.client?.finished && isOlderThan4Weeks(relevantDate)) {
+      printDesignStaleCounts[status] = (printDesignStaleCounts[status] || 0) + 1;
+    }
+  });
+
+  const printDesignWebterminCount = printDesignStatusCounts["WEBTERMIN"] || 0;
+  const printDesignUmsetzungCount = printDesignStatusCounts["UMSETZUNG"] || 0;
+  const printDesignDesignAnKundenCount = printDesignStatusCounts["DESIGN_AN_KUNDEN"] || 0;
+  const printDesignDesignabnahmeCount = printDesignStatusCounts["DESIGNABNAHME"] || 0;
+  const printDesignFinalversionCount = printDesignStatusCounts["FINALVERSION"] || 0;
+  const printDesignDruckCount = printDesignStatusCounts["DRUCK"] || 0;
+  const printDesignAbgeschlossenCount = printDesignStatusCounts["ABGESCHLOSSEN"] || 0;
+
   const typeCountMap = new Map<ProjectType, number>([
     ["WEBSITE", websiteCount],
     ["FILM", filmCount],
+    ["PRINT_DESIGN", printDesignCount],
     ["SOCIAL", socialCount],
   ]);
 
@@ -824,6 +928,7 @@ export default async function DashboardPage({
   const typeCountMapUnfiltered = new Map<ProjectType, number>([
     ["WEBSITE", websiteCountUnfiltered],
     ["FILM", filmCountUnfiltered],
+    ["PRINT_DESIGN", printDesignCountUnfiltered],
     ["SOCIAL", socialCountUnfiltered],
   ]);
 
@@ -1017,6 +1122,61 @@ export default async function DashboardPage({
       return { ...type, label: sectionLabel, tiles };
     }
 
+    if (type.key === "PRINT_DESIGN") {
+      const tiles = [
+        {
+          key: "WEBTERMIN",
+          label: PRINT_DESIGN_STATUS_LABELS["WEBTERMIN"],
+          count: printDesignWebterminCount,
+          staleCount: printDesignStaleCounts["WEBTERMIN"] || 0,
+          href: withScope("/print-design?status=WEBTERMIN"),
+        },
+        {
+          key: "UMSETZUNG",
+          label: PRINT_DESIGN_STATUS_LABELS["UMSETZUNG"],
+          count: printDesignUmsetzungCount,
+          staleCount: printDesignStaleCounts["UMSETZUNG"] || 0,
+          href: withScope("/print-design?status=UMSETZUNG"),
+        },
+        {
+          key: "DESIGN_AN_KUNDEN",
+          label: PRINT_DESIGN_STATUS_LABELS["DESIGN_AN_KUNDEN"],
+          count: printDesignDesignAnKundenCount,
+          staleCount: printDesignStaleCounts["DESIGN_AN_KUNDEN"] || 0,
+          href: withScope("/print-design?status=DESIGN_AN_KUNDEN"),
+        },
+        {
+          key: "DESIGNABNAHME",
+          label: PRINT_DESIGN_STATUS_LABELS["DESIGNABNAHME"],
+          count: printDesignDesignabnahmeCount,
+          staleCount: printDesignStaleCounts["DESIGNABNAHME"] || 0,
+          href: withScope("/print-design?status=DESIGNABNAHME"),
+        },
+        {
+          key: "FINALVERSION",
+          label: PRINT_DESIGN_STATUS_LABELS["FINALVERSION"],
+          count: printDesignFinalversionCount,
+          staleCount: printDesignStaleCounts["FINALVERSION"] || 0,
+          href: withScope("/print-design?status=FINALVERSION"),
+        },
+        {
+          key: "DRUCK",
+          label: PRINT_DESIGN_STATUS_LABELS["DRUCK"],
+          count: printDesignDruckCount,
+          staleCount: printDesignStaleCounts["DRUCK"] || 0,
+          href: withScope("/print-design?status=DRUCK"),
+        },
+        {
+          key: "ABGESCHLOSSEN",
+          label: PRINT_DESIGN_STATUS_LABELS["ABGESCHLOSSEN"],
+          count: printDesignAbgeschlossenCount,
+          staleCount: 0,
+          href: withScope("/print-design?status=ABGESCHLOSSEN"),
+        },
+      ];
+      return { ...type, label: sectionLabel, tiles };
+    }
+
     const statusMap = nonWebsiteStatusMap.get(type.key) ?? new Map<ProjectStatus, number>();
     const tiles = STATUSES.map((status) => ({
       key: status,
@@ -1052,6 +1212,15 @@ export default async function DashboardPage({
                   film: {
                     is: {
                       status: { not: "BEENDET" },
+                    },
+                  },
+                },
+                // Print Design projects: exclude if pStatus is BEENDET
+                {
+                  type: "PRINT_DESIGN",
+                  printDesign: {
+                    is: {
+                      pStatus: { not: "BEENDET" },
                     },
                   },
                 },

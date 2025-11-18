@@ -23,7 +23,7 @@ const TRI: Option[] = [
   { value: "no", label: "Nein" },
 ];
 
-import type { FilmPriority, FilmProjectStatus, FilmScope } from "@prisma/client";
+import type { FilmPriority, FilmProjectStatus, FilmScope, PrintDesignType } from "@prisma/client";
 import {
   labelForProductionStatus,
   labelForMaterialStatus,
@@ -32,6 +32,7 @@ import {
   labelForSeoStatus,
   labelForTextitStatus,
 } from "@/lib/project-status";
+import { PRINT_DESIGN_TYPE_LABELS } from "@/lib/print-design-status";
 import Link from "next/link";
 
 const MATERIAL_STATUS_OPTIONS: Option[] = MATERIAL_STATUS_VALUES.map((value) => ({
@@ -104,16 +105,23 @@ const FILM_STATUS_OPTIONS: Option[] = (Object.keys(FILM_STATUS_LABELS) as FilmPr
   label: FILM_STATUS_LABELS[value],
 }));
 
+const PRINT_DESIGN_TYPE_OPTIONS: Option[] = (Object.keys(PRINT_DESIGN_TYPE_LABELS) as PrintDesignType[]).map((value) => ({
+  value,
+  label: PRINT_DESIGN_TYPE_LABELS[value],
+}));
+
 export function UnifiedProjectForm({
   clientOptions,
   websiteAgentOptions,
   filmAgentOptions,
+  printDesignAgentOptions,
   personOptions,
   clientIdFromQuery,
 }: {
   clientOptions: Option[];
   websiteAgentOptions: Option[];
   filmAgentOptions: Option[];
+  printDesignAgentOptions: Option[];
   personOptions: Option[];
   clientIdFromQuery?: string;
 }) {
@@ -159,66 +167,8 @@ export function UnifiedProjectForm({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const form = document.getElementById("project-form");
-    if (!form) return;
-
-    const radios = form.querySelectorAll('input[name="projectType"]');
-    const websiteFields = form.querySelector(".website-fields") as Element | null;
-    const filmFields = form.querySelector(".film-fields") as Element | null;
-    const websiteAgentSelect = form.querySelector(".website-agent-select") as Element | null;
-    const filmAgentSelect = form.querySelector(".film-agent-select") as Element | null;
-
-    if (!websiteFields || !filmFields || !websiteAgentSelect || !filmAgentSelect) return;
-
-    // Store as non-null for closure
-    const wf = websiteFields;
-    const ff = filmFields;
-    const was = websiteAgentSelect;
-    const fas = filmAgentSelect;
-
-    function updateVisibility() {
-      if (!form) return;
-      const selected = form.querySelector('input[name="projectType"]:checked') as HTMLInputElement | null;
-      if (!selected) {
-        wf.classList.add("hidden");
-        ff.classList.add("hidden");
-        was.classList.add("hidden");
-        fas.classList.add("hidden");
-        return;
-      }
-
-      const value = selected.value;
-      if (value === "WEBSITE") {
-        wf.classList.remove("hidden");
-        ff.classList.add("hidden");
-        was.classList.remove("hidden");
-        fas.classList.add("hidden");
-      } else if (value === "FILM") {
-        wf.classList.add("hidden");
-        ff.classList.remove("hidden");
-        was.classList.add("hidden");
-        fas.classList.remove("hidden");
-      } else if (value === "BOTH") {
-        wf.classList.remove("hidden");
-        ff.classList.remove("hidden");
-        was.classList.remove("hidden");
-        fas.classList.add("hidden");
-      }
-    }
-
-    radios.forEach((radio) => {
-      radio.addEventListener("change", updateVisibility);
-    });
-
-    updateVisibility();
-
-    return () => {
-      radios.forEach((radio) => {
-        radio.removeEventListener("change", updateVisibility);
-      });
-    };
-  }, []);
+  // Note: Visibility is now controlled by React state (projectTypes) and conditional rendering
+  // The old useEffect with radio buttons has been removed in favor of the checkbox approach
 
   // Get selected client label for display
   const selectedClientLabel = selectedClient
@@ -458,6 +408,17 @@ export function UnifiedProjectForm({
                     <input
                       type="checkbox"
                       name="projectTypes"
+                      value="PRINT_DESIGN"
+                      className="h-4 w-4"
+                      checked={projectTypes.has("PRINT_DESIGN")}
+                      onChange={(e) => handleProjectTypeChange("PRINT_DESIGN", e.target.checked)}
+                    />
+                    <span className="font-medium text-gray-900 dark:text-white">Print & Design</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="projectTypes"
                       value="SOCIAL_MEDIA"
                       className="h-4 w-4"
                       checked={projectTypes.has("SOCIAL_MEDIA")}
@@ -551,6 +512,28 @@ export function UnifiedProjectForm({
                         <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Posting-Frequenz</span>
                         <input name="socialFrequency" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="z.B. täglich, wöchentlich" />
                       </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Print-Design-spezifische Schnellfelder */}
+                {projectTypes.has("PRINT_DESIGN") && (
+                  <div className="rounded-lg border bg-orange-50 dark:bg-orange-900/20 dark:border-orange-700 p-4 space-y-4">
+                    <h4 className="text-sm font-semibold text-orange-900 dark:text-orange-200">Wichtige Print & Design-Infos</h4>
+                    <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                      <SelectField name="printDesignAgentId" label="Agent" options={printDesignAgentOptions} defaultValue="" />
+                      <SelectField name="printDesignType" label="Art *" options={PRINT_DESIGN_TYPE_OPTIONS} defaultValue="LOGO" />
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Webtermin (Datum + Zeit)</span>
+                        <input type="datetime-local" name="printDesignWebDate" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" />
+                      </div>
+                    </div>
+                    <div className="pt-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="printDesignPrintRequired" className="h-4 w-4 rounded border-gray-300 dark:border-gray-600" />
+                        <span className="text-sm font-medium text-orange-900 dark:text-orange-200">Druck erforderlich</span>
+                      </label>
+                      <p className="text-xs text-orange-700 dark:text-orange-300 mt-1 ml-6">Wird Druck benötigt, z.B. Visitenkarten, Flyer, etc.?</p>
                     </div>
                   </div>
                 )}
@@ -656,6 +639,8 @@ export function UnifiedProjectForm({
                   <input type="hidden" name="lastContact" value="" />
                   <input type="hidden" name="reminderAt" value="" />
                 </div>
+
+                {/* Print-Design erweiterte Felder werden auf der Projektdetailseite gepflegt */}
 
                 <FormActions saveLabel="Projekt speichern" isSubmitting={isSubmitting} />
               </div>

@@ -10,6 +10,7 @@ import { deriveProjectStatus, labelForProjectStatus, getProjectDisplayName } fro
 import type { ProjectStatus, ProjectType } from "@prisma/client";
 import { EmailLogItem } from "@/components/EmailLogItem";
 import { deriveFilmStatus, getFilmStatusDate, FILM_STATUS_LABELS } from "@/lib/film-status";
+import { derivePrintDesignStatus, getPrintDesignStatusDate, PRINT_DESIGN_STATUS_LABELS } from "@/lib/print-design-status";
 import { ClientStatusToggles } from "@/components/ClientStatusToggles";
 import { InstallationProjectAssignment } from "./InstallationProjectAssignment";
 import { ClientDetailHeader } from "@/components/ClientDetailHeader";
@@ -159,6 +160,7 @@ export default async function ClientDetailPage({ params }: Props) {
                 },
               },
             },
+            printDesign: true,
             agent: {
               select: {
                 id: true,
@@ -821,6 +823,31 @@ export default async function ClientDetailPage({ params }: Props) {
                 } else if (project.type === "FILM") {
                   typeLabel = "Film";
                   badgeClass = "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-300 dark:border-red-800";
+                } else if (project.type === "PRINT_DESIGN" && project.printDesign) {
+                  const printType = project.printDesign.projectType;
+                  switch (printType) {
+                    case "LOGO":
+                      typeLabel = "Logo";
+                      break;
+                    case "VISITENKARTE":
+                      typeLabel = "Visitenkarte";
+                      break;
+                    case "FLYER":
+                      typeLabel = "Flyer";
+                      break;
+                    case "PLAKAT":
+                      typeLabel = "Plakat";
+                      break;
+                    case "BROSCHÜRE":
+                      typeLabel = "Broschüre";
+                      break;
+                    case "SONSTIGES":
+                      typeLabel = "Sonstiges (Print)";
+                      break;
+                    default:
+                      typeLabel = "Print & Design";
+                  }
+                  badgeClass = "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-800";
                 } else if (project.type === "SOCIAL") {
                   typeLabel = "Social Media";
                   badgeClass = "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-300 dark:border-green-800";
@@ -847,6 +874,19 @@ export default async function ClientDetailPage({ params }: Props) {
                   const derivedFilmStatus = deriveFilmStatus(project.film);
                   statusLabel = FILM_STATUS_LABELS[derivedFilmStatus];
                   statusDate = getFilmStatusDate(derivedFilmStatus, project.film);
+                } else if (project.type === "PRINT_DESIGN" && project.printDesign) {
+                  const derivedPrintStatus = derivePrintDesignStatus({
+                    status: project.printDesign.pStatus,
+                    webtermin: project.printDesign.webtermin,
+                    implementation: project.printDesign.implementation,
+                    designToClient: project.printDesign.designToClient,
+                    designApproval: project.printDesign.designApproval,
+                    finalVersionToClient: project.printDesign.finalVersionToClient,
+                    printRequired: project.printDesign.printRequired,
+                    printOrderPlaced: project.printDesign.printOrderPlaced,
+                  });
+                  statusLabel = PRINT_DESIGN_STATUS_LABELS[derivedPrintStatus];
+                  statusDate = getPrintDesignStatusDate(derivedPrintStatus, project.printDesign);
                 } else {
                   statusLabel = project.status === "WEBTERMIN" ? "Webtermin"
                     : project.status === "MATERIAL" ? "Material"
@@ -858,10 +898,16 @@ export default async function ClientDetailPage({ params }: Props) {
 
                 const isOnlineWebsite = project.type === "WEBSITE" && project.status === "ONLINE";
 
+                const projectHref = project.type === "FILM"
+                  ? `/film-projects/${project.id}`
+                  : project.type === "PRINT_DESIGN"
+                  ? `/print-design/${project.id}`
+                  : `/projects/${project.id}`;
+
                 return (
                   <div key={project.id} className="rounded-lg border border-border bg-card p-4">
                     <Link
-                      href={project.type === "FILM" ? `/film-projects/${project.id}` : `/projects/${project.id}`}
+                      href={projectHref}
                       className="block transition-all hover:opacity-80"
                     >
                       <div className="flex items-start justify-between mb-3">

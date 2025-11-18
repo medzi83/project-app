@@ -45,9 +45,9 @@ export default async function AdminNoticesPage() {
 
   return (
     <main className="space-y-10">
-      <section className="rounded-2xl border bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <header className="mb-6">
-          <h1 className="text-2xl font-semibold">Hinweise verwalten</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Hinweise verwalten</h1>
           <p className="text-sm text-muted-foreground">
             Erstelle neue Hinweise für alle Agenten oder ausgewählte Teams.
           </p>
@@ -56,12 +56,12 @@ export default async function AdminNoticesPage() {
         <form action={createNotice} className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Titel</label>
+              <label className="text-sm font-medium text-foreground">Titel</label>
               <Input name="title" placeholder="z. B. Wichtige Systemwartung" required />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Sichtbarkeit</label>
-              <div className="flex gap-3 rounded-lg border p-3 text-sm">
+              <label className="text-sm font-medium text-foreground">Sichtbarkeit</label>
+              <div className="flex gap-3 rounded-lg border border-border bg-background p-3 text-sm text-foreground">
                 <label className="flex items-center gap-2">
                   <input type="radio" name="visibility" value="GLOBAL" defaultChecked />
                   Global
@@ -78,7 +78,7 @@ export default async function AdminNoticesPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Nachricht</label>
+            <label className="text-sm font-medium text-foreground">Nachricht</label>
             <Textarea
               name="message"
               rows={5}
@@ -89,11 +89,11 @@ export default async function AdminNoticesPage() {
           </div>
 
           <div className="space-y-3">
-            <label className="text-sm font-medium">Empfänger (Agenten)</label>
+            <label className="text-sm font-medium text-foreground">Empfänger (Agenten)</label>
             <select
               name="recipients"
               multiple
-              className="w-full rounded-lg border p-2 text-sm"
+              className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground"
               size={Math.min(agents.length, 8)}
             >
               {agents.map((agent) => (
@@ -108,20 +108,20 @@ export default async function AdminNoticesPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-6">
-            <label className="flex items-center gap-2 text-sm font-medium">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
               <input
                 type="checkbox"
                 name="requireAcknowledgement"
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
               />
               Bestätigung durch Agenten erforderlich
             </label>
-            <label className="flex items-center gap-2 text-sm font-medium">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
               <input
                 type="checkbox"
                 name="isActive"
                 defaultChecked
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
               />
               Sofort im Dashboard anzeigen
             </label>
@@ -133,7 +133,7 @@ export default async function AdminNoticesPage() {
 
       <section className="space-y-6">
         <header>
-          <h2 className="text-xl font-semibold">Bestehende Hinweise</h2>
+          <h2 className="text-xl font-semibold text-foreground">Bestehende Hinweise</h2>
           <p className="text-sm text-muted-foreground">
             Aktive Hinweise werden auf dem Dashboard angezeigt. Hier siehst du auch den
             Bestätigungsstatus der Agenten.
@@ -142,7 +142,7 @@ export default async function AdminNoticesPage() {
 
         <div className="space-y-4">
           {notices.length === 0 ? (
-            <div className="rounded-2xl border border-dashed bg-white p-6 text-center text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
               Es wurden noch keine Hinweise erstellt.
             </div>
           ) : (
@@ -174,10 +174,10 @@ export default async function AdminNoticesPage() {
               return (
                 <article
                   key={notice.id}
-                  className="rounded-2xl border bg-white p-6 shadow-sm space-y-4"
+                  className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4"
                 >
                   <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-lg font-semibold">{notice.title}</h3>
+                    <h3 className="text-lg font-semibold text-foreground">{notice.title}</h3>
                     {notice.isActive ? (
                       <Badge variant="default">Aktiv</Badge>
                     ) : (
@@ -193,7 +193,7 @@ export default async function AdminNoticesPage() {
                     )}
                   </div>
 
-                  <p className="whitespace-pre-wrap text-sm text-gray-700">{notice.message}</p>
+                  <p className="whitespace-pre-wrap text-sm text-foreground">{notice.message}</p>
 
                   <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                     <span>Erstellt am {formatDateTime(notice.createdAt)}</span>
@@ -212,8 +212,8 @@ export default async function AdminNoticesPage() {
                     )}
                   </div>
 
-                  <details className="rounded-lg border bg-gray-50 p-4">
-                    <summary className="cursor-pointer text-sm font-medium">
+                  <details className="rounded-lg border border-border bg-muted/50 dark:bg-muted/20 p-4">
+                    <summary className="cursor-pointer text-sm font-medium text-foreground">
                       Bestätigungen anzeigen
                     </summary>
                     <div className="mt-3 space-y-2 text-sm">
@@ -223,9 +223,9 @@ export default async function AdminNoticesPage() {
                         recipientEntries.map((entry) => (
                           <div
                             key={entry.label}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-white px-3 py-2"
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2"
                           >
-                            <span>{entry.label}</span>
+                            <span className="text-foreground">{entry.label}</span>
                             <span className="text-xs text-muted-foreground">
                               {entry.readAt ? `Gelesen am ${formatDateTime(entry.readAt)}` : "Noch offen"}
                             </span>

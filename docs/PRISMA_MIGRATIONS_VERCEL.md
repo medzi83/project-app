@@ -1,8 +1,24 @@
-# Prisma Migrations mit Vercel Deployment
+# ❌ VERALTET: Prisma Migrations mit Vercel Deployment
+
+> ## 🚨 ACHTUNG: DIESES DOKUMENT IST VERALTET!
+>
+> **Diese Anleitung funktioniert NICHT mit unserem pgBouncer-Setup!**
+>
+> ### ✅ AKTUELLE DOKUMENTATION:
+> **→ [PRISMA-MIGRATIONS.md](./PRISMA-MIGRATIONS.md)** ← **NUR DIESE VERWENDEN!**
+>
+> **Warum ist dieses Dokument veraltet?**
+> - Die Anleitung empfiehlt `npx prisma migrate dev` - das funktioniert NICHT mit pgBouncer
+> - Unser Setup erfordert manuelle Migration-Files und `npx prisma migrate deploy`
+> - Siehe [DATABASE_MIGRATIONS_AKTUELL.md](./DATABASE_MIGRATIONS_AKTUELL.md) für Details
+>
+> **Dieses Dokument wird nur für historische Referenz behalten.**
+
+---
 
 **Erstellt:** 13. November 2024
-**Status:** 📋 Aktiv
-**Kategorie:** Development Guidelines
+**Status:** ❌ VERALTET - NICHT VERWENDEN
+**Kategorie:** Development Guidelines (OBSOLETE)
 
 ## Architektur-Übersicht
 

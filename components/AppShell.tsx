@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap, Megaphone, MessageSquareHeart, ExternalLink, HardDrive, FileText, Handshake, Database, Moon, Sun, Monitor, Calendar } from "lucide-react";
+import { Menu, LayoutGrid, Building2, FolderKanban, Clapperboard, Share2, Users, Settings, Server, LogOut, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, PlusCircle, Shield, Upload, BarChart3, Package, Mail, Landmark, Zap, Megaphone, MessageSquareHeart, ExternalLink, HardDrive, FileText, Handshake, Database, Moon, Sun, Monitor, Calendar, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -287,6 +287,7 @@ function Sidebar({ user, counts, onNavigate, collapsed, onToggleCollapse }: { us
     { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
     { label: "Webseitenprojekte", href: "/projects", icon: FolderKanban },
     { label: "Filmprojekte", href: "/film-projects", icon: Clapperboard },
+    { label: "Print & Design", href: "/print-design", icon: Palette },
     { label: "SocialMedia-Projekte", href: "/social-projects", icon: Share2 },
     { label: "Kunden", href: "/clients", icon: Building2 },
     { label: "Termine", href: "/appointments", icon: Calendar },

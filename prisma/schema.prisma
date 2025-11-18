@@ -1,12 +1,13 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [uuid_ossp(map: "uuid-ossp", schema: "extensions")]
 }
 
 model User {
@@ -23,6 +24,7 @@ model User {
   categories              AgentCategory[]
   fullName                String?
   roleTitle               String?
+  favoriteClients         FavoriteClient[]
   feedbacks               Feedback[]              @relation("FeedbackAuthor")
   noticesCreated          Notice[]                @relation("NoticesCreated")
   noticeAcknowledgements  NoticeAcknowledgement[]
@@ -33,27 +35,27 @@ model User {
   notesAuthored           ProjectNote[]           @relation("NoteAuthor")
   client                  Client?                 @relation(fields: [clientId], references: [id])
   preferences             UserPreferences?
-  favoriteClients         FavoriteClient[]
 
   @@index([clientId])
 }
 
 model UserPreferences {
-  id                        String   @id @default(cuid())
-  userId                    String   @unique
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
-  // Projects filter preferences
-  projectsStatusFilter      Json?
-  projectsPriorityFilter    Json?
-  projectsCmsFilter         Json?
-  projectsAgentFilter       Json?
-  // Film projects filter preferences
-  filmProjectsAgentFilter   Json?
-  filmProjectsPStatusFilter Json?
-  filmProjectsScopeFilter   Json?
-  filmProjectsStatusFilter  Json?
-  user                      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                           String   @id @default(cuid())
+  userId                       String   @unique
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  filmProjectsAgentFilter      Json?
+  filmProjectsPStatusFilter    Json?
+  filmProjectsScopeFilter      Json?
+  filmProjectsStatusFilter     Json?
+  projectsAgentFilter          Json?
+  projectsCmsFilter            Json?
+  projectsPriorityFilter       Json?
+  projectsStatusFilter         Json?
+  printDesignAgentFilter       Json?
+  printDesignStatusFilter      Json?
+  printDesignProjectTypeFilter Json?
+  user                         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Client {
@@ -64,7 +66,7 @@ model Client {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   customerNo          String?              @unique
-  serverId            String?              // @deprecated Use clientServers relation instead
+  serverId            String?
   finished            Boolean              @default(false)
   workStopped         Boolean              @default(false)
   agencyId            String?
@@ -73,16 +75,16 @@ model Client {
   lastname            String?
   salutation          String?
   uploadLinks         Json?
-  ftpPasswords        Json?                // JSON object: { "ftpId": "password", ... }
+  ftpPasswords        Json?
+  authorizedPersons   AuthorizedPerson[]
   agency              Agency?              @relation(fields: [agencyId], references: [id])
   server              Server?              @relation("ClientToServer", fields: [serverId], references: [id])
+  clientServers       ClientServer[]
   emailLogs           EmailLog[]
+  favoritedBy         FavoriteClient[]
   joomlaInstallations JoomlaInstallation[]
   projects            Project[]
   users               User[]
-  favoritedBy         FavoriteClient[]
-  authorizedPersons   AuthorizedPerson[]
-  clientServers       ClientServer[]       // Many-to-many relation to servers
 
   @@index([name])
   @@index([agencyId])
@@ -128,6 +130,7 @@ model Project {
   film                ProjectFilm?
   notes               ProjectNote[]
   website             ProjectWebsite?
+  printDesign         ProjectPrintDesign?
 
   @@index([clientId, status])
   @@index([agentId])
@@ -217,6 +220,22 @@ model FilmPreviewVersion {
   @@index([projectId, sentDate])
 }
 
+model ProjectPrintDesign {
+  projectId              String                @id
+  projectType            PrintDesignType?
+  pStatus                ProductionStatus      @default(NONE)
+  webtermin              DateTime?
+  implementation         DateTime?
+  designToClient         DateTime?
+  designApproval         DateTime?
+  finalVersionToClient   DateTime?
+  printRequired          Boolean               @default(false)
+  printOrderPlaced       DateTime?
+  printProvider          String?
+  note                   String?
+  project                Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
 model ProjectNote {
   id        String   @id @default(cuid())
   projectId String
@@ -246,7 +265,7 @@ model Server {
   sshUsername         String?
   froxlorVersion      String?              @default("2.0+")
   clients             Client[]             @relation("ClientToServer")
-  clientServers       ClientServer[]       // Many-to-many relation to clients
+  clientServers       ClientServer[]
   databaseServers     DatabaseServer[]
   joomlaInstallations JoomlaInstallation[]
 }
@@ -258,10 +277,10 @@ model DatabaseServer {
   version             String
   host                String               @default("localhost")
   port                Int?                 @default(3306)
-  froxlorDbServerId   Int?                 // Froxlor database server ID
   isDefault           Boolean              @default(false)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+  froxlorDbServerId   Int?
   server              Server               @relation(fields: [serverId], references: [id], onDelete: Cascade)
   joomlaInstallations JoomlaInstallation[]
 
@@ -478,11 +497,58 @@ model JoomlaInstallation {
   @@index([databaseServerId])
 }
 
+model FavoriteClient {
+  id        String   @id @default(cuid())
+  userId    String
+  clientId  String
+  createdAt DateTime @default(now())
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clientId])
+  @@index([userId])
+  @@index([clientId])
+}
+
+model AuthorizedPerson {
+  id         String   @id @default(cuid())
+  clientId   String
+  salutation String?
+  firstname  String
+  lastname   String
+  email      String
+  position   String?
+  phone      String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model ClientServer {
+  id         String   @id @default(cuid())
+  clientId   String
+  serverId   String
+  customerNo String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, serverId])
+  @@index([clientId])
+  @@index([serverId])
+  @@index([customerNo])
+}
+
 enum EmailTemplateCategory {
   GENERAL
   WEBSITE
   FILM
   SOCIAL_MEDIA
+  PRINT_DESIGN
 }
 
 enum Role {
@@ -496,6 +562,7 @@ enum ProjectType {
   WEBSITE
   FILM
   SOCIAL
+  PRINT_DESIGN
 }
 
 enum ProjectStatus {
@@ -584,10 +651,20 @@ enum WebterminType {
   IN_DER_AGENTUR
 }
 
+enum PrintDesignType {
+  LOGO
+  VISITENKARTE
+  FLYER
+  PLAKAT
+  BROSCHÜRE
+  SONSTIGES
+}
+
 enum AgentCategory {
   WEBSEITE
   FILM
   SOCIALMEDIA
+  PRINT_DESIGN
 }
 
 enum EmailTriggerType {
@@ -629,50 +706,4 @@ enum FeedbackStatus {
   IN_PROGRESS
   RESOLVED
   DISMISSED
-}
-
-model FavoriteClient {
-  id        String   @id @default(cuid())
-  userId    String
-  clientId  String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, clientId])
-  @@index([userId])
-  @@index([clientId])
-}
-
-model AuthorizedPerson {
-  id         String   @id @default(cuid())
-  clientId   String
-  salutation String?
-  firstname  String
-  lastname   String
-  email      String
-  position   String?
-  phone      String?
-  notes      String?  @db.Text
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-
-  @@index([clientId])
-}
-
-model ClientServer {
-  id              String   @id @default(cuid())
-  clientId        String
-  serverId        String
-  customerNo      String?  // Froxlor customer number on this server
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
-
-  @@unique([clientId, serverId])
-  @@index([clientId])
-  @@index([serverId])
-  @@index([customerNo])
 }

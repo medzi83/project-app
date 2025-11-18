@@ -30,6 +30,7 @@ const TextitStatus = z.enum(["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"]);
 const FilmScope = z.enum(["FILM", "DROHNE", "NACHDREH", "FILM_UND_DROHNE", "FOTO", "GRAD_360"]);
 const FilmPriority = z.enum(["NONE", "FILM_SOLO", "PRIO_1", "PRIO_2"]);
 const FilmStatus = z.enum(["AKTIV", "BEENDET", "WARTEN", "VERZICHT", "MMW"]);
+const PrintDesignType = z.enum(["LOGO", "VISITENKARTE", "FLYER", "PLAKAT", "BROSCHÜRE", "SONSTIGES"]);
 
 function mapFilmStatusToProjectStatus(status: FilmProjectStatus): ProjectStatus {
   switch (status) {
@@ -69,6 +70,12 @@ const UnifiedProjectSchema = z.object({
   socialAgentId: z.string().optional().transform((v) => (v ? v : null)),
   socialPlatforms: z.string().optional().transform((v) => v?.trim() || null),
   socialFrequency: z.string().optional().transform((v) => v?.trim() || null),
+
+  // Print-Design-spezifische Felder
+  printDesignAgentId: z.string().optional().transform((v) => (v ? v : null)),
+  printDesignType: PrintDesignType.optional(),
+  printDesignWebDate: z.string().optional().transform(toDate),
+  printDesignPrintRequired: z.string().optional().transform((v) => v === "on"),
 
   // Weitere Website-Felder (aus versteckten Details)
   domain: z.string().optional().transform((v) => v?.trim() || null),
@@ -248,6 +255,41 @@ export async function POST(request: NextRequest) {
     if (projectTypes.includes("SOCIAL_MEDIA")) {
       // TODO: Implement Social Media project creation
       // For now, we'll skip it or create a basic project
+    }
+
+    // Create Print-Design project
+    if (projectTypes.includes("PRINT_DESIGN")) {
+      const { baseAgentId } = normalizeAgentIdForDB(data.printDesignAgentId);
+
+      const printDesignProject = await prisma.project.create({
+        data: {
+          title: projectTypes.length > 1 && data.title ? `${data.title} (Print & Design)` : data.title,
+          type: "PRINT_DESIGN",
+          status: "WEBTERMIN", // Default status for new print design projects
+          clientId: data.clientId,
+          agentId: baseAgentId,
+          printDesign: {
+            create: {
+              projectType: data.printDesignType ?? "LOGO",
+              pStatus: "NONE",
+              webtermin: data.printDesignWebDate,
+              printRequired: data.printDesignPrintRequired ?? false,
+            },
+          },
+        },
+      });
+
+      createdProjectIds.push(printDesignProject.id);
+
+      // Check for email triggers if webDate was set
+      if (data.printDesignWebDate) {
+        const queueIds = await processTriggers(
+          printDesignProject.id,
+          { webtermin: data.printDesignWebDate },
+          { webtermin: null }
+        );
+        allQueueIds.push(...queueIds);
+      }
     }
 
     return NextResponse.json({
