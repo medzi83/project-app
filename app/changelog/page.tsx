@@ -24,6 +24,36 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "18.11.2024",
+    version: "2.4.0",
+    changes: [
+      {
+        title: "Neuer Bereich Print & Design",
+        description:
+          "Die Projektverwaltung hat einen neuen Bereich für Print- und Designprojekte bekommen! Du kannst jetzt Projekte für Logos, Visitenkarten, Flyer, Plakate, Broschüren und sonstige Drucksachen anlegen und verwalten. Im neuen Formular unter 'Projekt anlegen' gibt es die Option 'Print & Design' mit Feldern für Art des Projekts, Agent, Webtermin und ob Druck erforderlich ist. Die Print & Design Projekte haben ihren eigenen Bereich in der Navigation und werden im Dashboard mit eigenen Kacheln angezeigt. Die Detailseite zeigt alle relevanten Informationen: Projektart, Agent, Status, Zeitplan (Webtermin, Umsetzung, Design an Kunden, Designabnahme, Finalversion, Druckauftrag) sowie Notizen. Alle Felder können direkt bearbeitet werden (Inline-Editing). Agenten können die Kategorie 'Print & Design' zugewiesen bekommen, um Print-Projekte betreuen zu können.",
+        type: "feature",
+      },
+      {
+        title: "Dashboard mit Print & Design Integration",
+        description:
+          "Das Dashboard zeigt jetzt auch Print & Design Projekte mit eigener Kachel und Status-Übersicht! Die neue grüne Kachel zeigt die Anzahl aller Print & Design Projekte. Im Status-Bereich werden alle Print-Projekte nach ihrem Status aufgeschlüsselt: Webtermin, Umsetzung, Design an Kunden, Designabnahme, Finalversion, Druck und Abgeschlossen. Projekte, die älter als 4 Wochen sind, werden mit einem Warn-Badge markiert. Agenten mit der Kategorie 'Print & Design' sehen nur ihre zugewiesenen Projekte.",
+        type: "feature",
+      },
+      {
+        title: "Einheitliches Design für alle Projektlisten",
+        description:
+          "Alle Projektlisten (Website, Film, Print & Design, Social Media) haben jetzt ein einheitliches, modernes Design! Jede Liste hat einen farbigen Icon-Header mit Projektanzahl: Website (Blau), Film (Lila), Print & Design (Grün) und Social Media (Orange). Die Farben entsprechen den Dashboard-Kacheln und erleichtern die Orientierung. Alle Listen haben den gleichen Aufbau mit Filter-Bereich, Sortierung und Inline-Editing-Funktionen.",
+        type: "improvement",
+      },
+      {
+        title: "Agent-Kategorien erweitert",
+        description:
+          "Agenten können jetzt die neue Kategorie 'Print & Design' zugewiesen bekommen! In der Agenten-Verwaltung unter Admin gibt es die neue Checkbox 'Print & Design'. Agenten mit dieser Kategorie können Print-Projekte betreuen und sehen diese im Dashboard und in den Listen. Die Agent-Bearbeitung wurde vollständig für Dark Mode optimiert.",
+        type: "improvement",
+      },
+    ],
+  },
+  {
     date: "13.11.2024",
     version: "2.3.6",
     changes: [
