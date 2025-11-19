@@ -201,8 +201,17 @@ export default async function ProjectDetail({ params }: Props) {
   const agentDisplayName = getAgentDisplayName(project.agentId, isWTAssignment, agentsAll);
   const effectiveAgentId = getEffectiveAgentId(project.agentId, isWTAssignment);
 
-  // Use status from database (which is kept in sync via actions and sync script)
-  const displayStatus = project.status;
+  // Calculate status in real-time based on current data
+  const displayStatus = project.type === "WEBSITE"
+    ? deriveProjectStatus({
+        pStatus: website?.pStatus,
+        webDate: website?.webDate,
+        webterminType: website?.webterminType,
+        demoDate: website?.demoDate,
+        onlineDate: website?.onlineDate,
+        materialStatus: website?.materialStatus,
+      })
+    : project.status;
 
   const statusLabel = project.type === "WEBSITE"
     ? labelForProjectStatus(displayStatus, { pStatus: website?.pStatus })

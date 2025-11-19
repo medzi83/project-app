@@ -710,8 +710,15 @@ export default async function ProjectsPage({ searchParams }: Props) {
               const effectiveAgentId = getEffectiveAgentId(p.agentId, isWTAssignment);
 
               const ended = (p.website?.pStatus ?? "") === "BEENDET";
-              // Use status from database (which is kept in sync via actions and sync script)
-              const derivedStatus = p.status;
+              // Calculate status in real-time based on current data
+              const derivedStatus = deriveProjectStatus({
+                pStatus: p.website?.pStatus,
+                webDate: p.website?.webDate,
+                webterminType: p.website?.webterminType,
+                demoDate: p.website?.demoDate,
+                onlineDate: p.website?.onlineDate,
+                materialStatus: p.website?.materialStatus,
+              });
               const statusLabel = labelForProjectStatus(derivedStatus, { pStatus: p.website?.pStatus });
               const clientInactive = p.client?.workStopped || p.client?.finished;
               const isOnline = derivedStatus === "ONLINE";
