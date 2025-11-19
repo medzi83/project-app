@@ -358,7 +358,7 @@ const PRODUCTION_STATUS_LABELS: Record<ProductionStatus, string> = {
   BEENDET: "Beendet",
   MMW: "MMW",
   VOLLST_A_K: "vollst. a.K.",
-  VOLLST_K_E_S: "vollst. K.e.S.",
+  VOLLST_K_E_S: "vollst. EM/VW",
 };
 
 const SEO_STATUS_LABELS: Record<SEOStatus, string> = {
