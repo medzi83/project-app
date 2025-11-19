@@ -70,18 +70,18 @@ export default function LoadingDashboard() {
       </main>
 
       {/* Loading Overlay with Spinner */}
-      <div className="fixed inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm flex items-center justify-center z-50">
         <div className="text-center space-y-4">
           {/* Animated Spinner */}
           <div className="relative w-16 h-16 mx-auto">
-            <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 border-4 border-gray-200 dark:border-gray-700 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-blue-600 dark:border-blue-500 rounded-full border-t-transparent animate-spin"></div>
           </div>
 
           {/* Loading Text */}
           <div className="space-y-2">
-            <p className="text-lg font-semibold text-gray-900">Dashboard wird geladen...</p>
-            <p className="text-sm text-gray-600">Daten werden vorbereitet</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Dashboard wird geladen...</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Daten werden vorbereitet</p>
           </div>
         </div>
       </div>

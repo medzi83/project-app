@@ -43,7 +43,7 @@ const linkify = (u?: string | null) => {
 };
 
 const PRIORITIES = ["NONE", "PRIO_1", "PRIO_2", "PRIO_3"] as const;
-const CMS = ["SHOPWARE", "JOOMLA", "LOGO", "PRINT", "OTHER"] as const;
+const CMS = ["SHOPWARE", "JOOMLA", "WORDPRESS", "CUSTOM", "OTHER"] as const;
 
 type Props = { params: Promise<{ id: string }> };
 

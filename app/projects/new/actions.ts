@@ -25,8 +25,8 @@ const triState = z.enum(["unknown", "yes", "no"]).transform((v) =>
 
 const MaterialStatus = z.enum(["ANGEFORDERT", "TEILWEISE", "VOLLSTAENDIG", "NV"]);
 const WebsitePriority = z.enum(["NONE", "PRIO_1", "PRIO_2", "PRIO_3"]);
-const CMS = z.enum(["SHOPWARE", "WORDPRESS", "JOOMLA", "LOGO", "PRINT", "CUSTOM", "OTHER"]);
-const ProductionStatus = z.enum(["NONE", "BEENDET", "MMW", "VOLLST_A_K"]);
+const CMS = z.enum(["SHOPWARE", "WORDPRESS", "JOOMLA", "CUSTOM", "OTHER"]);
+const ProductionStatus = z.enum(["NONE", "BEENDET", "MMW", "VOLLST_A_K", "VOLLST_K_E_S"]);
 const SEOStatus = z.string().optional().transform((v) => {
   if (!v || v.trim() === "") return "NEIN";
   const val = v.trim();

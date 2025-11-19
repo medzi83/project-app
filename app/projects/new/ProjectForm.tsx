@@ -7,7 +7,7 @@ import { EmailConfirmationDialog } from "@/components/EmailConfirmationDialog";
 type Option = { value: string; label: string };
 
 const PRIORITIES = ["NONE", "PRIO_1", "PRIO_2", "PRIO_3"] as const;
-const CMS = ["SHOPWARE", "JOOMLA", "LOGO", "PRINT", "OTHER"] as const;
+const CMS = ["SHOPWARE", "JOOMLA", "WORDPRESS", "CUSTOM", "OTHER"] as const;
 const PRODUCTION = ["NONE", "BEENDET", "MMW", "VOLLST_A_K", "VOLLST_K_E_S"] as const;
 const SEO = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"] as const;
 const TEXTIT = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"] as const;

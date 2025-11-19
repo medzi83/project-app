@@ -46,7 +46,7 @@ type Search = {
 
 const STATUSES = ["WEBTERMIN", "MATERIAL", "UMSETZUNG", "DEMO", "ONLINE"] as const;
 const PRIORITIES = ["NONE", "PRIO_1", "PRIO_2", "PRIO_3"] as const;
-const CMS = ["SHOPWARE", "JOOMLA", "LOGO", "PRINT", "OTHER"] as const;
+const CMS = ["SHOPWARE", "JOOMLA", "WORDPRESS", "CUSTOM", "OTHER"] as const;
 
 const fmtDate = (d?: Date | string | null) => {
   if (!d) return "-";
