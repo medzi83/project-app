@@ -577,7 +577,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-    <form method="get" className="flex flex-wrap items-end gap-3">
+    <form method="get" className="flex flex-col gap-4">
       <input type="hidden" name="sort" value={sp.sort} />
       <input type="hidden" name="submitted" value="1" />
       {scopeActive && <input type="hidden" name="scope" value="active" />}
@@ -585,79 +585,86 @@ export default async function ProjectsPage({ searchParams }: Props) {
       {sp.overdue === "1" && <input type="hidden" name="overdue" value="1" />}
       {sp.showBeendet === "1" && <input type="hidden" name="showBeendet" value="1" />}
 
-      <div className="flex flex-col gap-1 w-48 shrink-0">
-        <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Kunde suchen</label>
-        <input name="q" defaultValue={sp.q} placeholder="Kundennr. oder Name" className="px-2 py-1 text-xs border rounded bg-background text-foreground" />
-      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1 w-48 shrink-0">
+          <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Kunde suchen</label>
+          <input name="q" defaultValue={sp.q} placeholder="Kundennr. oder Name" className="px-2 py-1 text-xs border rounded bg-background text-foreground" />
+        </div>
 
-      <CheckboxFilterGroup
-        name="status"
-        label="Status"
-        options={[
-          ...STATUSES.map((s) => ({ value: s, label: labelForProjectStatus(s as ProjectStatus) })),
-          { value: "BEENDET", label: "Beendet" },
-        ]}
-        selected={sp.status ?? []}
-        width="w-44"
-      />
-
-      <CheckboxFilterGroup
-        name="priority"
-        label="Prio"
-        options={PRIORITIES.map((p) => ({ value: p, label: labelForWebsitePriority(p) }))}
-        selected={sp.priority ?? []}
-        width="w-40"
-      />
-
-      <CheckboxFilterGroup
-        name="cms"
-        label="CMS"
-        options={CMS.map((c) => ({ value: c, label: c === "SHOPWARE" ? "Shop" : c }))}
-        selected={sp.cms ?? []}
-        width="w-40"
-      />
-
-      <CheckboxFilterGroup
-        name="agent"
-        label="Agent"
-        options={[
-          { value: "alle", label: "Alle" },
-          { value: "none", label: "Ohne Agent" },
-          ...agentsActive.filter(a => a.categories.includes("WEBSEITE")).map((a) => ({
-            value: a.id,
-            label: a.name ?? a.email ?? "",
-          })),
-        ]}
-        selected={sp.agent ?? []}
-        width="w-52"
-      />
-
-      <div className="flex flex-col gap-1 w-36 shrink-0">
-        <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Reihenfolge</label>
-        <select name="dir" defaultValue={sp.dir} className="px-2 py-1 text-xs border rounded bg-background text-foreground">
-          <option value="asc">aufsteigend</option>
-          <option value="desc">absteigend</option>
-        </select>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" className="gap-2">Anwenden</Button>
-        <SaveFilterButton
-          type="projects"
-          currentStatus={sp.status}
-          currentPriority={sp.priority}
-          currentCms={sp.cms}
-          currentAgent={sp.agent}
+        <CheckboxFilterGroup
+          name="status"
+          label="Status"
+          options={[
+            ...STATUSES.map((s) => ({ value: s, label: labelForProjectStatus(s as ProjectStatus) })),
+            { value: "BEENDET", label: "Beendet" },
+          ]}
+          selected={sp.status ?? []}
+          width="w-44"
         />
-        <Button type="button" variant="outline" asChild>
-          <Link href="/projects?reset=1">Zurücksetzen</Link>
-        </Button>
-        <Button type="submit" name="standardSort" value="1" variant="outline">Standardsortierung</Button>
-        <Button type="button" variant={showBeendetProjects ? "default" : "outline"} asChild>
-          <Link href={makeShowBeendetHref({ current: sp, show: !showBeendetProjects })}>
-            {showBeendetProjects ? "Beendete Projekte ausblenden" : "Beendete Projekte einblenden"}
-          </Link>
-        </Button>
+
+        <CheckboxFilterGroup
+          name="priority"
+          label="Prio"
+          options={PRIORITIES.map((p) => ({ value: p, label: labelForWebsitePriority(p) }))}
+          selected={sp.priority ?? []}
+          width="w-40"
+        />
+
+        <CheckboxFilterGroup
+          name="cms"
+          label="CMS"
+          options={CMS.map((c) => ({ value: c, label: c === "SHOPWARE" ? "Shop" : c }))}
+          selected={sp.cms ?? []}
+          width="w-40"
+        />
+
+        <CheckboxFilterGroup
+          name="agent"
+          label="Agent"
+          options={[
+            { value: "alle", label: "Alle" },
+            { value: "none", label: "Ohne Agent" },
+            ...agentsActive.filter(a => a.categories.includes("WEBSEITE")).map((a) => ({
+              value: a.id,
+              label: a.name ?? a.email ?? "",
+            })),
+          ]}
+          selected={sp.agent ?? []}
+          width="w-52"
+        />
+
+        <div className="flex flex-col gap-1 w-36 shrink-0">
+          <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Reihenfolge</label>
+          <select name="dir" defaultValue={sp.dir} className="px-2 py-1 text-xs border rounded bg-background text-foreground">
+            <option value="asc">aufsteigend</option>
+            <option value="desc">absteigend</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <Button type="submit" className="gap-2 h-10">Anwenden</Button>
+          <SaveFilterButton
+            type="projects"
+            currentStatus={sp.status}
+            currentPriority={sp.priority}
+            currentCms={sp.cms}
+            currentAgent={sp.agent}
+          />
+          <Button type="button" variant="outline" asChild className="h-10">
+            <Link href="/projects?reset=1">Zurücksetzen</Link>
+          </Button>
+          <Button type="submit" name="standardSort" value="1" variant="outline" className="h-10">Standardsortierung</Button>
+          <Button type="button" variant={showBeendetProjects ? "default" : "outline"} asChild className="h-10">
+            <Link href={makeShowBeendetHref({ current: sp, show: !showBeendetProjects })}>
+              {showBeendetProjects ? "Beendete Projekte ausblenden" : "Beendete Projekte einblenden"}
+            </Link>
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Bevor du einen Filter speichern möchtest, um ihn bei jedem Aufruf der Liste standardmäßig zu laden, musst du die gesetzten Filteroptionen erst &quot;Anwenden&quot; und dann kannst du &quot;Filter speichern&quot;.
+        </p>
       </div>
     </form>
         </CardContent>

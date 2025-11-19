@@ -75,8 +75,7 @@ export function SaveFilterButton(props: Props) {
       onClick={handleSave}
       disabled={saving}
       variant="outline"
-      size="sm"
-      className="text-xs"
+      className="h-10"
     >
       {saved ? "✓ Gespeichert" : saving ? "Speichere..." : "Filter speichern"}
     </Button>
