@@ -41,6 +41,7 @@ type Search = {
   scope?: string;
   overdue?: string;
   client?: string;
+  showBeendet?: string;
 };
 
 const STATUSES = ["WEBTERMIN", "MATERIAL", "UMSETZUNG", "DEMO", "ONLINE"] as const;
@@ -299,6 +300,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
     scope: str(spRaw.scope) ?? undefined,
     overdue: str(spRaw.overdue) ?? undefined,
     client: str(spRaw.client) ?? undefined,
+    showBeendet: str(spRaw.showBeendet) ?? undefined,
   };
 
   const standardSortTriggered = str(spRaw.standardSort);
@@ -312,6 +314,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
   }
 
   const scopeActive = sp.scope === "active";
+  const showBeendetProjects = sp.showBeendet === "1";
 
   const role = session.user.role!;
   const canEdit = role === "ADMIN" || role === "AGENT";
@@ -333,6 +336,13 @@ export default async function ProjectsPage({ searchParams }: Props) {
     }
     return where.AND as Prisma.ProjectWhereInput[];
   };
+
+  // Exclude BEENDET projects by default (unless showBeendet=1 or status filter includes BEENDET)
+  const statusFilterIncludesBeendet = sp.status && sp.status.includes("BEENDET");
+  if (!showBeendetProjects && !statusFilterIncludesBeendet) {
+    const andConditions = ensureAnd();
+    andConditions.push({ status: { not: "BEENDET" } });
+  }
   if (role === "CUSTOMER") {
     if (!clientId) redirect("/");
     where.clientId = clientId!;
@@ -573,6 +583,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
       {scopeActive && <input type="hidden" name="scope" value="active" />}
       {sp.client && <input type="hidden" name="client" value={sp.client} />}
       {sp.overdue === "1" && <input type="hidden" name="overdue" value="1" />}
+      {sp.showBeendet === "1" && <input type="hidden" name="showBeendet" value="1" />}
 
       <div className="flex flex-col gap-1 w-48 shrink-0">
         <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Kunde suchen</label>
@@ -642,6 +653,11 @@ export default async function ProjectsPage({ searchParams }: Props) {
           <Link href="/projects?reset=1">Zurücksetzen</Link>
         </Button>
         <Button type="submit" name="standardSort" value="1" variant="outline">Standardsortierung</Button>
+        <Button type="button" variant={showBeendetProjects ? "default" : "outline"} asChild>
+          <Link href={makeShowBeendetHref({ current: sp, show: !showBeendetProjects })}>
+            {showBeendetProjects ? "Beendete Projekte ausblenden" : "Beendete Projekte einblenden"}
+          </Link>
+        </Button>
       </div>
     </form>
         </CardContent>
@@ -658,6 +674,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
                   <Th href={mkSort("status")} active={sp.sort==="status"} dir={sp.dir}>Status</Th>
                   <Th href={mkSort("customerNo")} active={sp.sort==="customerNo"} dir={sp.dir} width={120}>Kundennr.</Th>
                   <Th href={mkSort("clientName")} active={sp.sort==="clientName"} dir={sp.dir} width={200}>Kunde</Th>
+                  <Th className="text-center" width={60}></Th>
                   <Th href={mkSort("priority")} active={sp.sort==="priority"} dir={sp.dir}>Prio</Th>
                   <Th href={mkSort("pStatus")} active={sp.sort==="pStatus"} dir={sp.dir}>P-Status</Th>
                   <Th href={mkSort("cms")} active={sp.sort==="cms"} dir={sp.dir}>CMS</Th>
@@ -693,13 +710,8 @@ export default async function ProjectsPage({ searchParams }: Props) {
               const effectiveAgentId = getEffectiveAgentId(p.agentId, isWTAssignment);
 
               const ended = (p.website?.pStatus ?? "") === "BEENDET";
-              const derivedStatus = deriveProjectStatus({
-                pStatus: p.website?.pStatus,
-                webDate: p.website?.webDate,
-                demoDate: p.website?.demoDate,
-                onlineDate: p.website?.onlineDate,
-                materialStatus: p.website?.materialStatus,
-              });
+              // Use status from database (which is kept in sync via actions and sync script)
+              const derivedStatus = p.status;
               const statusLabel = labelForProjectStatus(derivedStatus, { pStatus: p.website?.pStatus });
               const clientInactive = p.client?.workStopped || p.client?.finished;
               const isOnline = derivedStatus === "ONLINE";
@@ -761,12 +773,25 @@ export default async function ProjectsPage({ searchParams }: Props) {
                         </svg>
                       )}
                       <span className="truncate">{p.client?.name ?? "-"}</span>
+                      {p.title && (
+                        <sup className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-help flex-shrink-0 leading-none" title={p.title}>
+                          +
+                        </sup>
+                      )}
                       {p.website?.isRelaunch && (
                         <Badge className="bg-orange-500 dark:bg-orange-600 text-white text-xs flex-shrink-0" title="Relaunch-Projekt">
                           RL
                         </Badge>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Link href={`/projects/${p.id}`} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-primary hover:bg-muted transition-colors" title="Details anzeigen">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </Link>
                   </TableCell>
                   <TableCell><InlineCell target="website" id={p.id} name="priority" type="select" display={labelForWebsitePriority(p.website?.priority)} value={p.website?.priority ?? "NONE"} options={priorityOptions} canEdit={canEdit} /></TableCell>
                   <TableCell><InlineCell target="website" id={p.id} name="pStatus" type="select" display={labelForProductionStatus(p.website?.pStatus)} value={p.website?.pStatus ?? "NONE"} options={pStatusOptions} canEdit={canEdit} /></TableCell>
@@ -786,21 +811,18 @@ export default async function ProjectsPage({ searchParams }: Props) {
                   <TableCell className="align-top"><InlineCell target="website" id={p.id} name="note" type="textarea" display={p.website?.note ?? ""} value={p.website?.note ?? ""} canEdit={canEdit} displayClassName="block whitespace-pre-wrap" /></TableCell>
                   <TableCell className="whitespace-nowrap">{fmtDate(p.updatedAt)}</TableCell>
                   <TableCell className="whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <Link href={`/projects/${p.id}`} className="underline">Details</Link>
-                      {role === "ADMIN" && (
-                        <form action={deleteProject}>
-                          <input type="hidden" name="projectId" value={p.id} />
-                          <ConfirmSubmit
-                            confirmText="Dieses Projekt unwiderruflich löschen?"
-                            className="inline-flex items-center gap-1 rounded border border-destructive/30 px-2 py-1 text-destructive hover:bg-destructive/10"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                            <span className="sr-only">Projekt löschen</span>
-                          </ConfirmSubmit>
-                        </form>
-                      )}
-                    </div>
+                    {role === "ADMIN" && (
+                      <form action={deleteProject}>
+                        <input type="hidden" name="projectId" value={p.id} />
+                        <ConfirmSubmit
+                          confirmText="Dieses Projekt unwiderruflich löschen?"
+                          className="inline-flex items-center gap-1 rounded border border-destructive/30 px-2 py-1 text-destructive hover:bg-destructive/10"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                          <span className="sr-only">Projekt löschen</span>
+                        </ConfirmSubmit>
+                      </form>
+                    )}
                   </TableCell>
                 </ProjectRow>
               );
@@ -886,6 +908,7 @@ function makeSortHref({ current, key }: { current: Search; key: string }) {
   if (current.scope) p.set("scope", current.scope);
   if (current.client) p.set("client", current.client);
   if (current.overdue === "1") p.set("overdue", "1");
+  if (current.showBeendet === "1") p.set("showBeendet", "1");
   return `/projects?${p.toString()}`;
 }
 
@@ -902,6 +925,7 @@ function makePageHref({ current, page }: { current: Search; page: number }) {
   if (current.scope) p.set("scope", current.scope);
   if (current.client) p.set("client", current.client);
   if (current.overdue === "1") p.set("overdue", "1");
+  if (current.showBeendet === "1") p.set("showBeendet", "1");
   p.set("page", String(page));
   return `/projects?${p.toString()}`;
 }
@@ -918,10 +942,30 @@ function makePageSizeHref({ current, size }: { current: Search; size: number }) 
   if (current.scope) p.set("scope", current.scope);
   if (current.client) p.set("client", current.client);
   if (current.overdue === "1") p.set("overdue", "1");
+  if (current.showBeendet === "1") p.set("showBeendet", "1");
   p.set("ps", String(size));
   p.set("page", "1");
   return `/projects?${p.toString()}`;
 }
+
+function makeShowBeendetHref({ current, show }: { current: Search; show: boolean }) {
+  const p = new URLSearchParams();
+  if (current.sort) p.set("sort", current.sort);
+  if (current.dir) p.set("dir", current.dir);
+  if (current.q) p.set("q", current.q);
+  if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
+  if (current.priority && current.priority.length) for (const v of current.priority) p.append("priority", v);
+  if (current.cms && current.cms.length) for (const v of current.cms) p.append("cms", v);
+  if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);
+  if (current.ps) p.set("ps", current.ps);
+  if (current.page) p.set("page", current.page);
+  if (current.scope) p.set("scope", current.scope);
+  if (current.client) p.set("client", current.client);
+  if (current.overdue === "1") p.set("overdue", "1");
+  if (show) p.set("showBeendet", "1");
+  return `/projects?${p.toString()}`;
+}
+
 function Th(props: { href?: string; active?: boolean; dir?: "asc" | "desc"; children: React.ReactNode; width?: number }) {
   const { href, active, dir, children, width } = props;
   const arrow = active ? (dir === "desc" ? " ↓" : " ↑") : "";

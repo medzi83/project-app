@@ -201,16 +201,8 @@ export default async function ProjectDetail({ params }: Props) {
   const agentDisplayName = getAgentDisplayName(project.agentId, isWTAssignment, agentsAll);
   const effectiveAgentId = getEffectiveAgentId(project.agentId, isWTAssignment);
 
-  // Derive the correct status for website projects
-  const displayStatus = project.type === "WEBSITE" && website
-    ? deriveProjectStatus({
-        pStatus: website.pStatus,
-        webDate: website.webDate,
-        demoDate: website.demoDate,
-        onlineDate: website.onlineDate,
-        materialStatus: website.materialStatus,
-      })
-    : project.status;
+  // Use status from database (which is kept in sync via actions and sync script)
+  const displayStatus = project.status;
 
   const statusLabel = project.type === "WEBSITE"
     ? labelForProjectStatus(displayStatus, { pStatus: website?.pStatus })
@@ -527,6 +519,21 @@ export default async function ProjectDetail({ params }: Props) {
             </h2>
           </div>
           <div className="p-6 space-y-4">
+            <div>
+              <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Projekttitel</dt>
+              <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                <InlineCell
+                  target="project"
+                  id={project.id}
+                  name="title"
+                  type="text"
+                  display={project.title ?? "-"}
+                  value={project.title ?? ""}
+                  canEdit={canEdit}
+                />
+              </dd>
+            </div>
+
             <div>
               <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Domain</dt>
               <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">

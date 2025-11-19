@@ -703,7 +703,16 @@ export default async function PrintDesignPage({ searchParams }: Props) {
                         <Badge variant="outline">{row.status}</Badge>
                       </TableCell>
                       <TableCell>{row.customerNo}</TableCell>
-                      <TableCell>{row.clientName}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span>{row.clientName}</span>
+                          {project.title && (
+                            <sup className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-help flex-shrink-0 leading-none" title={project.title}>
+                              +
+                            </sup>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-center">
                         <Link
                           href={`/print-design/${row.id}`}

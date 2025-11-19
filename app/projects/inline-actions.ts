@@ -17,7 +17,7 @@ import { getAuthSession } from "@/lib/authz";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-const ProjectKey = z.enum(["agentId"]); // bei Bedarf erweitern (z.B. "title")
+const ProjectKey = z.enum(["agentId", "title"]);
 const WebsiteKey = z.enum([
   "domain","priority","pStatus","cms",
   "webDate","demoDate","onlineDate","lastMaterialAt",
@@ -73,8 +73,9 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
 
   if (target === "project") {
     const projectKey = ProjectKey.parse(key);
-    const nextAgentId = value && value !== "" ? value : null;
+
     if (projectKey === "agentId") {
+      const nextAgentId = value && value !== "" ? value : null;
       const { baseAgentId, isWTAssignment } = normalizeAgentIdForDB(nextAgentId);
 
       // Update both the project's agentId and the website's isWTAssignment flag
@@ -86,6 +87,12 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
           create: { projectId: id, isWTAssignment },
         }),
       ]);
+    } else if (projectKey === "title") {
+      const nextTitle = value && value.trim() !== "" ? value.trim() : null;
+      await prisma.project.update({
+        where: { id },
+        data: { title: nextTitle }
+      });
     }
   } else {
     const websiteKey = WebsiteKey.parse(key);
@@ -132,7 +139,7 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
         createData.webDate = nextValue;
         // Also handle webterminType if extraValue is provided
         if (extraValue !== undefined) {
-          const nextType = extraValue.trim() !== "" ? extraValue as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" : null;
+          const nextType = extraValue.trim() !== "" ? extraValue as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" | "OHNE_TERMIN" : null;
           updateData.webterminType = nextType;
           createData.webterminType = nextType;
         }
@@ -260,6 +267,7 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
             select: {
               pStatus: true,
               webDate: true,
+              webterminType: true,
               demoDate: true,
               onlineDate: true,
               materialStatus: true,
@@ -271,6 +279,7 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
         const nextStatus = deriveProjectStatus({
           pStatus: project.website?.pStatus,
           webDate: project.website?.webDate,
+          webterminType: project.website?.webterminType,
           demoDate: project.website?.demoDate,
           onlineDate: project.website?.onlineDate,
           materialStatus: project.website?.materialStatus,

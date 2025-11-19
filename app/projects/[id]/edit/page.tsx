@@ -130,6 +130,7 @@ export default async function EditProjectPage({ params }: Props) {
               <option value="TELEFONISCH">Telefonisch</option>
               <option value="BEIM_KUNDEN">Beim Kunden</option>
               <option value="IN_DER_AGENTUR">In der Agentur</option>
+              <option value="OHNE_TERMIN">Ohne Termin</option>
             </select>
           </Field>
 

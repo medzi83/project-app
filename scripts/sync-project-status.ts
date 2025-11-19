@@ -39,6 +39,7 @@ async function syncProjectStatuses() {
       const derivedStatus = deriveProjectStatus({
         pStatus: project.website?.pStatus,
         webDate: project.website?.webDate,
+        webterminType: project.website?.webterminType,
         demoDate: project.website?.demoDate,
         onlineDate: project.website?.onlineDate,
         materialStatus: project.website?.materialStatus,

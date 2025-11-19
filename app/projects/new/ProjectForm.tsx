@@ -16,6 +16,7 @@ const WEBTERMIN_TYPES: Option[] = [
   { value: "TELEFONISCH", label: "Telefonisch" },
   { value: "BEIM_KUNDEN", label: "Beim Kunden" },
   { value: "IN_DER_AGENTUR", label: "In der Agentur" },
+  { value: "OHNE_TERMIN", label: "Ohne Termin" },
 ];
 const TRI: Option[] = [
   { value: "unknown", label: "(nicht gesetzt)" },
@@ -471,7 +472,7 @@ export function UnifiedProjectForm({
                         <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Webtermin (Datum + Zeit)</span>
                         <input type="datetime-local" name="webDate" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" />
                       </div>
-                      <SelectField name="webterminType" label="Art des Termins" options={WEBTERMIN_TYPES} defaultValue="" />
+                      <SelectField name="webterminType" label="Art des Termins *" options={WEBTERMIN_TYPES} defaultValue="OHNE_TERMIN" required />
                     </div>
                     <div className="pt-2">
                       <label className="flex items-center gap-2 cursor-pointer">
@@ -678,16 +679,18 @@ function SelectField({
   label,
   options,
   defaultValue,
+  required,
 }: {
   name: string;
   label: string;
   options: Option[];
   defaultValue?: string;
+  required?: boolean;
 }) {
   return (
     <label className="flex flex-col gap-1">
       <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">{label}</span>
-      <select name={name} defaultValue={defaultValue} className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600">
+      <select name={name} defaultValue={defaultValue} required={required} className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600">
         {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}

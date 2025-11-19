@@ -19,6 +19,7 @@ type TextitStatusValue = TextitStatus | string | null | undefined;
 type DeriveProjectStatusInput = {
   pStatus?: ProductionStatusValue;
   webDate?: DateLike;
+  webterminType?: string | null;
   demoDate?: DateLike;
   onlineDate?: DateLike;
   materialStatus?: MaterialStatusValue;
@@ -39,6 +40,7 @@ export const STATUS_LABELS: Record<ProjectStatus, string> = {
   UMSETZUNG: "Umsetzung",
   DEMO: "Demo",
   ONLINE: "Online",
+  BEENDET: "Beendet",
 };
 
 const toDate = (value: DateLike) => {
@@ -87,6 +89,7 @@ export type DerivedStatusFilter = ProjectStatus | "BEENDET";
 export function deriveProjectStatus({
   pStatus,
   webDate,
+  webterminType,
   demoDate,
   onlineDate,
   materialStatus,
@@ -94,7 +97,7 @@ export function deriveProjectStatus({
 }: DeriveProjectStatusInput): ProjectStatus {
   const normalizedPStatus = normalizeStatus(pStatus);
   if (normalizedPStatus && DONE_P_STATUS.has(normalizedPStatus)) {
-    return "ONLINE";
+    return "BEENDET";
   }
 
   const online = toDate(onlineDate);
@@ -105,6 +108,18 @@ export function deriveProjectStatus({
   const demo = toDate(demoDate);
   if (demo) {
     return "DEMO";
+  }
+
+  // If webterminType is "OHNE_TERMIN", skip WEBTERMIN phase and go directly to MATERIAL
+  if (webterminType === "OHNE_TERMIN") {
+    if (normalizedPStatus === VOLLST_A_K) {
+      return "UMSETZUNG";
+    }
+    const normalizedMaterial = normalizeMaterialStatus(materialStatus);
+    if (normalizedMaterial !== MATERIAL_COMPLETE) {
+      return "MATERIAL";
+    }
+    return "UMSETZUNG";
   }
 
   const effectiveNow = now ?? new Date();
@@ -168,6 +183,13 @@ export function buildWebsiteStatusWhere(
           excludeDone,
           { onlineDate: null },
           { demoDate: null },
+          // Exclude projects with OHNE_TERMIN (but include NULL values)
+          {
+            OR: [
+              { webterminType: null },
+              { webterminType: { not: "OHNE_TERMIN" } },
+            ],
+          },
           {
             OR: [
               { webDate: null },
@@ -182,11 +204,26 @@ export function buildWebsiteStatusWhere(
           excludeDone,
           { onlineDate: null },
           { demoDate: null },
-          { webDate: { lte: effectiveNow } },
           {
-            materialStatus: { in: INCOMPLETE_MATERIAL_STATUSES },
+            OR: [
+              // Regular case: webDate in past, material incomplete, not VOLLST_A_K
+              {
+                AND: [
+                  { webDate: { lte: effectiveNow } },
+                  { materialStatus: { in: INCOMPLETE_MATERIAL_STATUSES } },
+                  { pStatus: { not: VOLLST_A_K } },
+                ],
+              },
+              // OHNE_TERMIN case: material incomplete, not VOLLST_A_K
+              {
+                AND: [
+                  { webterminType: "OHNE_TERMIN" },
+                  { materialStatus: { in: INCOMPLETE_MATERIAL_STATUSES } },
+                  { pStatus: { not: VOLLST_A_K } },
+                ],
+              },
+            ],
           },
-          { pStatus: { not: VOLLST_A_K } },
         ],
       });
     case "UMSETZUNG":
@@ -195,11 +232,32 @@ export function buildWebsiteStatusWhere(
           excludeDone,
           { onlineDate: null },
           { demoDate: null },
-          { webDate: { lte: effectiveNow } },
           {
             OR: [
-              { pStatus: VOLLST_A_K },
-              { materialStatus: MATERIAL_COMPLETE },
+              // Regular case: webDate in past and (VOLLST_A_K or material complete)
+              {
+                AND: [
+                  { webDate: { lte: effectiveNow } },
+                  {
+                    OR: [
+                      { pStatus: VOLLST_A_K },
+                      { materialStatus: MATERIAL_COMPLETE },
+                    ],
+                  },
+                ],
+              },
+              // OHNE_TERMIN case: VOLLST_A_K or material complete
+              {
+                AND: [
+                  { webterminType: "OHNE_TERMIN" },
+                  {
+                    OR: [
+                      { pStatus: VOLLST_A_K },
+                      { materialStatus: MATERIAL_COMPLETE },
+                    ],
+                  },
+                ],
+              },
             ],
           },
         ],
@@ -215,16 +273,14 @@ const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
   UMSETZUNG: "Umsetzung",
   DEMO: "Demo",
   ONLINE: "Online",
+  BEENDET: "Beendet",
 };
 
 export function labelForProjectStatus(
   status: ProjectStatus,
   opts?: { pStatus?: ProductionStatusValue },
 ): string {
-  const normalizedPStatus = normalizeStatus(opts?.pStatus);
-  if (normalizedPStatus && DONE_P_STATUS.has(normalizedPStatus)) {
-    return "Beendet";
-  }
+  // No need to check pStatus anymore - status should already be BEENDET if pStatus is BEENDET
   return PROJECT_STATUS_LABELS[status] ?? status;
 }
 

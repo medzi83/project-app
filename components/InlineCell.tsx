@@ -114,9 +114,29 @@ export default function InlineCell({
 
   // READ MODE
   if (!editing) {
+    // Format webterminType label for display
+    const formatWebterminType = (typeValue?: string) => {
+      switch (typeValue) {
+        case "TELEFONISCH": return "Telefonisch";
+        case "BEIM_KUNDEN": return "Beim Kunden";
+        case "IN_DER_AGENTUR": return "In der Agentur";
+        case "OHNE_TERMIN": return "Ohne Termin";
+        default: return "";
+      }
+    };
+
+    const extraLabel = type === "datetime-with-type" && extraValue
+      ? formatWebterminType(extraValue)
+      : "";
+
     const displayNode = (
       <span className={displayClassName} style={displayStyle}>
         {fallbackDisplay}
+        {extraLabel && (
+          <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+            {extraLabel}
+          </span>
+        )}
       </span>
     );
 
@@ -250,7 +270,7 @@ export default function InlineCell({
           <select
             name="extraValue"
             defaultValue={extraValue ?? ""}
-            className="p-1 border rounded text-sm"
+            className="p-1 border rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
             onKeyDown={(e) => {
               if (e.key === "Escape") { e.preventDefault(); cancel(); }
             }}
@@ -259,6 +279,7 @@ export default function InlineCell({
             <option value="TELEFONISCH">Telefonisch</option>
             <option value="BEIM_KUNDEN">Beim Kunden</option>
             <option value="IN_DER_AGENTUR">In der Agentur</option>
+            <option value="OHNE_TERMIN">Ohne Termin</option>
           </select>
           <div className="flex gap-2">
             <button

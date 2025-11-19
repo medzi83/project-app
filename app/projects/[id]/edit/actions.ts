@@ -52,7 +52,7 @@ const FormSchema = z.object({
   pStatus: ProductionStatus,
 
   webDate: z.string().optional().transform(toDate),
-  webterminType: z.string().optional().transform((v) => v && v.trim() ? v as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" : null),
+  webterminType: z.string().optional().transform((v) => v && v.trim() ? v as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" | "OHNE_TERMIN" : null),
   demoDate: z.string().optional().transform(toDate),
   onlineDate: z.string().optional().transform(toDate),
   lastMaterialAt: z.string().optional().transform(toDate),
@@ -87,6 +87,7 @@ export async function updateWebsite(formData: FormData) {
   const nextStatus = deriveProjectStatus({
     pStatus: data.pStatus,
     webDate: data.webDate,
+    webterminType: data.webterminType,
     demoDate: data.demoDate,
     onlineDate: data.onlineDate,
     materialStatus: data.materialStatus,

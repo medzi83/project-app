@@ -43,7 +43,7 @@ const TextitStatus = z.string().optional().transform((v) => {
   }
   return "NEIN"; // Fallback to default if invalid value
 });
-const WebterminType = z.enum(["TELEFONISCH", "BEIM_KUNDEN", "IN_DER_AGENTUR"]).nullable();
+const WebterminType = z.enum(["TELEFONISCH", "BEIM_KUNDEN", "IN_DER_AGENTUR", "OHNE_TERMIN"]).nullable();
 const FilmScope = z.enum(["FILM", "DROHNE", "NACHDREH", "FILM_UND_DROHNE"]);
 const FilmPriority = z.enum(["NONE", "FILM_SOLO", "PRIO_1", "PRIO_2"]);
 const FilmStatus = z.enum(["AKTIV", "BEENDET", "WARTEN", "VERZICHT", "MMW"]);
@@ -138,7 +138,7 @@ const WebsiteProjectSchema = z.object({
   pStatus: ProductionStatus.default("NONE"),
 
   webDate: z.string().optional().transform(toDate),
-  webterminType: z.string().optional().transform((v) => v && v.trim() ? v as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" : null),
+  webterminType: z.string().optional().transform((v) => v && v.trim() ? v as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" | "OHNE_TERMIN" : null),
   demoDate: z.string().optional().transform(toDate),
   onlineDate: z.string().optional().transform(toDate),
   lastMaterialAt: z.string().optional().transform(toDate),
@@ -178,6 +178,7 @@ export async function createWebsiteProject(formData: FormData) {
   const nextStatus = deriveProjectStatus({
     pStatus: data.pStatus,
     webDate: data.webDate,
+    webterminType: data.webterminType,
     demoDate: data.demoDate,
     onlineDate: data.onlineDate,
     materialStatus: data.materialStatus,
@@ -345,7 +346,7 @@ const UnifiedProjectSchema = z.object({
   cmsOther: z.string().optional().transform((v) => v?.trim() || null),
   pStatus: ProductionStatus.optional(),
   webDate: z.string().optional().transform(toDate),
-  webterminType: z.string().optional().transform((v) => v && v.trim() ? v as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" : null),
+  webterminType: z.string().optional().transform((v) => v && v.trim() ? v as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" | "OHNE_TERMIN" : null),
   demoDate: z.string().optional().transform(toDate),
   onlineDate: z.string().optional().transform(toDate),
   lastMaterialAt: z.string().optional().transform(toDate),

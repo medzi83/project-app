@@ -571,6 +571,7 @@ enum ProjectStatus {
   UMSETZUNG
   DEMO
   ONLINE
+  BEENDET
 }
 
 enum WebsitePriority {
@@ -649,6 +650,7 @@ enum WebterminType {
   TELEFONISCH
   BEIM_KUNDEN
   IN_DER_AGENTUR
+  OHNE_TERMIN
 }
 
 enum PrintDesignType {

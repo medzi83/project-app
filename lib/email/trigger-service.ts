@@ -398,6 +398,7 @@ function replacePlaceholders(text: string, project: ProjectWithDetails): string 
       case "TELEFONISCH": return "Telefonisch";
       case "BEIM_KUNDEN": return "Beim Kunden";
       case "IN_DER_AGENTUR": return "In der Agentur";
+      case "OHNE_TERMIN": return "Ohne Termin";
       default: return "";
     }
   };

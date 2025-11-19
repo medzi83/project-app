@@ -986,6 +986,11 @@ export default async function FilmProjectsPage({ searchParams }: Props) {
                           </svg>
                         )}
                         <span>{row.clientName}</span>
+                        {project.title && (
+                          <sup className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-help flex-shrink-0 leading-none" title={project.title}>
+                            +
+                          </sup>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-center w-12">

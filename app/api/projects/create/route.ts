@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
       const nextStatus = deriveProjectStatus({
         pStatus: data.pStatus ?? "NONE",
         webDate: data.webDate ?? null,
+        webterminType: data.webterminType ?? null,
         demoDate: data.demoDate ?? null,
         onlineDate: data.onlineDate ?? null,
         materialStatus: data.materialStatus ?? "ANGEFORDERT",
