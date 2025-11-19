@@ -547,7 +547,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
   ];
   const priorityOptions = PRIORITIES.map((p) => ({ value: p, label: labelForWebsitePriority(p) }));
   const cmsOptions = CMS.map((c) => ({ value: c, label: c === "SHOPWARE" ? "Shop" : c }));
-  const pStatusOptions = ["NONE", "BEENDET", "MMW", "VOLLST_A_K"].map((v) => ({ value: v, label: labelForProductionStatus(v) }));
+  const pStatusOptions = ["NONE", "BEENDET", "MMW", "VOLLST_A_K", "VOLLST_K_E_S"].map((v) => ({ value: v, label: labelForProductionStatus(v) }));
   const seoOptions = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"].map((v) => ({ value: v, label: labelForSeoStatus(v) }));
   const textitOptions = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"].map((v) => ({ value: v, label: labelForTextitStatus(v) }));
 
@@ -743,6 +743,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
               const statusGreen = isUmsetzung && textitReady && seoReady;
               const isDemo = derivedStatus === "DEMO";
               const statusOnline = derivedStatus === "ONLINE";
+              const isKesStatus = p.website?.pStatus === "VOLLST_K_E_S" && derivedStatus === "UMSETZUNG";
 
               const isFavoriteClient = p.clientId && favoriteClientIds.has(p.clientId);
 
@@ -761,7 +762,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
                         : statusGreen
                         ? "inline-flex items-center px-2 py-1 rounded-md bg-green-500/30 dark:bg-green-500/40 text-green-900 dark:text-green-100 text-xs font-semibold"
                         : ""
-                    }>{statusLabel}</span>
+                    } style={isKesStatus ? { fontStyle: "italic" } : undefined}>{statusLabel}</span>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <div className="flex flex-col gap-1">

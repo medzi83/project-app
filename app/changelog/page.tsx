@@ -24,6 +24,42 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "19.11.2024",
+    version: "2.4.1",
+    changes: [
+      {
+        title: "Neuer P-Status: vollst. K.e.S.",
+        description:
+          "Für Webseitenprojekte gibt es einen neuen Produktionsstatus: 'vollst. K.e.S.' (vollständig - Kraft eigener Suppe). Dieser Status funktioniert wie 'vollst. a.K.' und versetzt Projekte in die UMSETZUNG-Phase. Der Unterschied: Wenn ein Projekt den Status 'vollst. K.e.S.' hat, wird das Wort 'Umsetzung' in der Projektliste und auf der Detailseite kursiv dargestellt. So erkennst du auf einen Blick, dass das Projekt aus eigener Initiative weiterläuft. Der neue Status steht in allen Dropdowns zur Auswahl und wird in der Filterlogik genauso behandelt wie 'vollst. a.K.'.",
+        type: "feature",
+      },
+      {
+        title: "Projekte ohne Webtermin erstellen",
+        description:
+          "Du kannst jetzt bei der Webtermin-Eingabe die Art 'Ohne Termin' auswählen! Projekte mit dieser Einstellung überspringen automatisch die WEBTERMIN-Phase und starten direkt bei MATERIAL. Das ist perfekt für Projekte, bei denen kein klassischer Webtermin stattfindet. Die Status-Berechnung wurde entsprechend angepasst und berücksichtigt diese neue Option in allen Listen und Filtern. In der Projektliste und auf der Detailseite wird der korrekte Status in Echtzeit basierend auf den aktuellen Daten berechnet.",
+        type: "feature",
+      },
+      {
+        title: "Beendete Projekte standardmäßig ausgeblendet",
+        description:
+          "Projekte mit dem Produktionsstatus 'Beendet' werden jetzt automatisch ausgeblendet, um die Listen übersichtlicher zu machen! In der Webseitenprojekt-Liste gibt es einen neuen Button 'Beendete Projekte einblenden', mit dem du sie bei Bedarf anzeigen lassen kannst. Der Status 'BEENDET' ist nun ein eigener Projektstatus und wird entsprechend gefiltert. Beendete Projekte tauchen nicht mehr in den normalen Listen auf, außer du aktivierst sie explizit. So konzentrierst du dich auf die aktiven Projekte.",
+        type: "improvement",
+      },
+      {
+        title: "Verbesserte Filter-Bedienung",
+        description:
+          "Die Filter-Buttons wurden unter die Filterfelder verschoben für eine bessere Übersicht! Alle Buttons haben jetzt eine einheitliche Höhe und das Layout ist übersichtlicher strukturiert. Eine neue Hilfetext-Zeile erklärt: 'Bevor du einen Filter speichern möchtest, um ihn bei jedem Aufruf der Liste standardmäßig zu laden, musst du die gesetzten Filteroptionen erst Anwenden und dann kannst du Filter speichern.' So ist der Ablauf klarer verständlich.",
+        type: "improvement",
+      },
+      {
+        title: "Print & Design Liste erweitert",
+        description:
+          "Die Print & Design Liste hat neue Funktionen erhalten! Die Kundennummer ist jetzt klickbar und führt direkt zum Kundenblatt. Admins können Projekte direkt aus der Liste oder von der Detailseite löschen - ein kompakter Mülleimer-Button mit Bestätigungs-Dialog verhindert versehentliches Löschen. Der 'Neues Projekt' Button wurde entfernt, da Print-Projekte über den allgemeinen Projekt-Anlegen-Dialog erstellt werden. Das Icon wurde auf das Palette-Symbol geändert, passend zur Navigation.",
+        type: "improvement",
+      },
+    ],
+  },
+  {
     date: "18.11.2024",
     version: "2.4.0",
     changes: [

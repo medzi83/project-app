@@ -2,6 +2,7 @@ import type { Prisma, PrintDesignType, ProductionStatus } from "@prisma/client";
 import type { CSSProperties, SVGProps } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Palette } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
@@ -12,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import CheckboxFilterGroup from "@/components/CheckboxFilterGroup";
 import { SaveFilterButton } from "@/components/SaveFilterButton";
 import PrintDesignInlineCell from "@/components/PrintDesignInlineCell";
+import { DeleteProjectButton } from "./DeleteProjectButton";
 import {
   derivePrintDesignStatus,
   getPrintDesignStatusDate,
@@ -541,16 +543,14 @@ export default async function PrintDesignPage({ searchParams }: Props) {
   };
 
   const canEdit = session.user.role === "ADMIN" || session.user.role === "AGENT";
+  const isAdmin = session.user.role === "ADMIN";
 
   return (
     <div className="w-full space-y-6 py-6 px-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg">
-          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 3v5a2 2 0 002 2h5m-6 10h4m-4-4h4m-10-4h.01M9 16h.01" />
-          </svg>
+          <Palette className="h-6 w-6" />
         </div>
         <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">Print & Design</h1>
@@ -558,11 +558,6 @@ export default async function PrintDesignPage({ searchParams }: Props) {
             {totalCount} {totalCount === 1 ? 'Projekt' : 'Projekte'} gesamt
           </p>
         </div>
-        {canEdit && (
-          <Link href="/print-design/new">
-            <Button>Neues Projekt</Button>
-          </Link>
-        )}
       </div>
 
       {/* Filter */}
@@ -679,12 +674,13 @@ export default async function PrintDesignPage({ searchParams }: Props) {
                   <TableHead>P-Status</TableHead>
                   <TableHead>Notizen</TableHead>
                   <SortableHeader field="updatedAt">Aktualisiert</SortableHeader>
+                  {canEdit && <TableHead className="w-20">Aktionen</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedRows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={17} className="text-center text-muted-foreground">
+                    <TableCell colSpan={canEdit ? 18 : 17} className="text-center text-muted-foreground">
                       Keine Projekte gefunden
                     </TableCell>
                   </TableRow>
@@ -702,7 +698,18 @@ export default async function PrintDesignPage({ searchParams }: Props) {
                       <TableCell>
                         <Badge variant="outline">{row.status}</Badge>
                       </TableCell>
-                      <TableCell>{row.customerNo}</TableCell>
+                      <TableCell>
+                        {project.client?.id ? (
+                          <Link
+                            href={`/clients/${project.client.id}`}
+                            className="underline hover:no-underline"
+                          >
+                            {row.customerNo}
+                          </Link>
+                        ) : (
+                          row.customerNo
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span>{row.clientName}</span>
@@ -863,6 +870,15 @@ export default async function PrintDesignPage({ searchParams }: Props) {
                         />
                       </TableCell>
                       <TableCell>{row.updatedAt}</TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <DeleteProjectButton
+                            projectId={project.id}
+                            projectTitle={project.title}
+                            clientId={project.clientId}
+                          />
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}

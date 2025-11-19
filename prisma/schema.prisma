@@ -621,6 +621,7 @@ enum ProductionStatus {
   BEENDET
   MMW
   VOLLST_A_K
+  VOLLST_K_E_S
 }
 
 enum SEOStatus {

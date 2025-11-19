@@ -13,6 +13,7 @@ import {
 } from "@/lib/print-design-status";
 import PrintDesignInlineCell from "@/components/PrintDesignInlineCell";
 import type { PrintDesignType, ProductionStatus } from "@prisma/client";
+import { DeleteProjectButton } from "../DeleteProjectButton";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -334,10 +335,17 @@ export default async function PrintDesignDetailPage({ params }: Props) {
                 )}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <Badge variant="outline" className={`${getStatusColor(derivedStatus)} border text-base px-3 py-1`}>
                 {PRINT_DESIGN_STATUS_LABELS[derivedStatus]}
               </Badge>
+              {isAdmin && (
+                <DeleteProjectButton
+                  projectId={project.id}
+                  projectTitle={project.title}
+                  clientId={project.clientId}
+                />
+              )}
             </div>
           </div>
         </CardHeader>

@@ -154,7 +154,7 @@ export default async function ProjectDetail({ params }: Props) {
   const materialStatusOptions = MATERIAL_STATUS_VALUES.map((value) => ({ value, label: labelForMaterialStatus(value) }));
   const priorityOptions = PRIORITIES.map((p) => ({ value: p, label: labelForWebsitePriority(p) }));
   const cmsOptions = CMS.map((c) => ({ value: c, label: c === "SHOPWARE" ? "Shop" : c }));
-  const pStatusOptions = ["NONE", "BEENDET", "MMW", "VOLLST_A_K"].map((v) => ({ value: v, label: labelForProductionStatus(v) }));
+  const pStatusOptions = ["NONE", "BEENDET", "MMW", "VOLLST_A_K", "VOLLST_K_E_S"].map((v) => ({ value: v, label: labelForProductionStatus(v) }));
   const seoOptions = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"].map((v) => ({ value: v, label: labelForSeoStatus(v) }));
   const textitOptions = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA"].map((v) => ({ value: v, label: labelForTextitStatus(v) }));
 
@@ -217,6 +217,9 @@ export default async function ProjectDetail({ params }: Props) {
     ? labelForProjectStatus(displayStatus, { pStatus: website?.pStatus })
     : displayStatus;
 
+  // Check if status should be italic (K.e.S. status)
+  const isKesStatus = website?.pStatus === "VOLLST_K_E_S" && displayStatus === "UMSETZUNG";
+
   // Status badge colors
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -267,7 +270,7 @@ export default async function ProjectDetail({ params }: Props) {
 
           {/* Badges */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold border ${getStatusColor(displayStatus)}`}>
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold border ${getStatusColor(displayStatus)}`} style={isKesStatus ? { fontStyle: "italic" } : undefined}>
               {statusLabel}
             </span>
             {website?.isRelaunch && (
@@ -366,7 +369,7 @@ export default async function ProjectDetail({ params }: Props) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2 flex-wrap">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(displayStatus)}`}>
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(displayStatus)}`} style={isKesStatus ? { fontStyle: "italic" } : undefined}>
                 {statusLabel}
               </span>
               {website?.isRelaunch && (

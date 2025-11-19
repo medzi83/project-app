@@ -32,6 +32,8 @@ const MATERIAL_STATUS_SET = new Set<string>(MATERIAL_STATUS_VALUES);
 const MATERIAL_COMPLETE: MaterialStatus = "VOLLSTAENDIG";
 const INCOMPLETE_MATERIAL_STATUSES: MaterialStatus[] = MATERIAL_STATUS_VALUES.filter((value) => value !== MATERIAL_COMPLETE) as MaterialStatus[];
 const VOLLST_A_K: ProductionStatus = "VOLLST_A_K";
+const VOLLST_K_E_S: ProductionStatus = "VOLLST_K_E_S";
+const COMPLETE_STATUSES = new Set<string>(["VOLLST_A_K", "VOLLST_K_E_S"]);
 export const DONE_PRODUCTION_STATUSES: ProductionStatus[] = ["BEENDET"];
 
 export const STATUS_LABELS: Record<ProjectStatus, string> = {
@@ -112,7 +114,7 @@ export function deriveProjectStatus({
 
   // If webterminType is "OHNE_TERMIN", skip WEBTERMIN phase and go directly to MATERIAL
   if (webterminType === "OHNE_TERMIN") {
-    if (normalizedPStatus === VOLLST_A_K) {
+    if (normalizedPStatus && COMPLETE_STATUSES.has(normalizedPStatus)) {
       return "UMSETZUNG";
     }
     const normalizedMaterial = normalizeMaterialStatus(materialStatus);
@@ -128,7 +130,7 @@ export function deriveProjectStatus({
     return "WEBTERMIN";
   }
 
-  if (normalizedPStatus === VOLLST_A_K) {
+  if (normalizedPStatus && COMPLETE_STATUSES.has(normalizedPStatus)) {
     return "UMSETZUNG";
   }
 
@@ -206,20 +208,20 @@ export function buildWebsiteStatusWhere(
           { demoDate: null },
           {
             OR: [
-              // Regular case: webDate in past, material incomplete, not VOLLST_A_K
+              // Regular case: webDate in past, material incomplete, not complete
               {
                 AND: [
                   { webDate: { lte: effectiveNow } },
                   { materialStatus: { in: INCOMPLETE_MATERIAL_STATUSES } },
-                  { pStatus: { not: VOLLST_A_K } },
+                  { pStatus: { notIn: [VOLLST_A_K, VOLLST_K_E_S] } },
                 ],
               },
-              // OHNE_TERMIN case: material incomplete, not VOLLST_A_K
+              // OHNE_TERMIN case: material incomplete, not complete
               {
                 AND: [
                   { webterminType: "OHNE_TERMIN" },
                   { materialStatus: { in: INCOMPLETE_MATERIAL_STATUSES } },
-                  { pStatus: { not: VOLLST_A_K } },
+                  { pStatus: { notIn: [VOLLST_A_K, VOLLST_K_E_S] } },
                 ],
               },
             ],
@@ -234,25 +236,25 @@ export function buildWebsiteStatusWhere(
           { demoDate: null },
           {
             OR: [
-              // Regular case: webDate in past and (VOLLST_A_K or material complete)
+              // Regular case: webDate in past and (complete status or material complete)
               {
                 AND: [
                   { webDate: { lte: effectiveNow } },
                   {
                     OR: [
-                      { pStatus: VOLLST_A_K },
+                      { pStatus: { in: [VOLLST_A_K, VOLLST_K_E_S] } },
                       { materialStatus: MATERIAL_COMPLETE },
                     ],
                   },
                 ],
               },
-              // OHNE_TERMIN case: VOLLST_A_K or material complete
+              // OHNE_TERMIN case: complete status or material complete
               {
                 AND: [
                   { webterminType: "OHNE_TERMIN" },
                   {
                     OR: [
-                      { pStatus: VOLLST_A_K },
+                      { pStatus: { in: [VOLLST_A_K, VOLLST_K_E_S] } },
                       { materialStatus: MATERIAL_COMPLETE },
                     ],
                   },
@@ -356,6 +358,7 @@ const PRODUCTION_STATUS_LABELS: Record<ProductionStatus, string> = {
   BEENDET: "Beendet",
   MMW: "MMW",
   VOLLST_A_K: "vollst. a.K.",
+  VOLLST_K_E_S: "vollst. K.e.S.",
 };
 
 const SEO_STATUS_LABELS: Record<SEOStatus, string> = {

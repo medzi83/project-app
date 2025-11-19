@@ -61,7 +61,7 @@ export function DomainProjectAssignment({ domain, onlineProjects }: Props) {
           value={selectedProjectId}
           onChange={(e) => setSelectedProjectId(e.target.value)}
           disabled={saving}
-          className="w-full rounded border p-1.5 text-xs"
+          className="w-full rounded border p-1.5 text-xs bg-white dark:bg-gray-800 text-foreground dark:text-white border-border dark:border-gray-600"
         >
           <option value="">-- Projekt auswählen --</option>
           {onlineProjects.map((project) => (

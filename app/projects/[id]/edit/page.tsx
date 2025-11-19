@@ -112,7 +112,7 @@ export default async function EditProjectPage({ params }: Props) {
 
           <Field label="P-Status">
             <select name="pStatus" defaultValue={w?.pStatus ?? "NONE"} className="w-full p-2 border rounded">
-              {["NONE","BEENDET","MMW","VOLLST_A_K"].map(v=> <option key={v} value={v}>{v}</option>)}
+              {["NONE","BEENDET","MMW","VOLLST_A_K","VOLLST_K_E_S"].map(v=> <option key={v} value={v}>{v}</option>)}
             </select>
           </Field>
 

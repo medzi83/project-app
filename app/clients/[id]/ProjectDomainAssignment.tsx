@@ -82,7 +82,7 @@ export function ProjectDomainAssignment({
           value={selectedDomain}
           onChange={(e) => setSelectedDomain(e.target.value)}
           disabled={saving}
-          className="w-full rounded border p-2 text-sm"
+          className="w-full rounded border p-2 text-sm bg-white dark:bg-gray-800 text-foreground dark:text-white border-border dark:border-gray-600"
         >
           <option value="">Keine Domain zugeordnet</option>
           {selectableDomains.map((domain) => (
