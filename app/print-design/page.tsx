@@ -874,7 +874,7 @@ export default async function PrintDesignPage({ searchParams }: Props) {
                         <TableCell>
                           <DeleteProjectButton
                             projectId={project.id}
-                            projectTitle={project.title}
+                            projectTitle={project.title ?? (printDesign?.type ? PRINT_DESIGN_TYPE_LABELS[printDesign.type] : null)}
                             clientId={project.clientId}
                           />
                         </TableCell>

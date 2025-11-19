@@ -24,7 +24,7 @@ export async function deleteProject(formData: FormData) {
     await prisma.$transaction([
       prisma.projectNote.deleteMany({ where: { projectId } }),
       prisma.projectDomainHistory.deleteMany({ where: { projectId } }),
-      prisma.printDesign.deleteMany({ where: { projectId } }),
+      prisma.projectPrintDesign.deleteMany({ where: { projectId } }),
       prisma.emailLog.deleteMany({ where: { projectId } }),
       prisma.project.delete({ where: { id: projectId } }),
     ]);
