@@ -46,8 +46,8 @@ export async function deleteEmailLog(emailLogId: string) {
 export async function updateClientBasicData(formData: FormData) {
   const session = await getAuthSession();
 
-  // Only admins can update client data
-  if (!session?.user || session.user.role !== "ADMIN") {
+  // Only admins and agents can update client data
+  if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "AGENT")) {
     return { success: false, message: "Nicht autorisiert" };
   }
 
