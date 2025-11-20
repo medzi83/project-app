@@ -647,6 +647,7 @@ export default async function ClientDetailPage({ params }: Props) {
   const isSales = role === "SALES";
   const canSendEmail = role === "ADMIN" || role === "AGENT";
   const canEditAuthorizedPersons = role === "ADMIN" || role === "AGENT";
+  const canEditClientData = role === "ADMIN" || role === "AGENT";
 
   // Check if client is favorited by current user
   const isFavorite = await isFavoriteClient(client.id);
@@ -723,6 +724,7 @@ export default async function ClientDetailPage({ params }: Props) {
             servers={servers}
             agencies={agencies}
             isAdmin={isAdmin}
+            canEdit={canEditClientData}
           />
         </section>
 

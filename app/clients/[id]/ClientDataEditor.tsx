@@ -46,9 +46,10 @@ type Props = {
   servers: Server[];
   agencies: Agency[];
   isAdmin: boolean;
+  canEdit?: boolean;
 };
 
-export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) {
+export function ClientDataEditor({ client, servers, agencies, isAdmin, canEdit = false }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -170,7 +171,7 @@ export function ClientDataEditor({ client, servers, agencies, isAdmin }: Props) 
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-medium">Basisdaten</h2>
-          {isAdmin && (
+          {canEdit && (
             <Button
               type="button"
               onClick={() => setIsEditing(true)}
