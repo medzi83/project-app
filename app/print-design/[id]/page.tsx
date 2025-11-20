@@ -14,6 +14,7 @@ import {
 import PrintDesignInlineCell from "@/components/PrintDesignInlineCell";
 import type { PrintDesignType, ProductionStatus } from "@prisma/client";
 import { DeleteProjectButton } from "../DeleteProjectButton";
+import { BackButton } from "@/components/BackButton";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -292,25 +293,7 @@ export default async function PrintDesignDetailPage({ params }: Props) {
     <div className="p-2 md:p-6 space-y-4 md:space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between px-2 md:px-0">
-        <Link
-          href="/print-design"
-          className="inline-flex items-center text-xs md:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-        >
-          <svg
-            className="w-3 h-3 md:w-4 md:h-4 mr-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          Zurück zur Übersicht
-        </Link>
+        <BackButton fallbackUrl="/print-design" />
       </div>
 
       {/* Project Header */}

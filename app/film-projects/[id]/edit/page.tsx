@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
 import { updateFilmProject } from "./actions";
 import DeleteVersionButton from "./DeleteVersionButton";
+import { BackButton } from "@/components/BackButton";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -87,9 +88,7 @@ export default async function EditFilmProjectPage({ params }: Props) {
   return (
     <div className="space-y-6">
       <header>
-        <Link href={`/film-projects/${project.id}`} className="text-blue-600 hover:underline">
-          ← Zurück zur Detailansicht
-        </Link>
+        <BackButton fallbackUrl={`/film-projects/${project.id}`} />
         <h1 className="text-2xl font-semibold mt-2">Filmprojekt bearbeiten</h1>
         <p className="text-sm text-gray-500">{project.title || project.client?.name}</p>
       </header>

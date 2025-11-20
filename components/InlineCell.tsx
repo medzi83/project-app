@@ -131,12 +131,14 @@ export default function InlineCell({
 
     const displayNode = (
       <span className={displayClassName} style={displayStyle}>
-        {fallbackDisplay}
-        {extraLabel && (
-          <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-            {extraLabel}
-          </span>
-        )}
+        <div className="flex flex-col gap-1">
+          <span>{fallbackDisplay}</span>
+          {extraLabel && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 self-start">
+              {extraLabel}
+            </span>
+          )}
+        </div>
       </span>
     );
 

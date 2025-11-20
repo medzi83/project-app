@@ -457,20 +457,12 @@ export default function CustomerForm({ serverId, clientName, clientCustomerNo, o
 
             {!existingCustomer && (
               <>
-                <Field label="Kundenpasswort">
-                  <input
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full rounded border p-2"
-                    required
-                    minLength={8}
-                  />
-                  <span className="text-xs text-gray-500 mt-1">
-                    Passwort für Froxlor-Login
-                  </span>
-                </Field>
+                {/* Hidden password field - still sent but not visible to user */}
+                <input
+                  name="password"
+                  type="hidden"
+                  value={formData.password}
+                />
               </>
             )}
 

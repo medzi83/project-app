@@ -5,6 +5,7 @@ import { deriveProjectStatus, labelForProjectStatus, labelForWebsitePriority, la
 import { notFound, redirect } from "next/navigation";
 import InlineCell from "@/components/InlineCell";
 import ClientReassignment from "@/components/ClientReassignment";
+import { BackButton } from "@/components/BackButton";
 import type { WebsitePriority, ProductionStatus, MaterialStatus, SEOStatus, TextitStatus, CMS as PrismaCMS } from "@prisma/client";
 
 // Naive date/time formatting - extracts components directly from ISO string without timezone conversion
@@ -242,12 +243,7 @@ export default async function ProjectDetail({ params }: Props) {
     <div className="p-2 md:p-6 space-y-4 md:space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between px-2 md:px-0">
-        <Link href="/projects" className="inline-flex items-center text-xs md:text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
-          <svg className="w-3 h-3 md:w-4 md:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Zurück zur Übersicht
-        </Link>
+        <BackButton fallbackUrl="/projects" />
       </div>
 
       {/* Project Header Card */}

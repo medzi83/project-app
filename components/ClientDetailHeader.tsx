@@ -6,6 +6,7 @@ import { ClientStatusToggles } from "./ClientStatusToggles";
 import { ClientDataDialog } from "./ClientDataDialog";
 import { ClientEmailDialog } from "./ClientEmailDialog";
 import { FavoriteToggle } from "./FavoriteToggle";
+import { BackButton } from "./BackButton";
 
 type ClientDetailHeaderProps = {
   client: {
@@ -65,9 +66,7 @@ export function ClientDetailHeader({ client, isAdmin, canSendEmail = true, isSal
       <header className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <Link href="/clients" className="text-blue-600 dark:text-blue-400 hover:underline">
-              ← Zurück zur Kundenliste
-            </Link>
+            <BackButton fallbackUrl="/clients" />
           </div>
           <div className="flex items-center gap-4 mt-2">
             <div className="flex items-center gap-3">
