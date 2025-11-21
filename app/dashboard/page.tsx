@@ -140,7 +140,8 @@ const isActiveProductionStatus = (value?: string | null) => {
   if (!value) return true;
   const normalized = String(value).trim().toUpperCase();
   if (!normalized) return true;
-  return normalized !== "BEENDET";
+  // Exclude "BEENDET" and "VOLLST_K_E_S" (vollständig kontrolliert, erwartet Setzen)
+  return normalized !== "BEENDET" && normalized !== "VOLLST_K_E_S";
 };
 
 const relevantWebsiteDate = (

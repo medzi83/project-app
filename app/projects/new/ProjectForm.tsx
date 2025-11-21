@@ -12,11 +12,10 @@ const PRODUCTION = ["NONE", "BEENDET", "MMW", "VOLLST_A_K", "VOLLST_K_E_S"] as c
 const SEO = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"] as const;
 const TEXTIT = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"] as const;
 const WEBTERMIN_TYPES: Option[] = [
-  { value: "", label: "(nicht gesetzt)" },
+  { value: "OHNE_TERMIN", label: "Ohne Termin" },
   { value: "TELEFONISCH", label: "Telefonisch" },
   { value: "BEIM_KUNDEN", label: "Beim Kunden" },
   { value: "IN_DER_AGENTUR", label: "In der Agentur" },
-  { value: "OHNE_TERMIN", label: "Ohne Termin" },
 ];
 const TRI: Option[] = [
   { value: "unknown", label: "(nicht gesetzt)" },

@@ -58,7 +58,7 @@ const UnifiedProjectSchema = z.object({
   cmsOther: z.string().optional().transform((v) => v?.trim() || null),
   textit: TextitStatus.optional(),
   webDate: z.string().optional().transform(toDate),
-  webterminType: z.string().optional().transform((v) => v && v.trim() ? v as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" : null),
+  webterminType: z.string().optional().transform((v) => v && v.trim() ? v as "TELEFONISCH" | "BEIM_KUNDEN" | "IN_DER_AGENTUR" | "OHNE_TERMIN" : null),
   isRelaunch: z.string().optional().transform((v) => v === "on"),
 
   // Film-spezifische Felder

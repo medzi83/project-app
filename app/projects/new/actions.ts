@@ -178,7 +178,7 @@ export async function createWebsiteProject(formData: FormData) {
   const nextStatus = deriveProjectStatus({
     pStatus: data.pStatus,
     webDate: data.webDate,
-    webterminType: data.webterminType,
+    webterminType: data.webterminType || null,
     demoDate: data.demoDate,
     onlineDate: data.onlineDate,
     materialStatus: data.materialStatus,
@@ -420,6 +420,7 @@ export async function createProject(formData: FormData) {
     const nextStatus = deriveProjectStatus({
       pStatus: data.pStatus ?? "NONE",
       webDate: data.webDate ?? null,
+      webterminType: data.webterminType || null,
       demoDate: data.demoDate ?? null,
       onlineDate: data.onlineDate ?? null,
       materialStatus: data.materialStatus ?? "ANGEFORDERT",
@@ -541,6 +542,7 @@ export async function createProject(formData: FormData) {
     const websiteStatus = deriveProjectStatus({
       pStatus: data.pStatus ?? "NONE",
       webDate: data.webDate ?? null,
+      webterminType: data.webterminType || null,
       demoDate: data.demoDate ?? null,
       onlineDate: data.onlineDate ?? null,
       materialStatus: data.materialStatus ?? "ANGEFORDERT",

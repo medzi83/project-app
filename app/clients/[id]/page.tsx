@@ -914,9 +914,16 @@ export default async function ClientDetailPage({ params }: Props) {
                       className="block transition-all hover:opacity-80"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <Badge variant="outline" className={`text-xs font-semibold ${badgeClass}`}>
-                          {typeLabel}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={`text-xs font-semibold ${badgeClass}`}>
+                            {typeLabel}
+                          </Badge>
+                          {project.type === "WEBSITE" && project.website?.isRelaunch && (
+                            <Badge variant="outline" className="text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800">
+                              Relaunch
+                            </Badge>
+                          )}
+                        </div>
                         <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>

@@ -192,6 +192,19 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
         const nextValue = (typeof parsedValue === "string" ? parsedValue : "ANGEFORDERT") as MaterialStatus;
         updateData.materialStatus = nextValue;
         createData.materialStatus = nextValue;
+
+        // If material is set to VOLLSTÄNDIG and no lastMaterialAt date exists, set it to today
+        if (nextValue === "VOLLSTAENDIG" && !oldProject?.website?.lastMaterialAt) {
+          // Format: YYYY-MM-DD in local timezone, then convert to UTC midnight
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const day = String(now.getDate()).padStart(2, '0');
+          const todayStr = `${year}-${month}-${day}`;
+          const today = new Date(todayStr + 'T00:00:00.000Z');
+          updateData.lastMaterialAt = today;
+          createData.lastMaterialAt = today;
+        }
         break;
       }
       case "seo": {

@@ -129,6 +129,14 @@ const isOlderThan4Weeks = (value: Date | null | undefined) => {
   return value.getTime() < fourWeeksAgo.getTime();
 };
 
+const isActiveProductionStatus = (value?: string | null) => {
+  if (!value) return true;
+  const normalized = String(value).trim().toUpperCase();
+  if (!normalized) return true;
+  // Exclude "BEENDET" and "VOLLST_K_E_S" (vollständig kontrolliert, erwartet Setzen)
+  return normalized !== "BEENDET" && normalized !== "VOLLST_K_E_S";
+};
+
 const relevantWebsiteDate = (
   status: ProjectStatus,
   website?: {
@@ -734,6 +742,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
                 !ended &&
                 !clientInactive &&
                 !isOnline &&
+                isActiveProductionStatus(p.website?.pStatus) &&
                 isOlderThan4Weeks(relevantDate);
 
               // Check if status should have green background

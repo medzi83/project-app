@@ -100,18 +100,14 @@ export async function getCustomerMysqlServers(serverId: string, customerNo: stri
 
     // Get all available MySQL servers
     const allServers = await client.getMysqlServers();
-    console.log('[DEBUG getCustomerMysqlServers] All MySQL servers from Froxlor:', JSON.stringify(allServers, null, 2));
 
     // Filter to only show servers the customer is allowed to use
     // If customer.allowed_mysqlserver is not set or empty, return all servers (backward compatibility)
     const allowedServerIds = customer.allowed_mysqlserver || [];
-    console.log('[DEBUG getCustomerMysqlServers] Customer allowed_mysqlserver:', allowedServerIds);
 
     const filteredServers = allowedServerIds.length > 0
       ? allServers.filter(s => allowedServerIds.includes(s.id))
       : allServers;
-
-    console.log('[DEBUG getCustomerMysqlServers] Filtered servers for customer:', JSON.stringify(filteredServers, null, 2));
 
     return { success: true, message: "Erfolgreich", servers: filteredServers };
   } catch (error) {

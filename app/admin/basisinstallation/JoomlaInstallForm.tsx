@@ -96,11 +96,9 @@ export default function JoomlaInstallForm({
     // Fetch customer's allowed MySQL servers
     getCustomerMysqlServers(serverId, customerNo).then((response) => {
       if (response.success && response.servers) {
-        console.log('[DEBUG JoomlaInstallForm] Available MySQL servers:', response.servers);
         setMysqlServers(response.servers);
         // Don't auto-select any server - user must choose explicitly
         // This prevents accidentally using the wrong database server
-        console.log('[DEBUG JoomlaInstallForm] No auto-selection - user must choose');
       }
     });
   }, [serverId, customerNo]);
@@ -157,9 +155,6 @@ export default function JoomlaInstallForm({
     try {
       // Step 1: Upload files and create database
       setCurrentStep("Lade Dateien hoch und erstelle Datenbank...");
-
-      console.log('[DEBUG JoomlaInstallForm] Sending request with mysqlServerId:', selectedMysqlServerId);
-      console.log('[DEBUG JoomlaInstallForm] Selected server details:', mysqlServers.find(s => s.id === selectedMysqlServerId));
 
       const uploadRes = await fetch("/api/admin/joomla-install", {
         method: "POST",
@@ -222,7 +217,9 @@ export default function JoomlaInstallForm({
 
       // Reset form on success
       setFolderName("");
-      setDbPassword("");
+      setDbPassword(generatePassword());
+      setSelectedProjectId("");
+      setSelectedMysqlServerId(null);
     } catch (error) {
       setResult({
         success: false,
@@ -404,7 +401,7 @@ export default function JoomlaInstallForm({
               </div>
             )}
             {result.installUrl && (
-              <div className="mt-3">
+              <div className="mt-3 flex gap-3">
                 <a
                   href={result.installUrl}
                   target="_blank"
@@ -412,6 +409,12 @@ export default function JoomlaInstallForm({
                   className="inline-block rounded bg-green-700 dark:bg-green-600 px-4 py-2 text-white font-medium hover:bg-green-800 dark:hover:bg-green-700 transition-colors"
                 >
                   → Webseite öffnen
+                </a>
+                <a
+                  href={`/clients/${clientId}`}
+                  className="inline-block rounded bg-blue-600 dark:bg-blue-500 px-4 py-2 text-white font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+                >
+                  ← Zurück zum Kunden
                 </a>
               </div>
             )}
