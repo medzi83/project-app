@@ -4,11 +4,13 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
-interface Particle {
+interface Snowflake {
   x: number;
   y: number;
-  vx: number;
-  vy: number;
+  size: number;
+  speed: number;
+  opacity: number;
+  drift: number;
 }
 
 export default function LoginPage() {
@@ -57,7 +59,7 @@ export default function LoginPage() {
     }
   }, [status, router]);
 
-  // Particle Network Animation
+  // Winter Mountain Landscape Animation (Performance Optimized)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -65,98 +67,112 @@ export default function LoginPage() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Create background canvas for static mountains
+    const bgCanvas = document.createElement("canvas");
+    const bgCtx = bgCanvas.getContext("2d");
+    if (!bgCtx) return;
+
     // Set canvas size
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      bgCanvas.width = canvas.width;
+      bgCanvas.height = canvas.height;
+      drawMountains();
     };
+
+    // Draw mountain landscape once (static background)
+    const drawMountains = () => {
+      const width = bgCanvas.width;
+      const height = bgCanvas.height;
+
+      // Sky gradient (dark blue to lighter blue)
+      const skyGradient = bgCtx.createLinearGradient(0, 0, 0, height);
+      skyGradient.addColorStop(0, "rgba(10, 25, 47, 1)");
+      skyGradient.addColorStop(1, "rgba(30, 58, 95, 1)");
+      bgCtx.fillStyle = skyGradient;
+      bgCtx.fillRect(0, 0, width, height);
+
+      // Back mountain layer (darkest)
+      bgCtx.fillStyle = "rgba(20, 40, 70, 0.8)";
+      bgCtx.beginPath();
+      bgCtx.moveTo(0, height);
+      for (let i = 0; i <= width; i += 50) {
+        const y = height * 0.5 + Math.sin(i * 0.01) * 80 - Math.abs(Math.sin(i * 0.005)) * 120;
+        bgCtx.lineTo(i, y);
+      }
+      bgCtx.lineTo(width, height);
+      bgCtx.closePath();
+      bgCtx.fill();
+
+      // Middle mountain layer
+      bgCtx.fillStyle = "rgba(35, 60, 95, 0.9)";
+      bgCtx.beginPath();
+      bgCtx.moveTo(0, height);
+      for (let i = 0; i <= width; i += 40) {
+        const y = height * 0.6 + Math.sin(i * 0.015) * 60 - Math.abs(Math.cos(i * 0.008)) * 100;
+        bgCtx.lineTo(i, y);
+      }
+      bgCtx.lineTo(width, height);
+      bgCtx.closePath();
+      bgCtx.fill();
+
+      // Front mountain layer (lightest)
+      bgCtx.fillStyle = "rgba(50, 80, 120, 1)";
+      bgCtx.beginPath();
+      bgCtx.moveTo(0, height);
+      for (let i = 0; i <= width; i += 30) {
+        const y = height * 0.7 + Math.sin(i * 0.02) * 50 - Math.abs(Math.sin(i * 0.01)) * 80;
+        bgCtx.lineTo(i, y);
+      }
+      bgCtx.lineTo(width, height);
+      bgCtx.closePath();
+      bgCtx.fill();
+    };
+
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
-    // Create particles
-    const particleCount = 80;
-    const particles: Particle[] = [];
-    const maxDistance = 150;
+    // Create snowflakes (reduced count for better performance)
+    const snowflakeCount = 80;
+    const snowflakes: Snowflake[] = [];
 
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
+    for (let i = 0; i < snowflakeCount; i++) {
+      snowflakes.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
+        size: Math.random() * 3 + 1,
+        speed: Math.random() * 1 + 0.3,
+        opacity: Math.random() * 0.8 + 0.2,
+        drift: Math.random() * 0.8 - 0.4,
       });
     }
-
-    // Mouse move handler
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener("mousemove", handleMouseMove);
 
     // Animation loop
     let animationFrameId: number;
     const animate = () => {
-      ctx.fillStyle = "rgba(15, 23, 42, 0.1)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Copy static mountain background
+      ctx.drawImage(bgCanvas, 0, 0);
 
-      // Update and draw particles
-      particles.forEach((particle, i) => {
-        // Move particle
-        particle.x += particle.vx;
-        particle.y += particle.vy;
+      // Update and draw snowflakes (without shadow blur for better performance)
+      snowflakes.forEach((snowflake) => {
+        // Move snowflake down and sideways
+        snowflake.y += snowflake.speed;
+        snowflake.x += snowflake.drift;
 
-        // Bounce off edges
-        if (particle.x < 0 || particle.x > canvas.width) particle.vx *= -1;
-        if (particle.y < 0 || particle.y > canvas.height) particle.vy *= -1;
-
-        // Mouse interaction - attract particles
-        const dx = mouseRef.current.x - particle.x;
-        const dy = mouseRef.current.y - particle.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < 150) {
-          const force = (150 - distance) / 150;
-          particle.x += dx * force * 0.03;
-          particle.y += dy * force * 0.03;
+        // Reset snowflake if it goes off screen
+        if (snowflake.y > canvas.height) {
+          snowflake.y = -10;
+          snowflake.x = Math.random() * canvas.width;
         }
+        if (snowflake.x < -10) snowflake.x = canvas.width + 10;
+        if (snowflake.x > canvas.width + 10) snowflake.x = -10;
 
-        // Draw particle
+        // Draw snowflake (simple circle, no glow for performance)
         ctx.beginPath();
-        ctx.arc(particle.x, particle.y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(147, 197, 253, 0.8)";
+        ctx.arc(snowflake.x, snowflake.y, snowflake.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${snowflake.opacity})`;
         ctx.fill();
-
-        // Draw connections
-        particles.slice(i + 1).forEach((otherParticle) => {
-          const dx = particle.x - otherParticle.x;
-          const dy = particle.y - otherParticle.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-
-          if (distance < maxDistance) {
-            ctx.beginPath();
-            ctx.moveTo(particle.x, particle.y);
-            ctx.lineTo(otherParticle.x, otherParticle.y);
-            const opacity = 1 - distance / maxDistance;
-            ctx.strokeStyle = `rgba(147, 197, 253, ${opacity * 0.3})`;
-            ctx.lineWidth = 1;
-            ctx.stroke();
-          }
-        });
-
-        // Connection to mouse
-        const mouseDistance = Math.sqrt(
-          Math.pow(mouseRef.current.x - particle.x, 2) +
-          Math.pow(mouseRef.current.y - particle.y, 2)
-        );
-        if (mouseDistance < maxDistance) {
-          ctx.beginPath();
-          ctx.moveTo(particle.x, particle.y);
-          ctx.lineTo(mouseRef.current.x, mouseRef.current.y);
-          const opacity = 1 - mouseDistance / maxDistance;
-          ctx.strokeStyle = `rgba(168, 85, 247, ${opacity * 0.5})`;
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
       });
 
       animationFrameId = requestAnimationFrame(animate);
@@ -165,7 +181,6 @@ export default function LoginPage() {
 
     return () => {
       window.removeEventListener("resize", resizeCanvas);
-      window.removeEventListener("mousemove", handleMouseMove);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
