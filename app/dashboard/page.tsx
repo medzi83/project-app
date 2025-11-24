@@ -1758,10 +1758,10 @@ export default async function DashboardPage({
         {isAgentView && workStoppedProjects.length > 0 && (
           <WorkStoppedProjectsAccordion projects={workStoppedProjects} />
         )}
-      </div>
 
-      {isAgentView && agentAgendaGroups.length > 0 && (
-        <section className="rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-gradient-to-br from-blue-50 to-cyan-50/50 dark:from-blue-950/30 dark:to-cyan-950/30 p-5 sm:p-6 shadow-lg">
+        {/* Aktuelle Termine und Aufgaben - moved into grid */}
+        {isAgentView && agentAgendaGroups.length > 0 && (
+          <section className="rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-gradient-to-br from-blue-50 to-cyan-50/50 dark:from-blue-950/30 dark:to-cyan-950/30 p-5 sm:p-6 shadow-lg lg:col-span-2">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 text-2xl">📅</div>
             <div className="flex-1">
@@ -1790,7 +1790,8 @@ export default async function DashboardPage({
             </div>
           </div>
         </section>
-      )}
+        )}
+      </div>
 
       {/* KPI-Kacheln */}
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">

@@ -25,11 +25,11 @@ export default async function SocialProjectsPage() {
         </div>
       </div>
 
-      <section className="rounded-2xl border border-orange-200 bg-white shadow-sm">
-        <div className="px-6 py-3 bg-gradient-to-r from-orange-50 to-red-50 border-b border-orange-200 rounded-t-2xl">
-          <h2 className="text-sm font-semibold text-orange-900">Übersicht</h2>
+      <section className="rounded-2xl border border-orange-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 shadow-sm">
+        <div className="px-6 py-3 bg-gradient-to-r from-orange-50 to-red-50 dark:from-gray-800 dark:to-gray-800 border-b border-orange-200 dark:border-gray-700 rounded-t-2xl">
+          <h2 className="text-sm font-semibold text-orange-900 dark:text-gray-200">Übersicht</h2>
         </div>
-        <div className="p-6 text-sm text-gray-500">
+        <div className="p-6 text-sm text-gray-500 dark:text-gray-400">
           <p>Noch keine Inhalte vorhanden.</p>
         </div>
       </section>

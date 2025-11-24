@@ -39,7 +39,7 @@ export default function WorkStoppedProjectsAccordion({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <section className="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-red-50/40 p-5 sm:p-6 shadow-lg">
+    <section className="rounded-2xl border border-orange-200 dark:border-gray-700 bg-gradient-to-br from-orange-50 to-red-50/40 dark:from-gray-800 dark:to-gray-800 p-5 sm:p-6 shadow-lg">
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 text-2xl">⚠️</div>
         <div className="flex-1">
@@ -49,16 +49,16 @@ export default function WorkStoppedProjectsAccordion({
             aria-expanded={isOpen}
           >
             <div>
-              <h2 className="text-lg font-bold bg-gradient-to-r from-orange-700 to-red-600 bg-clip-text text-transparent">
+              <h2 className="text-lg font-bold bg-gradient-to-r from-orange-700 to-red-600 dark:from-orange-400 dark:to-red-400 bg-clip-text text-transparent">
                 Projekte mit Arbeitsstopp ({projects.length})
               </h2>
-              <p className="text-sm text-orange-900 font-medium mt-1">
+              <p className="text-sm text-orange-900 dark:text-gray-300 font-medium mt-1">
                 Diese Projekte befinden sich im Status &quot;Arbeitsstopp&quot;. Bitte keine weiteren Arbeiten durchführen.
               </p>
             </div>
             <div className="flex-shrink-0">
               <svg
-                className={`w-6 h-6 text-orange-600 transition-transform ${
+                className={`w-6 h-6 text-orange-600 dark:text-orange-400 transition-transform ${
                   isOpen ? "rotate-180" : ""
                 }`}
                 fill="none"
@@ -120,19 +120,19 @@ export default function WorkStoppedProjectsAccordion({
                   <Link
                     key={project.id}
                     href={projectUrl}
-                    className="block rounded-lg border border-orange-200 bg-white p-3 hover:border-orange-400 transition-colors"
+                    className="block rounded-lg border border-orange-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 p-3 hover:border-orange-400 dark:hover:border-orange-500 transition-colors"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm truncate">
+                        <div className="font-semibold text-sm truncate dark:text-gray-200">
                           {customerLabel}
                         </div>
-                        <div className="text-xs text-gray-600 mt-0.5 truncate">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 truncate">
                           {project.title ?? "Projekt ohne Titel"} · {typeLabel}{" "}
                           · Status: {statusLabel}
                         </div>
                       </div>
-                      <span className="text-xs text-orange-700 whitespace-nowrap">
+                      <span className="text-xs text-orange-700 dark:text-orange-400 whitespace-nowrap">
                         Details →
                       </span>
                     </div>

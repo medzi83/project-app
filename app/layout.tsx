@@ -45,7 +45,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="de" suppressHydrationWarning>
       <body>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <AuthSessionProvider session={session as any}>
             <SessionTimeout />
             {isPrivileged && <InstallationCheckHandler />}

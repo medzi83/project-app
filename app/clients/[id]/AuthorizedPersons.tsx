@@ -133,43 +133,55 @@ export function AuthorizedPersons({ clientId, authorizedPersons, isAdmin, canEdi
         {authorizedPersons.length === 0 ? (
           <p className="text-sm text-muted-foreground">Keine berechtigten Personen hinterlegt</p>
         ) : (
-          <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {authorizedPersons.map((person) => (
               <div
                 key={person.id}
-                className="border rounded-lg p-4 bg-white dark:bg-gray-800"
+                className="border rounded-lg p-3 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50"
               >
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Name:</span>
-                    <span className="ml-2 font-medium">
-                      {person.salutation ? `${person.salutation} ` : ""}
-                      {person.firstname} {person.lastname}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">E-Mail:</span>
-                    <span className="ml-2">{person.email}</span>
+                {/* Header with Name */}
+                <div className="mb-2">
+                  <div className="font-semibold text-sm truncate">
+                    {person.salutation ? `${person.salutation} ` : ""}
+                    {person.firstname} {person.lastname}
                   </div>
                   {person.position && (
-                    <div>
-                      <span className="text-muted-foreground">Position:</span>
-                      <span className="ml-2">{person.position}</span>
-                    </div>
-                  )}
-                  {person.phone && (
-                    <div>
-                      <span className="text-muted-foreground">Telefon:</span>
-                      <span className="ml-2">{person.phone}</span>
-                    </div>
-                  )}
-                  {person.notes && (
-                    <div className="col-span-2">
-                      <span className="text-muted-foreground">Infos:</span>
-                      <p className="mt-1 text-sm whitespace-pre-wrap">{person.notes}</p>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {person.position}
                     </div>
                   )}
                 </div>
+
+                {/* Contact Info */}
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <svg className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <a href={`mailto:${person.email}`} className="truncate hover:underline text-blue-600 dark:text-blue-400">
+                      {person.email}
+                    </a>
+                  </div>
+                  {person.phone && (
+                    <div className="flex items-center gap-1.5">
+                      <svg className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      <a href={`tel:${person.phone}`} className="truncate hover:underline">
+                        {person.phone}
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes - only show if exists */}
+                {person.notes && (
+                  <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {person.notes}
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -328,67 +340,80 @@ export function AuthorizedPersons({ clientId, authorizedPersons, isAdmin, canEdi
       {authorizedPersons.length === 0 && !isAdding ? (
         <p className="text-sm text-muted-foreground">Keine berechtigten Personen hinterlegt</p>
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {authorizedPersons.map((person) => (
             <div
               key={person.id}
-              className="border rounded-lg p-4 bg-white dark:bg-gray-800"
+              className="group relative border rounded-lg p-3 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Name:</span>
-                    <span className="ml-2 font-medium">
-                      {person.salutation ? `${person.salutation} ` : ""}
-                      {person.firstname} {person.lastname}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">E-Mail:</span>
-                    <span className="ml-2">{person.email}</span>
+              {/* Header with Name and Actions */}
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm truncate">
+                    {person.salutation ? `${person.salutation} ` : ""}
+                    {person.firstname} {person.lastname}
                   </div>
                   {person.position && (
-                    <div>
-                      <span className="text-muted-foreground">Position:</span>
-                      <span className="ml-2">{person.position}</span>
-                    </div>
-                  )}
-                  {person.phone && (
-                    <div>
-                      <span className="text-muted-foreground">Telefon:</span>
-                      <span className="ml-2">{person.phone}</span>
-                    </div>
-                  )}
-                  {person.notes && (
-                    <div className="col-span-2">
-                      <span className="text-muted-foreground">Infos:</span>
-                      <p className="mt-1 text-sm whitespace-pre-wrap">{person.notes}</p>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {person.position}
                     </div>
                   )}
                 </div>
 
                 {!editingId && !isAdding && (
-                  <div className="flex gap-1 ml-4">
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEdit(person)}
                       disabled={saving}
+                      className="h-7 w-7 p-0"
                     >
-                      <Edit2 className="h-4 w-4" />
+                      <Edit2 className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(person.id)}
                       disabled={saving}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 )}
               </div>
+
+              {/* Contact Info */}
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <svg className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <a href={`mailto:${person.email}`} className="truncate hover:underline text-blue-600 dark:text-blue-400">
+                    {person.email}
+                  </a>
+                </div>
+                {person.phone && (
+                  <div className="flex items-center gap-1.5">
+                    <svg className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    <a href={`tel:${person.phone}`} className="truncate hover:underline">
+                      {person.phone}
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Notes - only show if exists */}
+              {person.notes && (
+                <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {person.notes}
+                  </p>
+                </div>
+              )}
             </div>
           ))}
         </div>

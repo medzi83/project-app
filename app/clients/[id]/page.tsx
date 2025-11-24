@@ -923,6 +923,11 @@ export default async function ClientDetailPage({ params }: Props) {
                               Relaunch
                             </Badge>
                           )}
+                          {project.type === "FILM" && project.film?.scope === "NACHDREH" && (
+                            <Badge variant="outline" className="text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800">
+                              Nachdreh
+                            </Badge>
+                          )}
                         </div>
                         <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1042,9 +1047,10 @@ export default async function ClientDetailPage({ params }: Props) {
             </div>
           )}
 
-        {/* Joomla Installations */}
-        {client.joomlaInstallations.length > 0 && (
-          <section className="rounded-lg border border-border bg-card p-4">
+        {/* Joomla Installations - in grid for 50% width */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {client.joomlaInstallations.length > 0 && (
+            <section className="rounded-lg border border-border bg-card p-4">
               <h2 className="text-base font-medium text-foreground mb-3">
                 Joomla Installationen ({client.joomlaInstallations.length})
               </h2>
@@ -1181,6 +1187,7 @@ export default async function ClientDetailPage({ params }: Props) {
               </div>
             </section>
           )}
+        </div>
       </section>
 
       {/* Tabs für Server-Daten und Kommunikation */}

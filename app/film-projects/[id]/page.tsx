@@ -319,6 +319,11 @@ export default async function FilmProjectDetailPage({ params }: Props) {
             <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold border ${getStatusColor(derivedStatus)}`}>
               {DERIVED_STATUS_LABELS[derivedStatus]}
             </span>
+            {film.scope === "NACHDREH" && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                Nachdreh
+              </span>
+            )}
             {project.client?.workStopped && (
               <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-800 border border-orange-300">
                 ⚠️ Arbeitsstopp
@@ -380,6 +385,11 @@ export default async function FilmProjectDetailPage({ params }: Props) {
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(derivedStatus)}`}>
                 {DERIVED_STATUS_LABELS[derivedStatus]}
               </span>
+              {film.scope === "NACHDREH" && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                  Nachdreh
+                </span>
+              )}
               {project.client?.workStopped && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800 border border-orange-300">
                   ⚠️ Arbeitsstopp
@@ -508,8 +518,12 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                   value={film.scope ?? undefined}
                   options={[
                     { value: "FILM", label: "Film" },
+                    { value: "DROHNE", label: "Drohne" },
+                    { value: "NACHDREH", label: "Nachdreh" },
+                    { value: "FILM_UND_DROHNE", label: "Film + Drohne" },
                     { value: "FOTO", label: "Foto" },
-                    { value: "FILM_FOTO", label: "Film & Foto" },
+                    { value: "GRAD_360", label: "360°" },
+                    { value: "K_A", label: "k.A." },
                   ]}
                   canEdit={canEdit}
                   displayClassName="mt-1 text-sm text-gray-900 dark:text-white"
