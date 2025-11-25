@@ -24,6 +24,48 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "25.11.2024",
+    version: "2.4.2",
+    changes: [
+      {
+        title: "Kundenportal vorbereitet",
+        description:
+          "Die Infrastruktur für das kommende Kundenportal wurde implementiert. Admins finden auf der Kundenseite im Tab 'Basisdaten' einen neuen Bereich 'Kundenportal'. Dort können sie den Portal-Zugang für Kunden aktivieren, deaktivieren und neue Passwörter generieren. Das generierte Passwort wird einmalig angezeigt und kann kopiert werden. Voraussetzung ist, dass der Kunde eine E-Mail-Adresse hinterlegt hat.",
+        type: "feature",
+      },
+      {
+        title: "Kundenseite mit Tab-Navigation",
+        description:
+          "Die Kundenseite wurde komplett neu strukturiert! Statt einer langen Seite gibt es jetzt vier übersichtliche Tabs: 'Basisdaten' (Kontaktdaten, berechtigte Personen, Kundenportal), 'Projekte' (alle Projekte des Kunden mit Schnellzugriff), 'Server-Daten' (Froxlor-Daten, Domains, FTP, Datenbanken) und 'Kommunikation' (versendete E-Mails). Die Server-Daten werden jetzt dreispaltig dargestellt für bessere Übersicht.",
+        type: "improvement",
+      },
+      {
+        title: "Berechtigte Personen modernisiert",
+        description:
+          "Der Bereich 'Berechtigte Personen' hat ein neues, kompaktes Design erhalten. Die Personen werden jetzt als zweispaltige Kacheln mit Icons für E-Mail und Telefon angezeigt. Bearbeitungs- und Lösch-Buttons erscheinen nur beim Hover, was die Darstellung aufgeräumter macht.",
+        type: "improvement",
+      },
+      {
+        title: "Nachdreh-Badge für Filmprojekte",
+        description:
+          "Filmprojekte mit dem Umfang 'Nachdreh' werden jetzt mit einem auffälligen Badge gekennzeichnet - ähnlich wie 'Relaunch' bei Webseitenprojekten. Das Badge erscheint sowohl auf der Filmprojekt-Detailseite als auch in der Projektliste auf der Kundenseite.",
+        type: "feature",
+      },
+      {
+        title: "Webtermin-Typ wird korrekt gespeichert",
+        description:
+          "Ein Fehler wurde behoben, bei dem die Art des Webtermins (z.B. 'Telefonisch', 'Beim Kunden') beim Anlegen eines Projekts nicht korrekt gespeichert wurde. Das Problem lag an einem doppelten Formularfeld, das jetzt entfernt wurde.",
+        type: "fix",
+      },
+      {
+        title: "E-Mail-Zähler korrigiert",
+        description:
+          "Der Zähler für versendete E-Mails im Kommunikations-Tab zählt jetzt korrekt alle E-Mails - sowohl projektbezogene als auch allgemeine E-Mails ohne Projektbezug.",
+        type: "fix",
+      },
+    ],
+  },
+  {
     date: "19.11.2024",
     version: "2.4.1",
     changes: [
