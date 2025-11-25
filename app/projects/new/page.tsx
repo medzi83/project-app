@@ -62,11 +62,6 @@ export default async function NewProjectPage({ searchParams }: Props) {
     ...filmAgents.map((a) => ({ value: a.id, label: a.name ?? a.email ?? "" })),
   ];
 
-  const filmPersonOptions: Option[] = [
-    { value: "", label: "- nicht vergeben -" },
-    ...filmAgents.map((a) => ({ value: a.id, label: a.name ?? a.email ?? "" })),
-  ];
-
   // For print design projects: Only base agents
   const printDesignAgentOptions: Option[] = [
     { value: "", label: "- kein Agent -" },
@@ -172,7 +167,6 @@ export default async function NewProjectPage({ searchParams }: Props) {
             websiteAgentOptions={websiteAgentOptions}
             filmAgentOptions={filmAgentOptions}
             printDesignAgentOptions={printDesignAgentOptions}
-            personOptions={filmPersonOptions}
             clientIdFromQuery={clientIdFromQuery}
           />
         </div>

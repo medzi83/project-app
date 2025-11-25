@@ -6,9 +6,7 @@ import { EmailConfirmationDialog } from "@/components/EmailConfirmationDialog";
 
 type Option = { value: string; label: string };
 
-const PRIORITIES = ["NONE", "PRIO_1", "PRIO_2", "PRIO_3"] as const;
 const CMS = ["SHOPWARE", "JOOMLA", "WORDPRESS", "CUSTOM", "OTHER"] as const;
-const PRODUCTION = ["NONE", "BEENDET", "MMW", "VOLLST_A_K", "VOLLST_K_E_S"] as const;
 const SEO = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"] as const;
 const TEXTIT = ["NEIN", "NEIN_NEIN", "JA_NEIN", "JA_JA", "JA"] as const;
 const WEBTERMIN_TYPES: Option[] = [
@@ -17,40 +15,17 @@ const WEBTERMIN_TYPES: Option[] = [
   { value: "BEIM_KUNDEN", label: "Beim Kunden" },
   { value: "IN_DER_AGENTUR", label: "In der Agentur" },
 ];
-const TRI: Option[] = [
-  { value: "unknown", label: "(nicht gesetzt)" },
-  { value: "yes", label: "Ja" },
-  { value: "no", label: "Nein" },
-];
-
-import type { FilmPriority, FilmProjectStatus, FilmScope, PrintDesignType } from "@prisma/client";
+import type { FilmScope, PrintDesignType } from "@prisma/client";
 import {
-  labelForProductionStatus,
-  labelForMaterialStatus,
-  MATERIAL_STATUS_VALUES,
-  labelForWebsitePriority,
   labelForSeoStatus,
   labelForTextitStatus,
 } from "@/lib/project-status";
 import { PRINT_DESIGN_TYPE_LABELS } from "@/lib/print-design-status";
 import Link from "next/link";
 
-const MATERIAL_STATUS_OPTIONS: Option[] = MATERIAL_STATUS_VALUES.map((value) => ({
-  value,
-  label: labelForMaterialStatus(value),
-}));
-
-const PRIORITY_OPTIONS: Option[] = PRIORITIES.map((value) => ({
-  value,
-  label: labelForWebsitePriority(value),
-}));
 const CMS_OPTIONS: Option[] = CMS.map((value) => ({
   value,
   label: value === "SHOPWARE" ? "Shop" : value,
-}));
-const PRODUCTION_OPTIONS: Option[] = PRODUCTION.map((value) => ({
-  value,
-  label: labelForProductionStatus(value),
 }));
 const SEO_OPTIONS: Option[] = [
   { value: "", label: "(leer)" },
@@ -76,19 +51,6 @@ const FILM_SCOPE_LABELS: Record<FilmScope, string> = {
   GRAD_360: "360°",
   K_A: "k.A.",
 };
-const FILM_PRIORITY_LABELS: Record<FilmPriority, string> = {
-  NONE: "-",
-  FILM_SOLO: "Film solo",
-  PRIO_1: "Prio 1",
-  PRIO_2: "Prio 2",
-};
-const FILM_STATUS_LABELS: Record<FilmProjectStatus, string> = {
-  AKTIV: "aktiv",
-  BEENDET: "beendet",
-  WARTEN: "warten",
-  VERZICHT: "verzicht",
-  MMW: "MMW",
-};
 
 const FILM_SCOPE_OPTIONS: Option[] = (Object.keys(FILM_SCOPE_LABELS) as FilmScope[])
   .filter((value) => value !== "K_A")
@@ -96,14 +58,6 @@ const FILM_SCOPE_OPTIONS: Option[] = (Object.keys(FILM_SCOPE_LABELS) as FilmScop
     value,
     label: FILM_SCOPE_LABELS[value],
   }));
-const FILM_PRIORITY_OPTIONS: Option[] = (Object.keys(FILM_PRIORITY_LABELS) as FilmPriority[]).map((value) => ({
-  value,
-  label: FILM_PRIORITY_LABELS[value],
-}));
-const FILM_STATUS_OPTIONS: Option[] = (Object.keys(FILM_STATUS_LABELS) as FilmProjectStatus[]).map((value) => ({
-  value,
-  label: FILM_STATUS_LABELS[value],
-}));
 
 const PRINT_DESIGN_TYPE_OPTIONS: Option[] = (Object.keys(PRINT_DESIGN_TYPE_LABELS) as PrintDesignType[]).map((value) => ({
   value,
@@ -115,14 +69,12 @@ export function UnifiedProjectForm({
   websiteAgentOptions,
   filmAgentOptions,
   printDesignAgentOptions,
-  personOptions,
   clientIdFromQuery,
 }: {
   clientOptions: Option[];
   websiteAgentOptions: Option[];
   filmAgentOptions: Option[];
   printDesignAgentOptions: Option[];
-  personOptions: Option[];
   clientIdFromQuery?: string;
 }) {
   const router = useRouter();
@@ -544,103 +496,6 @@ export function UnifiedProjectForm({
                     💡 Weitere Details kannst du nach dem Anlegen auf der Projektseite ergänzen.
                   </p>
                 </div>
-
-                {/* Versteckte zusätzliche Felder - werden vom useEffect-Handler ein/ausgeblendet */}
-                <div className="website-fields space-y-6 hidden">
-                  <h3 className="text-base font-semibold border-b border-gray-200 dark:border-gray-700 pb-2 text-gray-900 dark:text-white">Weitere Website-Details (optional)</h3>
-
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Domain</span>
-                      <input name="domain" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
-                    </label>
-                    <SelectField name="priority" label="Priorität" options={PRIORITY_OPTIONS} defaultValue="NONE" />
-                    <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">CMS (frei)</span>
-                      <input name="cmsOther" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
-                    </label>
-                    <SelectField name="pStatus" label="P-Status" options={PRODUCTION_OPTIONS} defaultValue="NONE" />
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <SelectField name="webterminType" label="Art des Webtermins" options={WEBTERMIN_TYPES} defaultValue="" />
-                    <DateField name="demoDate" label="Demo an Kunden" />
-                    <DateField name="onlineDate" label="Online" />
-                    <DateField name="lastMaterialAt" label="Letzter Materialeingang" />
-                    <NumberField name="effortBuildMin" label="Aufwand Umsetzung (Stunden)" />
-                    <NumberField name="effortDemoMin" label="Aufwand Demo (Stunden)" />
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <SelectField
-                      name="materialStatus"
-                      label="Material"
-                      options={MATERIAL_STATUS_OPTIONS}
-                      defaultValue="ANGEFORDERT"
-                    />
-                    <SelectField name="seo" label="SEO" options={SEO_OPTIONS} defaultValue="NEIN" />
-                    <SelectField name="accessible" label="Barrierefrei" options={TRI} defaultValue="unknown" />
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Demolink</span>
-                      <input name="demoLink" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="https://..." />
-                    </label>
-                    <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Hinweise (Website)</span>
-                      <textarea name="websiteNote" rows={3} className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
-                    </label>
-                  </div>
-                </div>
-
-                <div className="film-fields space-y-6 hidden">
-                  <h3 className="text-base font-semibold border-b border-gray-200 dark:border-gray-700 pb-2 text-gray-900 dark:text-white">Weitere Film-Details (optional)</h3>
-
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <SelectField name="filmPriority" label="Prio / Nur Film" options={FILM_PRIORITY_OPTIONS} defaultValue="NONE" />
-                    <SelectField name="status" label="Status" options={FILM_STATUS_OPTIONS} defaultValue="AKTIV" />
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <SelectField name="filmerId" label="Verantwortl. Filmer" options={personOptions} defaultValue="" />
-                    <SelectField name="cutterId" label="Cutter" options={personOptions} defaultValue="" />
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <DateField name="contractStart" label="Vertragsbeginn" />
-                    <DateField name="scriptToClient" label="Skript an Kunden" />
-                    <DateField name="scriptApproved" label="Skriptfreigabe" />
-                    <DateField name="shootDate" label="Dreh- / Fototermin" />
-                    <DateField name="firstCutToClient" label="Vorabversion an Kunden" />
-                    <DateField name="finalToClient" label="Finalversion an Kunden" />
-                    <DateField name="filmOnlineDate" label="Online" />
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Finalversion-Link</span>
-                      <input type="url" name="finalLink" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="https://domain.tld/film" />
-                    </label>
-                    <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Hauptlink (Online)</span>
-                      <input type="url" name="onlineLink" className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="https://domain.tld/live" />
-                    </label>
-                  </div>
-
-                  <div className="grid gap-4">
-                    <label className="flex flex-col gap-1">
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground dark:text-gray-400">Hinweis (Film)</span>
-                      <textarea name="filmNote" rows={3} className="rounded border p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600" placeholder="optional" />
-                    </label>
-                  </div>
-
-                  {/* Versteckte Felder für Backend (werden nicht im UI angezeigt) */}
-                  <input type="hidden" name="lastContact" value="" />
-                  <input type="hidden" name="reminderAt" value="" />
-                </div>
-
-                {/* Print-Design erweiterte Felder werden auf der Projektdetailseite gepflegt */}
 
                 <FormActions saveLabel="Projekt speichern" isSubmitting={isSubmitting} />
               </div>

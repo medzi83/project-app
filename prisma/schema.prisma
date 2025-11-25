@@ -76,6 +76,11 @@ model Client {
   salutation          String?
   uploadLinks         Json?
   ftpPasswords        Json?
+  // Kundenportal-Felder
+  portalEnabled       Boolean              @default(false)
+  portalPasswordHash  String?
+  portalLastLogin     DateTime?
+  portalInvitedAt     DateTime?
   authorizedPersons   AuthorizedPerson[]
   agency              Agency?              @relation(fields: [agencyId], references: [id])
   server              Server?              @relation("ClientToServer", fields: [serverId], references: [id])

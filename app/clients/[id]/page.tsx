@@ -24,6 +24,7 @@ import { DeleteProjectButton } from "./DeleteProjectButton";
 import { DeleteDatabaseButton } from "./DeleteDatabaseButton";
 import { isFavoriteClient } from "@/app/actions/favorites";
 import { AuthorizedPersons } from "./AuthorizedPersons";
+import { ClientPortalCard } from "./ClientPortalCard";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -694,53 +695,180 @@ export default async function ClientDetailPage({ params }: Props) {
         initialIsFavorite={isFavorite}
       />
 
-      {/* Info-Cards oben */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Basic Information */}
-        <section className="rounded-lg border border-border bg-card p-4">
-          <ClientDataEditor
-            client={{
-              id: client.id,
-              name: client.name,
-              salutation: client.salutation,
-              firstname: client.firstname,
-              lastname: client.lastname,
-              email: client.email,
-              phone: client.phone,
-              notes: client.notes,
-              uploadLinks: client.uploadLinks as string[] | null,
-              customerNo: client.customerNo,
-              serverId: client.serverId,
-              agencyId: client.agencyId,
-              workStopped: client.workStopped,
-              finished: client.finished,
-              createdAt: client.createdAt,
-              server: client.server,
-              clientServers: client.clientServers.map(cs => ({
-                server: cs.server,
-                customerNo: cs.customerNo,
-              })),
-            }}
-            servers={servers}
-            agencies={agencies}
-            isAdmin={isAdmin}
-            canEdit={canEditClientData}
-          />
-        </section>
+      {/* Haupt-Navigation Tabs */}
+      <Tabs defaultValue="basisdaten" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsTrigger value="basisdaten" className="flex items-center gap-2">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span className="hidden sm:inline">Basisdaten</span>
+          </TabsTrigger>
+          <TabsTrigger value="projekte" className="flex items-center gap-2">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span className="hidden sm:inline">Projekte</span>
+            <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{client.projects.length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="server" className="flex items-center gap-2">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+            </svg>
+            <span className="hidden sm:inline">Server-Daten</span>
+          </TabsTrigger>
+          <TabsTrigger value="kommunikation" className="flex items-center gap-2">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span className="hidden sm:inline">Kommunikation</span>
+            <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{allEmailLogs.length + generalEmails.length}</span>
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Berechtigte Personen */}
-        <section className="rounded-lg border border-border bg-card p-4">
-          <AuthorizedPersons
-            clientId={client.id}
-            authorizedPersons={client.authorizedPersons}
-            isAdmin={isAdmin}
-            canEdit={canEditAuthorizedPersons}
-          />
-        </section>
-      </div>
+        {/* Tab: Basisdaten */}
+        <TabsContent value="basisdaten" className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* Basic Information */}
+            <section className="rounded-lg border border-border bg-card p-4">
+              <ClientDataEditor
+                client={{
+                  id: client.id,
+                  name: client.name,
+                  salutation: client.salutation,
+                  firstname: client.firstname,
+                  lastname: client.lastname,
+                  email: client.email,
+                  phone: client.phone,
+                  notes: client.notes,
+                  uploadLinks: client.uploadLinks as string[] | null,
+                  customerNo: client.customerNo,
+                  serverId: client.serverId,
+                  agencyId: client.agencyId,
+                  workStopped: client.workStopped,
+                  finished: client.finished,
+                  createdAt: client.createdAt,
+                  server: client.server,
+                  clientServers: client.clientServers.map(cs => ({
+                    server: cs.server,
+                    customerNo: cs.customerNo,
+                  })),
+                }}
+                servers={servers}
+                agencies={agencies}
+                isAdmin={isAdmin}
+                canEdit={canEditClientData}
+              />
+            </section>
 
-      {/* Projekte-Sektion */}
-      <section className="space-y-4">
+            {/* Berechtigte Personen */}
+            <section className="rounded-lg border border-border bg-card p-4">
+              <AuthorizedPersons
+                clientId={client.id}
+                authorizedPersons={client.authorizedPersons}
+                isAdmin={isAdmin}
+                canEdit={canEditAuthorizedPersons}
+              />
+            </section>
+          </div>
+
+          {/* Kundenportal und Joomla Installationen */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* Kundenportal Card */}
+            {isAdmin && (
+              <ClientPortalCard
+                clientId={client.id}
+                clientEmail={client.email}
+                portalEnabled={client.portalEnabled}
+                portalLastLogin={client.portalLastLogin}
+                portalInvitedAt={client.portalInvitedAt}
+                isAdmin={isAdmin}
+              />
+            )}
+
+            {/* Joomla Installations */}
+            {client.joomlaInstallations.length > 0 && (
+              <section className="rounded-lg border border-border bg-card p-4">
+                <h2 className="text-base font-medium text-foreground mb-3">
+                  Joomla Installationen ({client.joomlaInstallations.length})
+                </h2>
+                <div className="space-y-3">
+                  {client.joomlaInstallations.map((installation) => {
+                    const hasProject = !!installation.project;
+                    return (
+                      <div
+                        key={installation.id}
+                        className={`rounded border p-3 ${
+                          hasProject
+                            ? 'border-green-200 dark:border-green-800 bg-green-50/40 dark:bg-green-950/30'
+                            : 'border-blue-100 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/30'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="font-medium text-sm text-foreground">
+                                {installation.standardDomain}/{installation.folderName}
+                              </div>
+                              {hasProject ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+                                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Zugeordnet
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
+                                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                  </svg>
+                                  Nicht zugeordnet
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              <span className="text-muted-foreground">Server:</span>{" "}
+                              <span className="font-medium">{installation.server.name}</span>
+                            </div>
+                            {installation.project && (
+                              <div className="mt-1 flex items-center gap-1 text-xs">
+                                <svg className="h-3.5 w-3.5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span className="text-muted-foreground">Projekt:</span>{" "}
+                                <Link
+                                  href={`/projects/${installation.project.id}`}
+                                  className="text-green-700 dark:text-green-400 hover:underline font-medium"
+                                >
+                                  {installation.project.title}
+                                </Link>
+                              </div>
+                            )}
+                          </div>
+                          <a
+                            href={installation.installUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-3 inline-flex items-center gap-1 px-3 py-1.5 rounded bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800 transition text-xs font-medium whitespace-nowrap"
+                          >
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            Öffnen
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Tab: Projekte */}
+        <TabsContent value="projekte" className="space-y-4">
+          <section className="space-y-4">
         <h2 className="text-xl font-semibold text-foreground">
           Projekte ({client.projects.length})
         </h2>
@@ -1047,169 +1175,18 @@ export default async function ClientDetailPage({ params }: Props) {
             </div>
           )}
 
-        {/* Joomla Installations - in grid for 50% width */}
-        <div className="grid gap-4 lg:grid-cols-2">
-          {client.joomlaInstallations.length > 0 && (
-            <section className="rounded-lg border border-border bg-card p-4">
-              <h2 className="text-base font-medium text-foreground mb-3">
-                Joomla Installationen ({client.joomlaInstallations.length})
-              </h2>
-              <div className="space-y-3">
-                {client.joomlaInstallations.map((installation) => {
-                  const hasProject = !!installation.project;
-                  return (
-                    <div
-                      key={installation.id}
-                      className={`rounded border p-3 ${
-                        hasProject
-                          ? 'border-green-200 dark:border-green-800 bg-green-50/40 dark:bg-green-950/30'
-                          : 'border-blue-100 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/30'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="font-medium text-sm text-foreground">
-                              {installation.standardDomain}/{installation.folderName}
-                            </div>
-                            {hasProject ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
-                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Zugeordnet
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
-                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                                Nicht zugeordnet
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground space-y-0.5">
-                            <div>
-                              <span className="text-muted-foreground">Server:</span>{" "}
-                              <span className="font-medium">{installation.server.name}</span>
-                            </div>
-                            <div className="font-mono text-[11px]">
-                              {installation.installPath}
-                            </div>
-                            {installation.project && (
-                              <div className="mt-1 flex items-center gap-1">
-                                <svg className="h-3.5 w-3.5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <span className="text-muted-foreground">Projekt:</span>{" "}
-                                <Link
-                                  href={`/projects/${installation.project.id}`}
-                                  className="text-green-700 dark:text-green-400 hover:underline font-medium"
-                                >
-                                  {installation.project.title}
-                                </Link>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      <a
-                        href={installation.installUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-3 inline-flex items-center gap-1 px-3 py-1.5 rounded bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800 transition text-xs font-medium whitespace-nowrap"
-                      >
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                        Öffnen
-                      </a>
-                    </div>
-
-                    <div className="pt-2 border-t border-blue-200/50 dark:border-blue-800/50 grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <span className="text-muted-foreground">Datenbank:</span>{" "}
-                        <span className="font-mono text-foreground">{installation.databaseName}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">DB-Passwort:</span>{" "}
-                        <span className="font-mono text-foreground">{installation.databasePassword}</span>
-                      </div>
-                      {installation.filesExtracted && (
-                        <div>
-                          <span className="text-muted-foreground">Dateien:</span>{" "}
-                          <span className="text-foreground">{installation.filesExtracted.toLocaleString()}</span>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-muted-foreground">Installiert:</span>{" "}
-                        <span className="text-foreground">{formatDateOnly(installation.createdAt)}</span>
-                      </div>
-                    </div>
-
-                    {isAdmin && (
-                      <>
-                        <div className="pt-2 border-t border-blue-200/50 dark:border-blue-800/50 mt-2">
-                          <div className="text-xs text-muted-foreground mb-1">
-                            {installation.project ? "Projektzuordnung:" : "Projekt zuordnen:"}
-                          </div>
-                          <InstallationProjectAssignment
-                            installationId={installation.id}
-                            clientProjects={client.projects.filter((p) => {
-                              // Only show WEBSITE projects
-                              if (p.type !== "WEBSITE") return false;
-
-                              // Always show currently assigned project
-                              if (p.id === installation.project?.id) return true;
-
-                              // Exclude projects with domain or manual demo link
-                              if (p.website?.domain || p.website?.demoLink) return false;
-
-                              // Exclude projects assigned to other installations
-                              const isAssignedElsewhere = client.joomlaInstallations.some(
-                                inst => inst.projectId === p.id && inst.id !== installation.id
-                              );
-                              return !isAssignedElsewhere;
-                            })}
-                            currentProjectId={installation.project?.id}
-                          />
-                        </div>
-                        <div className="pt-2 border-t border-blue-200/50 mt-2 flex justify-end">
-                          <DeleteInstallationButton
-                            installationId={installation.id}
-                            installationName={`${installation.standardDomain}/${installation.folderName}`}
-                          />
-                        </div>
-                      </>
-                    )}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-        </div>
-      </section>
-
-      {/* Tabs für Server-Daten und Kommunikation */}
-      <Tabs defaultValue="server" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="server">
-            Server-Daten / Froxlor
-          </TabsTrigger>
-          <TabsTrigger value="communication">
-            Kommunikation
-          </TabsTrigger>
-        </TabsList>
+          </section>
+        </TabsContent>
 
         {/* Tab: Server-Daten */}
-        <TabsContent value="server" className="mt-6">
+        <TabsContent value="server" className="space-y-4">
           {serverDataList.length === 0 ? (
             <div className="rounded-lg border border-border bg-card p-8 text-center">
               <p className="text-muted-foreground">Keine Server-Daten verfügbar</p>
             </div>
           ) : (
             // Always use tabs for consistent display
-            <Tabs defaultValue={client.serverId || serverDataList[0].server.id} className="w-full max-w-5xl">
+            <Tabs defaultValue={client.serverId || serverDataList[0].server.id} className="w-full">
               <TabsList className="grid" style={{ gridTemplateColumns: `repeat(${serverDataList.length}, minmax(0, 1fr))`, maxWidth: '500px' }}>
                 {serverDataList.map((serverData) => (
                   <TabsTrigger key={serverData.server.id} value={serverData.server.id} className="text-sm">
@@ -1238,7 +1215,7 @@ export default async function ClientDetailPage({ params }: Props) {
                   )}
 
                   {/* Grid Layout for Cards */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
                     {/* Froxlor Customer Data */}
                     <section className="rounded-lg border border-border bg-card p-3">
                       {serverData.customer ? (
@@ -1441,11 +1418,11 @@ export default async function ClientDetailPage({ params }: Props) {
         </TabsContent>
 
         {/* Tab: Kommunikation */}
-        <TabsContent value="communication" className="space-y-6 mt-6">
+        <TabsContent value="kommunikation" className="space-y-4">
           {/* Email Logs */}
           <section className="rounded-lg border border-border bg-card p-4">
             <h2 className="text-base font-medium text-foreground mb-3">
-              Versendete E-Mails ({allEmailLogs.length})
+              Versendete E-Mails ({allEmailLogs.length + generalEmails.length})
             </h2>
             {allEmailLogs.length === 0 && generalEmails.length === 0 ? (
               <p className="text-sm text-muted-foreground">Noch keine E-Mails an diesen Kunden versendet.</p>
