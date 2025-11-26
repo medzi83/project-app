@@ -24,6 +24,30 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "26.11.2024",
+    version: "2.4.3",
+    changes: [
+      {
+        title: "Vertragsdaten für Kunden",
+        description:
+          "Auf der Kunden-Detailseite gibt es jetzt einen neuen Bereich 'Vertragsdaten' unter den Basisdaten. Hier kannst du alle wichtigen Vertragsinformationen hinterlegen: Vertragsbeginn, Laufzeit (in Monaten), Setup-Gebühr, monatlicher Betrag und Zahlweise (Monatlich, Vierteljährlich, Halbjährlich, Jährlich). Das Ende der Mindestlaufzeit wird automatisch aus Vertragsbeginn + Laufzeit berechnet, kann aber auch manuell überschrieben werden. Weitere Felder: Storno/Kündigung (Freitext), SEPA-Mandat und Schreiber. Zusätzlich können Adressdaten (Straße, Hausnummer, PLZ, Ort) und Kontaktdaten (Telefon 1, Telefon 2, Mobil) sowie Notizen gespeichert werden.",
+        type: "feature",
+      },
+      {
+        title: "Leistungsumfang für Verträge",
+        description:
+          "Im neuen Vertragsdaten-Bereich kannst du per Checkboxen festlegen, welche Leistungen im Vertrag enthalten sind: Webseite (Success), Webseitenhosting, Texterstellung (Textit), Film (Image), Filmhosting, SEOplus, Barrierefreiheit (B-free), Drohne (onAir), Fotoerstellung, Onlineshop (Shopit), Full Content, SecurePlus, Adwords (Adleit) und Social-Media. Die ausgewählten Leistungen werden als farbige Badges angezeigt.",
+        type: "feature",
+      },
+      {
+        title: "Verzeichnisprüfung bei Froxlor-Neuanlage",
+        description:
+          "Wenn du in der Basisinstallation einen neuen Kunden in Froxlor anlegst, prüft das System jetzt automatisch, ob das Kundenverzeichnis bereits erstellt wurde. Da der Froxlor-Cron alle 10 Minuten läuft, kann es etwas dauern bis das Verzeichnis existiert. Die Installation wartet automatisch und zeigt den Fortschritt an. Sobald das Verzeichnis bereit ist, wird die Installation freigeschaltet.",
+        type: "improvement",
+      },
+    ],
+  },
+  {
     date: "25.11.2024",
     version: "2.4.2",
     changes: [

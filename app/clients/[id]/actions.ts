@@ -5,6 +5,7 @@ import { getAuthSession } from "@/lib/authz";
 import { revalidatePath } from "next/cache";
 import { FroxlorClient, createFroxlorClientFromServer } from "@/lib/froxlor";
 import type { FroxlorCustomerUpdateInput } from "@/lib/froxlor";
+import type { PaymentInterval, PaymentMethod, ContractService } from "@prisma/client";
 
 export async function deleteEmailLog(emailLogId: string) {
   const session = await getAuthSession();
@@ -396,6 +397,138 @@ export async function deleteProject(formData: FormData) {
     return {
       success: false,
       message: error instanceof Error ? error.message : "Fehler beim Löschen des Projekts"
+    };
+  }
+}
+
+// ==================== Vertragsdaten Actions ====================
+
+export async function updateClientContract(formData: FormData) {
+  const session = await getAuthSession();
+
+  // Only admins and agents can update contract data
+  if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "AGENT")) {
+    return { success: false, message: "Nicht autorisiert" };
+  }
+
+  const clientId = formData.get("clientId") as string;
+
+  if (!clientId) {
+    return { success: false, message: "Client-ID fehlt" };
+  }
+
+  // Parse form data
+  const contractStartStr = formData.get("contractStart") as string;
+  const contractDurationStr = formData.get("contractDuration") as string;
+  const setupFeeStr = formData.get("setupFee") as string;
+  const paymentIntervalStr = formData.get("paymentInterval") as string;
+  const paymentMethodStr = formData.get("paymentMethod") as string;
+  const monthlyAmountStr = formData.get("monthlyAmount") as string;
+  const servicesStr = formData.getAll("services") as string[];
+  const street = formData.get("street") as string;
+  const houseNumber = formData.get("houseNumber") as string;
+  const postalCode = formData.get("postalCode") as string;
+  const city = formData.get("city") as string;
+  const phone1 = formData.get("phone1") as string;
+  const phone2 = formData.get("phone2") as string;
+  const mobile = formData.get("mobile") as string;
+  const note = formData.get("note") as string;
+  const minTermEndStr = formData.get("minTermEnd") as string;
+  const cancellationStr = formData.get("cancellation") as string;
+  const sepaMandate = formData.get("sepaMandate") as string;
+  const createdBy = formData.get("createdBy") as string;
+
+  // Parse values
+  const contractStart = contractStartStr ? new Date(contractStartStr) : null;
+  const contractDuration = contractDurationStr ? parseInt(contractDurationStr, 10) : null;
+  const setupFee = setupFeeStr ? parseFloat(setupFeeStr.replace(",", ".")) : null;
+  const paymentInterval = paymentIntervalStr as PaymentInterval | null;
+  const paymentMethod = paymentMethodStr as PaymentMethod | null;
+  const monthlyAmount = monthlyAmountStr ? parseFloat(monthlyAmountStr.replace(",", ".")) : null;
+  const services = servicesStr.filter(s => s) as ContractService[];
+  const minTermEnd = minTermEndStr ? new Date(minTermEndStr) : null;
+  const cancellation = cancellationStr || null; // Freitext, kein Datum
+
+  try {
+    // Upsert contract data
+    await prisma.clientContract.upsert({
+      where: { clientId },
+      update: {
+        contractStart,
+        contractDuration,
+        setupFee,
+        paymentInterval,
+        paymentMethod,
+        monthlyAmount,
+        services,
+        street: street || null,
+        houseNumber: houseNumber || null,
+        postalCode: postalCode || null,
+        city: city || null,
+        phone1: phone1 || null,
+        phone2: phone2 || null,
+        mobile: mobile || null,
+        note: note || null,
+        minTermEnd,
+        cancellation,
+        sepaMandate: sepaMandate || null,
+        createdBy: createdBy || null,
+      },
+      create: {
+        clientId,
+        contractStart,
+        contractDuration,
+        setupFee,
+        paymentInterval,
+        paymentMethod,
+        monthlyAmount,
+        services,
+        street: street || null,
+        houseNumber: houseNumber || null,
+        postalCode: postalCode || null,
+        city: city || null,
+        phone1: phone1 || null,
+        phone2: phone2 || null,
+        mobile: mobile || null,
+        note: note || null,
+        minTermEnd,
+        cancellation,
+        sepaMandate: sepaMandate || null,
+        createdBy: createdBy || null,
+      },
+    });
+
+    revalidatePath(`/clients/${clientId}`);
+    return { success: true, message: "Vertragsdaten erfolgreich gespeichert" };
+  } catch (error) {
+    console.error("Error updating client contract:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Fehler beim Speichern der Vertragsdaten"
+    };
+  }
+}
+
+export async function deleteClientContract(clientId: string) {
+  const session = await getAuthSession();
+
+  // Only admins can delete contract data
+  if (!session?.user || session.user.role !== "ADMIN") {
+    return { success: false, message: "Nicht autorisiert" };
+  }
+
+  try {
+    await prisma.clientContract.delete({
+      where: { clientId },
+    });
+
+    revalidatePath(`/clients/${clientId}`);
+    return { success: true, message: "Vertragsdaten erfolgreich gelöscht" };
+  } catch (error) {
+    console.error("Error deleting client contract:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Fehler beim Löschen der Vertragsdaten"
     };
   }
 }

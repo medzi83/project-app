@@ -25,6 +25,7 @@ import { DeleteDatabaseButton } from "./DeleteDatabaseButton";
 import { isFavoriteClient } from "@/app/actions/favorites";
 import { AuthorizedPersons } from "./AuthorizedPersons";
 import { ClientPortalCard } from "./ClientPortalCard";
+import { ContractDataEditor } from "./ContractDataEditor";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -202,6 +203,7 @@ export default async function ClientDetailPage({ params }: Props) {
             lastname: "asc",
           },
         },
+        contract: true,
       },
     }),
     prisma.server.findMany({
@@ -771,6 +773,21 @@ export default async function ClientDetailPage({ params }: Props) {
               />
             </section>
           </div>
+
+          {/* Vertragsdaten */}
+          <section className="rounded-lg border border-border bg-card p-4">
+            <ContractDataEditor
+              clientId={client.id}
+              contract={client.contract ? {
+                ...client.contract,
+                // Convert Decimal to string for client component serialization
+                setupFee: client.contract.setupFee?.toString() ?? null,
+                monthlyAmount: client.contract.monthlyAmount?.toString() ?? null,
+              } : null}
+              isAdmin={isAdmin}
+              canEdit={canEditClientData}
+            />
+          </section>
 
           {/* Kundenportal und Joomla Installationen */}
           <div className="grid gap-4 lg:grid-cols-2">

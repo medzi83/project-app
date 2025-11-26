@@ -85,6 +85,7 @@ model Client {
   agency              Agency?              @relation(fields: [agencyId], references: [id])
   server              Server?              @relation("ClientToServer", fields: [serverId], references: [id])
   clientServers       ClientServer[]
+  contract            ClientContract?
   emailLogs           EmailLog[]
   favoritedBy         FavoriteClient[]
   joomlaInstallations JoomlaInstallation[]
@@ -548,6 +549,43 @@ model ClientServer {
   @@index([customerNo])
 }
 
+model ClientContract {
+  id                  String              @id @default(cuid())
+  clientId            String              @unique
+  // Vertragsdaten
+  contractStart       DateTime?           // Vertragsbeginn
+  contractDuration    Int?                // Laufzeit in Monaten
+  setupFee            Decimal?            @db.Decimal(10, 2) // Setup in Euro
+  paymentInterval     PaymentInterval?    // Zahlweise
+  paymentMethod       PaymentMethod?      // Zahlart (SEPA, Rechnung, Sonstige)
+  monthlyAmount       Decimal?            @db.Decimal(10, 2) // monatlicher Betrag
+  // Leistungsumfang (als Array von Enums)
+  services            ContractService[]
+  // Adressdaten
+  street              String?
+  houseNumber         String?
+  postalCode          String?
+  city                String?
+  // Kontaktdaten
+  phone1              String?
+  phone2              String?
+  mobile              String?
+  // Weitere Felder
+  note                String?             // Notiz
+  minTermEnd          DateTime?           // Ende Mindestlaufzeit
+  cancellation        String?             // Storno/Kündigung (Freitext)
+  sepaMandate         String?             // SEPA-Mandat
+  createdBy           String?             // Schreiber (User-ID oder Name)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  // Relation
+  client              Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([contractStart])
+  @@index([minTermEnd])
+}
+
 enum EmailTemplateCategory {
   GENERAL
   WEBSITE
@@ -712,4 +750,34 @@ enum FeedbackStatus {
   IN_PROGRESS
   RESOLVED
   DISMISSED
+}
+
+enum PaymentInterval {
+  MONTHLY       // monatlich
+  QUARTERLY     // vierteljährlich
+  SEMI_ANNUAL   // halbjährlich
+  ANNUAL        // jährlich
+}
+
+enum PaymentMethod {
+  SEPA          // SEPA-Lastschrift
+  INVOICE       // Rechnung
+  OTHER         // Sonstige
+}
+
+enum ContractService {
+  WEBSITE_SUCCESS     // Webseite (Success)
+  WEBSITE_HOSTING     // Webseitenhosting
+  TEXTERSTELLUNG      // Texterstellung (Textit)
+  FILM_IMAGE          // Film (Image)
+  FILM_HOSTING        // Filmhosting
+  SEO_PLUS            // SEOplus
+  BARRIEREFREIHEIT    // Barrierefreiheit (B-free)
+  DROHNE_ONAIR        // Drohne (onAir)
+  FOTOERSTELLUNG      // Fotoerstellung
+  ONLINESHOP_SHOPIT   // Onlineshop (Shopit)
+  FULL_CONTENT        // Full Content
+  SECURE_PLUS         // SecurePlus
+  ADWORDS_ADLEIT      // Adwords (Adleit)
+  SOCIAL_MEDIA        // Social-Media
 }
