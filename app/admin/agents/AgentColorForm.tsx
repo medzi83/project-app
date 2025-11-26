@@ -21,7 +21,7 @@ export default function AgentColorForm({ userId, color }: Props) {
         type="color"
         name="color"
         defaultValue={defaultColor}
-        className="h-8 w-10 border rounded"
+        className="h-8 w-10 border dark:border-gray-600 rounded"
         onChange={() => {
           changedRef.current = true;
         }}
@@ -39,7 +39,7 @@ export default function AgentColorForm({ userId, color }: Props) {
       />
       {color && (
         <button
-          className="px-2 py-1 border rounded"
+          className="px-2 py-1 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
           name="mode"
           value="clear"
           formNoValidate

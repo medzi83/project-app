@@ -100,9 +100,9 @@ export default function AgencyLogoUpload({
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
         {/* Main Logo */}
-        <div className="rounded-xl border-2 border-blue-200 bg-gradient-to-br from-white to-blue-50/30 p-4 shadow-sm">
+        <div className="rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-950/30 p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <h4 className="text-sm font-bold text-blue-900">Haupt-Logo</h4>
+            <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300">Haupt-Logo</h4>
             {logoPath && (
               <button
                 type="button"
@@ -115,7 +115,7 @@ export default function AgencyLogoUpload({
             )}
           </div>
           {logoPath ? (
-            <div className="flex items-center justify-center rounded-lg border-2 border-blue-200 bg-white p-4">
+            <div className="flex items-center justify-center rounded-lg border-2 border-blue-200 dark:border-blue-700 bg-white dark:bg-gray-800 p-4">
               <Image
                 src={logoPath}
                 alt={`Logo ${agencyName}`}
@@ -126,19 +126,19 @@ export default function AgencyLogoUpload({
               />
             </div>
           ) : (
-            <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-blue-300 bg-blue-50/50">
+            <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-950/30">
               <div className="text-center">
-                <ImageIcon className="mx-auto h-8 w-8 text-blue-400" />
-                <p className="mt-2 text-xs text-blue-600">Kein Logo hochgeladen</p>
+                <ImageIcon className="mx-auto h-8 w-8 text-blue-400 dark:text-blue-500" />
+                <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">Kein Logo hochgeladen</p>
               </div>
             </div>
           )}
         </div>
 
         {/* Icon Logo */}
-        <div className="rounded-xl border-2 border-purple-200 bg-gradient-to-br from-white to-purple-50/30 p-4 shadow-sm">
+        <div className="rounded-xl border-2 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-white to-purple-50/30 dark:from-gray-800 dark:to-purple-950/30 p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <h4 className="text-sm font-bold text-purple-900">Icon/Favicon</h4>
+            <h4 className="text-sm font-bold text-purple-900 dark:text-purple-300">Icon/Favicon</h4>
             {logoIconPath && (
               <button
                 type="button"
@@ -151,7 +151,7 @@ export default function AgencyLogoUpload({
             )}
           </div>
           {logoIconPath ? (
-            <div className="flex items-center justify-center rounded-lg border-2 border-purple-200 bg-white p-4">
+            <div className="flex items-center justify-center rounded-lg border-2 border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 p-4">
               <Image
                 src={logoIconPath}
                 alt={`Icon ${agencyName}`}
@@ -162,10 +162,10 @@ export default function AgencyLogoUpload({
               />
             </div>
           ) : (
-            <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-purple-300 bg-purple-50/50">
+            <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-purple-300 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-950/30">
               <div className="text-center">
-                <ImageIcon className="mx-auto h-8 w-8 text-purple-400" />
-                <p className="mt-2 text-xs text-purple-600">Kein Icon hochgeladen</p>
+                <ImageIcon className="mx-auto h-8 w-8 text-purple-400 dark:text-purple-500" />
+                <p className="mt-2 text-xs text-purple-600 dark:text-purple-400">Kein Icon hochgeladen</p>
               </div>
             </div>
           )}
@@ -173,7 +173,7 @@ export default function AgencyLogoUpload({
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/50 p-3 text-sm text-red-800 dark:text-red-300">
           {error}
         </div>
       )}
@@ -181,33 +181,33 @@ export default function AgencyLogoUpload({
       <form onSubmit={handleUpload} className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Haupt-Logo hochladen
             </label>
             <input
               type="file"
               name="logo"
               accept=".png,.jpg,.jpeg,.svg,.webp"
-              className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="w-full text-sm text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-900/30 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50"
               disabled={isUploading}
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Empfohlen: PNG, SVG oder WEBP (max. 5 MB)
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Icon/Favicon hochladen
             </label>
             <input
               type="file"
               name="logoIcon"
               accept=".png,.jpg,.jpeg,.svg,.webp"
-              className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              className="w-full text-sm text-gray-900 dark:text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 dark:file:bg-purple-900/30 file:text-purple-700 dark:file:text-purple-300 hover:file:bg-purple-100 dark:hover:file:bg-purple-900/50"
               disabled={isUploading}
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Empfohlen: Quadratisch, 64x64px oder größer
             </p>
           </div>
