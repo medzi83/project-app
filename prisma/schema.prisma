@@ -1,3 +1,19 @@
+// ============================================================================
+// WICHTIG: Manuelle Migrationen!
+// ============================================================================
+// Dieses Projekt verwendet Supabase mit pgBouncer (Connection Pooling).
+// Daher werden Migrationen NICHT automatisch mit `prisma migrate dev` erstellt,
+// sondern manuell:
+//
+// 1. Schema hier anpassen
+// 2. Migration SQL-Datei manuell erstellen unter:
+//    prisma/migrations/YYYYMMDDHHMMSS_beschreibung/migration.sql
+// 3. Migration deployen mit: npx prisma migrate deploy
+// 4. Prisma Client neu generieren: npx prisma generate
+//
+// Siehe auch: https://www.prisma.io/docs/guides/deployment/deploy-database-changes-with-prisma-migrate
+// ============================================================================
+
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
@@ -27,6 +43,7 @@ model User {
   favoriteClients         FavoriteClient[]
   feedbacks               Feedback[]              @relation("FeedbackAuthor")
   noticesCreated          Notice[]                @relation("NoticesCreated")
+  customerNoticesCreated  CustomerNotice[]        @relation("CustomerNoticesCreated")
   noticeAcknowledgements  NoticeAcknowledgement[]
   noticeAssignments       NoticeRecipient[]
   projects                Project[]               @relation("AgentProjects")
@@ -86,6 +103,7 @@ model Client {
   server              Server?              @relation("ClientToServer", fields: [serverId], references: [id])
   clientServers       ClientServer[]
   contract            ClientContract?
+  customerNotices     CustomerNoticeRecipient[]
   emailLogs           EmailLog[]
   favoritedBy         FavoriteClient[]
   joomlaInstallations JoomlaInstallation[]
@@ -116,6 +134,7 @@ model Agency {
   clients         Client[]
   emailSignatures EmailSignature[]
   mailServers     MailServer[]
+  customerNotices CustomerNotice[]
 }
 
 model Project {
@@ -449,6 +468,46 @@ model NoticeAcknowledgement {
 
   @@unique([noticeId, userId])
   @@index([userId])
+}
+
+// Kundenportal-Hinweise (separate von Agenten-Hinweisen)
+model CustomerNotice {
+  id              String                     @id @default(cuid())
+  title           String
+  message         String
+  targetGroup     CustomerNoticeTargetGroup  @default(ALL_CUSTOMERS)
+  agencyId        String?                    // Falls AGENCY_CUSTOMERS: welche Agentur
+  showOnDashboard Boolean                    @default(false) // Wichtige Hinweise auch auf Dashboard anzeigen
+  isActive        Boolean                    @default(true)
+  createdById     String
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  createdBy       User                       @relation("CustomerNoticesCreated", fields: [createdById], references: [id], onDelete: Cascade)
+  agency          Agency?                    @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  recipients      CustomerNoticeRecipient[]
+
+  @@index([isActive, targetGroup])
+  @@index([isActive, showOnDashboard])
+  @@index([createdById])
+  @@index([agencyId])
+}
+
+// Für SELECTED_CUSTOMERS: welche Kunden sind Empfänger
+model CustomerNoticeRecipient {
+  noticeId   String
+  clientId   String
+  assignedAt DateTime       @default(now())
+  notice     CustomerNotice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  client     Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@id([noticeId, clientId])
+  @@index([clientId])
+}
+
+enum CustomerNoticeTargetGroup {
+  ALL_CUSTOMERS       // Alle Kunden
+  AGENCY_CUSTOMERS    // Kunden einer bestimmten Agentur (EM oder VW)
+  SELECTED_CUSTOMERS  // Ausgewählte Kunden
 }
 
 model Feedback {

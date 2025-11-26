@@ -150,3 +150,77 @@ export async function deleteNotice(noticeId: string) {
 
   await revalidateNotices();
 }
+
+// ========================================
+// CUSTOMER NOTICE ACTIONS (Kundenportal)
+// ========================================
+
+type CustomerNoticeTargetGroup = "ALL_CUSTOMERS" | "AGENCY_CUSTOMERS" | "SELECTED_CUSTOMERS";
+
+export async function createCustomerNotice(formData: FormData) {
+  const session = await requireRole(["ADMIN"]);
+  const createdById = session.user.id;
+  if (!createdById) {
+    throw new Error("Admin-Identität konnte nicht ermittelt werden.");
+  }
+
+  const title = String(formData.get("title") ?? "").trim();
+  const message = String(formData.get("message") ?? "").trim();
+  const targetGroup = (formData.get("targetGroup") ?? "ALL_CUSTOMERS") as CustomerNoticeTargetGroup;
+  const agencyId = formData.get("agencyId") as string | null;
+  const showOnDashboard = formData.has("showOnDashboard");
+  const isActive = formData.has("isActive");
+  const recipientIds = formData.getAll("recipients").map((value) => String(value));
+
+  if (!title) throw new Error("Titel darf nicht leer sein.");
+  if (!message) throw new Error("Nachricht darf nicht leer sein.");
+  if (targetGroup === "AGENCY_CUSTOMERS" && !agencyId) {
+    throw new Error("Bitte eine Agentur auswählen.");
+  }
+  if (targetGroup === "SELECTED_CUSTOMERS" && recipientIds.length === 0) {
+    throw new Error("Bitte mindestens einen Kunden auswählen.");
+  }
+
+  await prisma.customerNotice.create({
+    data: {
+      title,
+      message,
+      targetGroup,
+      agencyId: targetGroup === "AGENCY_CUSTOMERS" ? agencyId : null,
+      showOnDashboard,
+      isActive,
+      createdById,
+      recipients:
+        targetGroup === "SELECTED_CUSTOMERS"
+          ? {
+              createMany: {
+                data: recipientIds.map((clientId) => ({ clientId })),
+              },
+            }
+          : undefined,
+    },
+  });
+
+  await revalidateNotices();
+}
+
+export async function updateCustomerNoticeActiveState(noticeId: string, isActive: boolean) {
+  await requireRole(["ADMIN"]);
+
+  await prisma.customerNotice.update({
+    where: { id: noticeId },
+    data: { isActive },
+  });
+
+  await revalidateNotices();
+}
+
+export async function deleteCustomerNotice(noticeId: string) {
+  await requireRole(["ADMIN"]);
+
+  await prisma.customerNotice.delete({
+    where: { id: noticeId },
+  });
+
+  await revalidateNotices();
+}
