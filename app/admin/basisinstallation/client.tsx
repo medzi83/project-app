@@ -49,6 +49,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
     standardDomain: string;
   } | null>(null);
   const [loadingCustomer, setLoadingCustomer] = useState(false);
+  const [isNewlyCreatedInFroxlor, setIsNewlyCreatedInFroxlor] = useState(false); // Track wenn Kunde gerade in Froxlor angelegt wurde
   const [clientSearchTerm, setClientSearchTerm] = useState(() => {
     // Initialize with preselected client name if available
     if (preselectedClientId) {
@@ -342,6 +343,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                                 onClick={() => {
                                   setSelectedClient(client.id);
                                   setIsNewCustomer(false); // Deaktiviere "Neuer Kunde"-Modus
+                                  setIsNewlyCreatedInFroxlor(false); // Reset da anderer Kunde gewählt
                                   setClientSearchTerm(
                                     `${client.name}${client.customerNo ? ` (${client.customerNo})` : ""}`
                                   );
@@ -378,6 +380,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                           onClick={() => {
                             setSelectedClient("");
                             setClientSearchTerm("");
+                            setIsNewlyCreatedInFroxlor(false);
                           }}
                           className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
                           title="Auswahl aufheben"
@@ -635,6 +638,8 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                 onCustomerCreated={(customerNo) => {
                   // Lade Kundendaten nach erfolgreicher Neuanlage
                   loadCustomerDetailsForServer(customerNo);
+                  // Setze Flag dass Kunde gerade neu in Froxlor angelegt wurde
+                  setIsNewlyCreatedInFroxlor(true);
                 }}
               />
               <div className="mt-6 flex justify-between border-t dark:border-gray-700 pt-4">
@@ -679,6 +684,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                   standardDomain={customerDetails.standardDomain}
                   clientId={selectedClient}
                   clientProjects={client?.projects || []}
+                  isNewCustomer={isNewlyCreatedInFroxlor}
                 />
               )}
 

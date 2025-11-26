@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { getCustomerMysqlServers } from "./actions";
 import type { FroxlorMysqlServer } from "@/lib/froxlor";
@@ -17,6 +17,17 @@ type Props = {
     status: string;
     updatedAt: Date;
   }[];
+  isNewCustomer?: boolean; // Flag to indicate if customer was just created
+};
+
+type DirectoryStatus = {
+  exists: boolean;
+  customerExists: boolean;
+  documentRoot: string | null;
+  loginname?: string;
+  message: string;
+  checking: boolean;
+  pollCount: number;
 };
 
 // Generate a random password with 10 characters (uppercase, lowercase, numbers)
@@ -70,6 +81,7 @@ export default function JoomlaInstallForm({
   standardDomain,
   clientId,
   clientProjects,
+  isNewCustomer = false,
 }: Props) {
   const [folderName, setFolderName] = useState("");
   const [dbPassword, setDbPassword] = useState("");
@@ -88,6 +100,87 @@ export default function JoomlaInstallForm({
     filesExtracted?: number;
     bytesProcessed?: number;
   } | null>(null);
+
+  // Directory status for new customers
+  const [directoryStatus, setDirectoryStatus] = useState<DirectoryStatus>({
+    exists: !isNewCustomer, // Assume exists if not a new customer
+    customerExists: true,
+    documentRoot: customerDocumentRoot,
+    message: isNewCustomer ? "Prüfe Verzeichnis..." : "Verzeichnis bereit",
+    checking: isNewCustomer,
+    pollCount: 0,
+  });
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const MAX_POLL_COUNT = 120; // Max 120 attempts = 10 minutes (5 seconds each)
+
+  // Check if customer directory exists
+  const checkDirectory = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/check-customer-directory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverId, customerNo }),
+      });
+
+      const data = await response.json();
+
+      setDirectoryStatus((prev) => ({
+        exists: data.exists || false,
+        customerExists: data.customerExists || false,
+        documentRoot: data.documentRoot || prev.documentRoot,
+        loginname: data.loginname,
+        message: data.message || "Unbekannter Status",
+        checking: !data.exists && prev.pollCount < MAX_POLL_COUNT,
+        pollCount: prev.pollCount + 1,
+      }));
+
+      return data.exists;
+    } catch (error) {
+      console.error("Error checking directory:", error);
+      setDirectoryStatus((prev) => ({
+        ...prev,
+        checking: prev.pollCount < MAX_POLL_COUNT,
+        pollCount: prev.pollCount + 1,
+        message: "Fehler bei der Verzeichnisprüfung",
+      }));
+      return false;
+    }
+  }, [serverId, customerNo]);
+
+  // Start polling for directory when component mounts (for new customers)
+  useEffect(() => {
+    if (isNewCustomer) {
+      // Initial check
+      checkDirectory();
+
+      // Start polling every 5 seconds
+      pollIntervalRef.current = setInterval(async () => {
+        const exists = await checkDirectory();
+        if (exists && pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+      }, 5000);
+
+      return () => {
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+      };
+    }
+  }, [isNewCustomer, checkDirectory]);
+
+  // Stop polling when max count reached or directory exists
+  useEffect(() => {
+    if (directoryStatus.exists || directoryStatus.pollCount >= MAX_POLL_COUNT) {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      setDirectoryStatus((prev) => ({ ...prev, checking: false }));
+    }
+  }, [directoryStatus.exists, directoryStatus.pollCount]);
 
   // Generate password and fetch MySQL servers on mount
   useEffect(() => {
@@ -244,6 +337,98 @@ export default function JoomlaInstallForm({
           <div>Standard-Domain: {standardDomain}</div>
         </div>
       </div>
+
+      {/* Directory Status Check for new customers */}
+      {isNewCustomer && (
+        <div
+          className={`mb-4 rounded border p-4 text-sm ${
+            directoryStatus.exists
+              ? "border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/30"
+              : directoryStatus.checking
+              ? "border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/30"
+              : "border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/30"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {directoryStatus.checking ? (
+              <div className="animate-spin h-5 w-5 border-2 border-yellow-600 dark:border-yellow-400 border-t-transparent rounded-full flex-shrink-0"></div>
+            ) : directoryStatus.exists ? (
+              <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            ) : (
+              <div className="h-5 w-5 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            )}
+            <div className="flex-1">
+              <div
+                className={`font-medium ${
+                  directoryStatus.exists
+                    ? "text-green-900 dark:text-green-200"
+                    : directoryStatus.checking
+                    ? "text-yellow-900 dark:text-yellow-200"
+                    : "text-red-900 dark:text-red-200"
+                }`}
+              >
+                {directoryStatus.exists
+                  ? "Kundenverzeichnis bereit"
+                  : directoryStatus.checking
+                  ? "Warte auf Froxlor-Cron..."
+                  : "Verzeichnis nicht gefunden"}
+              </div>
+              <div
+                className={`text-xs mt-1 ${
+                  directoryStatus.exists
+                    ? "text-green-700 dark:text-green-300"
+                    : directoryStatus.checking
+                    ? "text-yellow-700 dark:text-yellow-300"
+                    : "text-red-700 dark:text-red-300"
+                }`}
+              >
+                {directoryStatus.message}
+                {directoryStatus.checking && (
+                  <span className="ml-2">
+                    (Prüfung {directoryStatus.pollCount}/{MAX_POLL_COUNT})
+                  </span>
+                )}
+              </div>
+              {!directoryStatus.exists && !directoryStatus.checking && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDirectoryStatus((prev) => ({ ...prev, checking: true, pollCount: 0 }));
+                      checkDirectory();
+                      pollIntervalRef.current = setInterval(async () => {
+                        const exists = await checkDirectory();
+                        if (exists && pollIntervalRef.current) {
+                          clearInterval(pollIntervalRef.current);
+                          pollIntervalRef.current = null;
+                        }
+                      }, 5000);
+                    }}
+                    className="text-xs px-3 py-1 rounded bg-yellow-600 dark:bg-yellow-500 text-white hover:bg-yellow-700 dark:hover:bg-yellow-600 transition-colors"
+                  >
+                    Erneut prüfen
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          {directoryStatus.checking && (
+            <div className="mt-3 text-xs text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/50 rounded p-2">
+              <strong>Info:</strong> Bei neuen Froxlor-Kunden muss der Froxlor-Cron-Job erst laufen,
+              um das Kundenverzeichnis anzulegen. Dies kann bis zu 10 Minuten dauern.
+              Die Installation wird automatisch freigeschaltet, sobald das Verzeichnis existiert.
+            </div>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleInstall} className="space-y-4">
         {clientProjects.length > 0 && (
@@ -422,8 +607,22 @@ export default function JoomlaInstallForm({
         )}
 
         <div className="flex gap-3">
-          <Button type="submit" disabled={installing || extracting || !folderName || !dbPassword || selectedMysqlServerId === null}>
-            {installing || extracting ? "Installation läuft..." : "Joomla automatisch installieren"}
+          <Button
+            type="submit"
+            disabled={
+              installing ||
+              extracting ||
+              !folderName ||
+              !dbPassword ||
+              selectedMysqlServerId === null ||
+              (isNewCustomer && !directoryStatus.exists)
+            }
+          >
+            {installing || extracting
+              ? "Installation läuft..."
+              : isNewCustomer && !directoryStatus.exists
+              ? "Warte auf Kundenverzeichnis..."
+              : "Joomla automatisch installieren"}
           </Button>
         </div>
       </form>
