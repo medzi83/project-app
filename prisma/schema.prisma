@@ -162,29 +162,259 @@ model Project {
 }
 
 model ProjectWebsite {
-  projectId      String                 @id
-  domain         String?
-  priority       WebsitePriority        @default(NONE)
-  pStatus        ProductionStatus       @default(NONE)
-  cms            CMS                    @default(JOOMLA)
-  cmsOther       String?
-  webDate        DateTime?
-  demoDate       DateTime?
-  onlineDate     DateTime?
-  lastMaterialAt DateTime?
-  effortBuildMin Int?
-  effortDemoMin  Int?
-  seo            SEOStatus?
-  textit         TextitStatus?
-  accessible     Boolean?
-  note           String?
-  demoLink       String?
-  materialStatus MaterialStatus         @default(ANGEFORDERT)
-  isWTAssignment Boolean                @default(false)
-  webterminType  WebterminType?
-  isRelaunch     Boolean                @default(false)
-  domainHistory  ProjectDomainHistory[]
-  project        Project                @relation(fields: [projectId], references: [id])
+  projectId        String                 @id
+  domain           String?
+  priority         WebsitePriority        @default(NONE)
+  pStatus          ProductionStatus       @default(NONE)
+  cms              CMS                    @default(JOOMLA)
+  cmsOther         String?
+  webDate          DateTime?
+  demoDate         DateTime?
+  onlineDate       DateTime?
+  lastMaterialAt   DateTime?
+  effortBuildMin   Int?
+  effortDemoMin    Int?
+  seo              SEOStatus?
+  textit           TextitStatus?
+  accessible       Boolean?
+  note             String?
+  demoLink         String?
+  materialStatus   MaterialStatus         @default(ANGEFORDERT)
+  isWTAssignment   Boolean                @default(false)
+  webterminType    WebterminType?
+  isRelaunch       Boolean                @default(false)
+  domainHistory    ProjectDomainHistory[]
+  project          Project                @relation(fields: [projectId], references: [id])
+  webDocumentation WebDocumentation?
+}
+
+// Webdokumentation - Sammlung aller relevanten Informationen für die Webseitenerstellung
+// Aufbau in 7 Schritten: 1. Allgemeines, 2. Unternehmensschwerpunkte, 3. Websiteaufbau,
+// 4. Design & Vorgaben, 5. Formulare, 6. Impressum & Datenschutz, 7. Material
+model WebDocumentation {
+  projectId          String                      @id
+
+  // ===== Schritt 1: Allgemeines =====
+  contactEmail       String?                     // E-Mail-Adresse (vorbelegt aus Client)
+  urgentNotes        String?                     // Dringend zu beachten (Textarea)
+  websiteDomain      String?                     // Domain für die Website
+  domainStatus       WebDocuDomainStatus?        // Status: neu, vorhanden, schon bei EM/VW
+
+  // ===== Schritt 2: Unternehmensschwerpunkte =====
+  companyName        String?                     // Name des Unternehmens
+  companyFocus       String?                     // Unternehmensschwerpunkte (Textarea)
+
+  // ===== Schritt 3: Websiteaufbau =====
+  // Menüpunkte werden in separater Tabelle gespeichert
+  menuItems          WebDocuMenuItem[]
+
+  // ===== Schritt 4: Design & Vorgaben =====
+  // Bereich Design
+  hasLogo            Boolean?                    // Logo vorhanden ja/nein
+  hasCIDefined       Boolean?                    // CI definiert ja/nein
+  colorOrientation   WebDocuColorOrientation?    // Farborientierung
+  colorCodes         String?                     // Farben/Farbcodes (Freitext)
+
+  // Bereich Umsetzungsvorgaben
+  topWebsite         String?                     // Top-Webseite (Referenz)
+  flopWebsite        String?                     // Flop-Webseite (Referenz)
+  websiteType        WebDocuWebsiteType?         // Art der Webseite
+  styleTypes         String[]                    // Stile der Webseite (Mehrfachauswahl)
+  styleCustom        String?                     // Individueller Stil (wenn CUSTOM in styleTypes)
+  startArea          WebDocuStartArea?           // Startbereich
+  slogan             String?                     // Slogan
+  teaserSpecs        String?                     // Teaservorgaben
+  disruptorSpecs     String?                     // Störervorgaben
+  otherSpecs         String?                     // Sonstige Vorgaben (RichText)
+  mapIntegration     WebDocuMapIntegration?      // Map-Einbindung
+
+  // ===== Schritt 5: Formulare =====
+  forms              WebDocuForm[]
+
+  // ===== Schritt 6: Impressum & Datenschutz =====
+  imprintFromWebsite Boolean?                    // Von aktueller Webseite übernehmen
+  imprintAddress     String?                     // Anschrift
+  imprintLegalForm   String?                     // Geschäftsform
+  imprintOwner       String?                     // Inhaber
+  imprintCeo         String?                     // Geschäftsführer
+  imprintPhone       String?                     // Telefonnummer
+  imprintFax         String?                     // Faxnummer
+  imprintEmail       String?                     // E-Mail-Adresse
+  imprintRegisterType WebDocuRegisterType?       // Registerart
+  imprintRegisterCustom String?                  // Freies Textfeld für Registerart
+  imprintRegisterLocation String?                // Registerort
+  imprintRegisterNumber String?                  // Registernummer
+  imprintChamber     String?                     // Kammer
+  imprintProfession  String?                     // Berufsbezeichnung
+  imprintCountry     String?                     // Staat
+  imprintVatId       String?                     // Umsatzsteuer-ID (DE...)
+  imprintTermsStatus WebDocuTermsStatus?         // AGB Status
+  imprintPrivacyOfficer String?                  // Datenschutzbeauftragter (Name)
+  imprintHasPrivacyOfficer Boolean?              // Haben Sie einen Datenschutzbeauftragten benannt?
+
+  // ===== Schritt 7: Material =====
+  materialLogoNeeded     Boolean?                // Logo nachzureichend (nur wenn hasLogo=true in Step 4)
+  materialAuthcodeNeeded Boolean?                // Authcode nachzureichend (nur wenn domainStatus=EXISTS_TRANSFER)
+  materialNotes          String?                 // Weitere Infos / Anmerkungen
+  materialDeadline       DateTime?               // Frist für Materialeinsendung
+
+  // ===== Kundenfreigabe =====
+  releasedAt             DateTime?               // Zeitpunkt der Freigabe für den Kunden
+  releasedByUserId       String?                 // User-ID des Freigebenden
+  releasedByName         String?                 // Name des Freigebenden (für Anzeige)
+
+  // ===== Kundenbestätigung =====
+  confirmedAt            DateTime?               // Zeitpunkt der Bestätigung durch den Kunden
+  confirmedByPersonId    String?                 // ID der AuthorizedPerson die bestätigt hat
+  confirmedByName        String?                 // Name der Person (für Anzeige)
+
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  project            ProjectWebsite              @relation(fields: [projectId], references: [projectId], onDelete: Cascade)
+
+  // Ansprechpartner für diese Webdoku (Verknüpfung zu AuthorizedPerson)
+  contacts           WebDocumentationContact[]
+}
+
+// Formular für Webdokumentation (Schritt 5)
+// Jede Webdokumentation kann mehrere Formulare haben (z.B. Kontaktformular, Bewerbungsformular)
+model WebDocuForm {
+  id                   String                @id @default(cuid())
+  webDocumentationId   String
+  name                 String                // Name/Zweck des Formulars (z.B. "Kontaktformular", "Bewerbung")
+  recipientEmail       String?               // Empfänger-E-Mail-Adresse
+  sortOrder            Int                   @default(0)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  webDocumentation     WebDocumentation      @relation(fields: [webDocumentationId], references: [projectId], onDelete: Cascade)
+  fields               WebDocuFormField[]
+
+  @@index([webDocumentationId])
+}
+
+// Formularfelder für ein Formular
+model WebDocuFormField {
+  id                   String                @id @default(cuid())
+  formId               String
+  fieldType            WebDocuFormFieldType  // Art des Feldes
+  label                String?               // Optionales Label für benutzerdefinierte Felder
+  isRequired           Boolean               @default(false)
+  sortOrder            Int                   @default(0)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  form                 WebDocuForm           @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+}
+
+// Formularfeld-Typen (Standard-Felder + Custom)
+enum WebDocuFormFieldType {
+  // Standard-Felder
+  ANREDE               // Anrede
+  VORNAME              // Vorname
+  NACHNAME             // Nachname
+  EMAIL                // E-Mail
+  TELEFON              // Telefon
+  STRASSE              // Straße
+  PLZ                  // PLZ
+  ORT                  // Ort
+  NACHRICHT            // Nachricht/Textarea
+  DATENSCHUTZ          // Datenschutz-Checkbox
+  // Benutzerdefinierte Felder
+  CUSTOM_TEXT          // Benutzerdefiniertes Textfeld
+  CUSTOM_TEXTAREA      // Benutzerdefiniertes Textarea
+  CUSTOM_CHECKBOX      // Benutzerdefinierte Checkbox
+  CUSTOM_SELECT        // Benutzerdefiniertes Dropdown
+}
+
+// Menüpunkte für Websiteaufbau (Schritt 3)
+model WebDocuMenuItem {
+  id                   String            @id @default(cuid())
+  webDocumentationId   String
+  name                 String            // Name des Menüpunkts
+  parentId             String?           // Null = Hauptmenüpunkt, sonst ID des Elternelements
+  sortOrder            Int               // Reihenfolge innerhalb der Ebene
+  isFooterMenu         Boolean           @default(false) // Gehört zum Footer-Menü
+  notes                String?           // Hinweise/Notizen zum Menüpunkt (Step 3)
+  // Schritt 7: Material - Nachzureichendes Material pro Menüpunkt
+  needsImages          Boolean           @default(false) // Bilder nachzureichend
+  needsTexts           Boolean           @default(false) // Texte/Stichpunkte nachzureichend
+  materialNotes        String?           // Konkrete Material-Hinweise (z.B. welche Bilder/Texte benötigt werden)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  webDocumentation     WebDocumentation  @relation(fields: [webDocumentationId], references: [projectId], onDelete: Cascade)
+  parent               WebDocuMenuItem?  @relation("MenuItemHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children             WebDocuMenuItem[] @relation("MenuItemHierarchy")
+
+  @@index([webDocumentationId])
+  @@index([parentId])
+}
+
+// Verknüpfungstabelle für Ansprechpartner in der Webdokumentation
+model WebDocumentationContact {
+  id                   String            @id @default(cuid())
+  webDocumentationId   String
+  authorizedPersonId   String
+  isPrimary            Boolean           @default(false) // Hauptansprechpartner
+  createdAt            DateTime          @default(now())
+  webDocumentation     WebDocumentation  @relation(fields: [webDocumentationId], references: [projectId], onDelete: Cascade)
+  authorizedPerson     AuthorizedPerson  @relation(fields: [authorizedPersonId], references: [id], onDelete: Cascade)
+
+  @@unique([webDocumentationId, authorizedPersonId])
+  @@index([webDocumentationId])
+  @@index([authorizedPersonId])
+}
+
+// Domain-Status für Webdokumentation
+enum WebDocuDomainStatus {
+  NEW              // Neue Domain (muss registriert werden)
+  EXISTS_STAYS     // Vorhanden (Domain bleibt bei Kunden)
+  EXISTS_TRANSFER  // Vorhanden (Domain wird zu EM/VW transferiert)
+  AT_AGENCY        // Schon bei EM/VW (bereits bei der Agentur)
+}
+
+// Farborientierung für Schritt 4
+enum WebDocuColorOrientation {
+  LOGO             // Am Logo orientiert
+  PRINT            // Am Printprodukt orientiert
+  CI_SHEET         // Am CI-Bogen orientiert
+  WEBSITE          // An bestehender Webseite orientiert
+}
+
+// Art der Webseite für Schritt 4
+enum WebDocuWebsiteType {
+  STANDARD         // Standard-Webseite mit mehreren Seiten
+  ONEPAGE          // Onepage-Webseite
+}
+
+// Startbereich für Schritt 4
+enum WebDocuStartArea {
+  HEADER_VIDEO     // Header-Video
+  SLIDER           // Slider
+  HEADER_IMAGE     // Header-Bild
+}
+
+// Map-Einbindung für Schritt 4
+enum WebDocuMapIntegration {
+  YES              // Ja, eine Map
+  MULTIPLE         // Ja, mehrere Standorte
+  NO               // Nein, keine Map
+}
+
+// Registerart für Schritt 6 (Impressum)
+enum WebDocuRegisterType {
+  HANDELSREGISTER  // Handelsregister
+  CUSTOM           // Anderes (freies Textfeld)
+}
+
+// AGB-Status für Schritt 6 (Impressum)
+enum WebDocuTermsStatus {
+  AVAILABLE        // AGB vorhanden
+  NOT_AVAILABLE    // AGB nicht vorhanden
+  NOT_NECESSARY    // AGB nicht notwendig
 }
 
 model ProjectDomainHistory {
@@ -576,18 +806,19 @@ model FavoriteClient {
 }
 
 model AuthorizedPerson {
-  id         String   @id @default(cuid())
-  clientId   String
-  salutation String?
-  firstname  String
-  lastname   String
-  email      String
-  position   String?
-  phone      String?
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
-  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  id                String                      @id @default(cuid())
+  clientId          String
+  salutation        String?
+  firstname         String
+  lastname          String
+  email             String
+  position          String?
+  phone             String?
+  notes             String?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @default(now()) @updatedAt
+  client            Client                      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  webDocumentations WebDocumentationContact[]
 
   @@index([clientId])
 }
