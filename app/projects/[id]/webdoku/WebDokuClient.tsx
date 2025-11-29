@@ -28,12 +28,15 @@ import {
   deleteMenuItem,
   reorderMenuItems,
   createDefaultMenuItems,
+  updateNoFormsRequired,
   createForm,
   updateForm,
   deleteForm,
   updateFormFields,
   releaseWebDocumentationForCustomer,
   revokeWebDocumentationRelease,
+  updateFeedbackAcknowledged,
+  updateInternalNote,
 } from "./actions";
 // Typ für Formularfelder (wird nach Migration aus @prisma/client importiert)
 type WebDocuFormFieldType =
@@ -114,6 +117,7 @@ type WebDocumentation = {
   otherSpecs: string | null;
   mapIntegration: string | null;
   // Schritt 5: Formulare
+  noFormsRequired: boolean;
   forms: WebDocuForm[];
   // Schritt 6: Impressum & Datenschutz
   imprintFromWebsite: boolean | null;
@@ -139,10 +143,35 @@ type WebDocumentation = {
   materialLogoNeeded: boolean | null;
   materialAuthcodeNeeded: boolean | null;
   materialNotes: string | null;
+  materialNotesNeedsImages: boolean | null;
+  materialNotesNeedsTexts: boolean | null;
   materialDeadline: string | null; // ISO-String
   // Kundenfreigabe
   releasedAt: string | null; // ISO-String
   releasedByName: string | null;
+  // Kundenbestätigung
+  confirmedAt: string | null; // ISO-String
+  confirmedByName: string | null;
+  confirmedByIp: string | null;
+  // Kundenfeedback
+  feedback: WebDocuFeedback | null;
+  // Interner Vermerk
+  internalNote: string | null;
+};
+
+type WebDocuFeedback = {
+  id: string;
+  generalComment: string | null;
+  focusComment: string | null;
+  structureComment: string | null;
+  designComment: string | null;
+  formsComment: string | null;
+  focusAcknowledged: boolean;
+  structureAcknowledged: boolean;
+  designAcknowledged: boolean;
+  formsAcknowledged: boolean;
+  createdAt: string;
+  createdByName: string | null;
 };
 
 type Client = {
@@ -195,7 +224,7 @@ function isStepSaved(step: number, webDoc: WebDocumentation): boolean {
         webDoc.mapIntegration
       );
     case 5:
-      return webDoc.forms.length > 0;
+      return webDoc.noFormsRequired || webDoc.forms.length > 0;
     case 6:
       return !!(
         webDoc.imprintFromWebsite !== null ||
@@ -226,6 +255,40 @@ function isStepSaved(step: number, webDoc: WebDocumentation): boolean {
         webDoc.menuItems.some((m) => m.needsImages || m.needsTexts)
       );
     // Weitere Schritte werden später ergänzt
+    default:
+      return false;
+  }
+}
+
+// Prüft ob ein Step Kundenfeedback hat
+function stepHasFeedback(step: number, feedback: WebDocuFeedback | null): boolean {
+  if (!feedback) return false;
+  switch (step) {
+    case 2:
+      return !!feedback.focusComment?.trim();
+    case 3:
+      return !!feedback.structureComment?.trim();
+    case 4:
+      return !!feedback.designComment?.trim();
+    case 5:
+      return !!feedback.formsComment?.trim();
+    default:
+      return false;
+  }
+}
+
+// Prüft ob das Feedback eines Steps als "wird beachtet" markiert ist
+function stepFeedbackAcknowledged(step: number, feedback: WebDocuFeedback | null): boolean {
+  if (!feedback) return false;
+  switch (step) {
+    case 2:
+      return !!feedback.focusComment?.trim() && feedback.focusAcknowledged;
+    case 3:
+      return !!feedback.structureComment?.trim() && feedback.structureAcknowledged;
+    case 4:
+      return !!feedback.designComment?.trim() && feedback.designAcknowledged;
+    case 5:
+      return !!feedback.formsComment?.trim() && feedback.formsAcknowledged;
     default:
       return false;
   }
@@ -263,6 +326,62 @@ function getDomainStatusOptions(agency: string | null) {
   ];
 }
 
+// Feedback-Badge Komponente für die Anzeige von Kundenfeedback in den Schritten
+function FeedbackBadge({
+  feedback,
+  commentKey,
+  acknowledgedKey,
+  onAcknowledgeChange,
+}: {
+  feedback: WebDocuFeedback | null;
+  commentKey: "focusComment" | "structureComment" | "designComment" | "formsComment";
+  acknowledgedKey: "focusAcknowledged" | "structureAcknowledged" | "designAcknowledged" | "formsAcknowledged";
+  onAcknowledgeChange: (value: boolean) => void;
+}) {
+  if (!feedback || !feedback[commentKey]) return null;
+
+  const comment = feedback[commentKey];
+  const isAcknowledged = feedback[acknowledgedKey];
+
+  return (
+    <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 mt-0.5">
+          <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <h4 className="font-medium text-amber-900 dark:text-amber-100">
+              Kundenfeedback
+              {feedback.createdByName && (
+                <span className="ml-2 text-sm font-normal text-amber-700 dark:text-amber-300">
+                  von {feedback.createdByName}
+                </span>
+              )}
+            </h4>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isAcknowledged}
+                onChange={(e) => onAcknowledgeChange(e.target.checked)}
+                className="w-4 h-4 rounded border-amber-300 text-green-600 focus:ring-green-500"
+              />
+              <span className={`text-sm font-medium ${isAcknowledged ? "text-green-700 dark:text-green-400" : "text-amber-700 dark:text-amber-300"}`}>
+                wird beachtet
+              </span>
+            </label>
+          </div>
+          <p className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">
+            {comment}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function WebDokuClient({ projectId, webDoc, client, projectDomain, hasTextit, isAdmin }: Props) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
@@ -272,6 +391,9 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
     releasedAt: webDoc.releasedAt,
     releasedByName: webDoc.releasedByName,
   });
+
+  // Webdoku ist gesperrt, wenn sie bereits an den Kunden freigegeben wurde
+  const isLocked = !!releaseData.releasedAt;
 
   // Track welche Schritte bereits gespeichert wurden (initial aus webDoc berechnet)
   const [savedSteps, setSavedSteps] = useState<Set<number>>(() => {
@@ -356,6 +478,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
   const [isCreatingContact, setIsCreatingContact] = useState(false);
 
   // State für Schritt 5: Formulare
+  const [noFormsRequired, setNoFormsRequired] = useState(webDoc.noFormsRequired);
   const [forms, setForms] = useState<WebDocuForm[]>(webDoc.forms);
   const [newFormName, setNewFormName] = useState("");
   const [editingFormId, setEditingFormId] = useState<string | null>(null);
@@ -412,6 +535,8 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
     materialLogoNeeded: webDoc.materialLogoNeeded,
     materialAuthcodeNeeded: webDoc.materialAuthcodeNeeded,
     materialNotes: webDoc.materialNotes || "",
+    materialNotesNeedsImages: webDoc.materialNotesNeedsImages || false,
+    materialNotesNeedsTexts: webDoc.materialNotesNeedsTexts || false,
     materialDeadline: webDoc.materialDeadline || getDefaultDeadline(),
   });
 
@@ -424,10 +549,27 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
     return map;
   });
 
+  // State für Feedback
+  const [feedbackData, setFeedbackData] = useState<WebDocuFeedback | null>(webDoc.feedback);
+
+  // State für internen Vermerk
+  const [internalNoteText, setInternalNoteText] = useState(webDoc.internalNote || "");
+  const [isSavingNote, setIsSavingNote] = useState(false);
+
   // Update forms wenn webDoc sich ändert
   useEffect(() => {
     setForms(webDoc.forms);
   }, [webDoc.forms]);
+
+  // Update feedback wenn webDoc sich ändert
+  useEffect(() => {
+    setFeedbackData(webDoc.feedback);
+  }, [webDoc.feedback]);
+
+  // Update internal note wenn webDoc sich ändert
+  useEffect(() => {
+    setInternalNoteText(webDoc.internalNote || "");
+  }, [webDoc.internalNote]);
 
   // Update menuItemMaterials wenn menuItems sich ändern
   useEffect(() => {
@@ -437,6 +579,40 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
     });
     setMenuItemMaterials(map);
   }, [menuItems]);
+
+  // Handler für Feedback-Acknowledged Checkbox
+  const handleFeedbackAcknowledge = async (
+    field: "focusAcknowledged" | "structureAcknowledged" | "designAcknowledged" | "formsAcknowledged",
+    value: boolean
+  ) => {
+    if (!feedbackData) return;
+
+    // Optimistisches Update
+    setFeedbackData((prev) => prev ? { ...prev, [field]: value } : null);
+
+    try {
+      await updateFeedbackAcknowledged(feedbackData.id, field, value);
+    } catch (error) {
+      console.error("Fehler beim Aktualisieren des Feedback-Status:", error);
+      // Rollback bei Fehler
+      setFeedbackData((prev) => prev ? { ...prev, [field]: !value } : null);
+    }
+  };
+
+  // Handler für internen Vermerk speichern
+  const handleSaveInternalNote = async () => {
+    setIsSavingNote(true);
+    try {
+      await updateInternalNote(projectId, internalNoteText || null);
+      setSaveMessage({ type: "success", text: "Interner Vermerk gespeichert!" });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error("Fehler beim Speichern des internen Vermerks:", error);
+      setSaveMessage({ type: "error", text: "Fehler beim Speichern" });
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
 
   // Speichern-Handler für Schritt 1
   const handleSaveStep1 = async (formData: FormData) => {
@@ -590,6 +766,8 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
         materialLogoNeeded: step7Data.materialLogoNeeded,
         materialAuthcodeNeeded: step7Data.materialAuthcodeNeeded,
         materialNotes: step7Data.materialNotes || null,
+        materialNotesNeedsImages: step7Data.materialNotesNeedsImages,
+        materialNotesNeedsTexts: step7Data.materialNotesNeedsTexts,
         materialDeadline: step7Data.materialDeadline || null,
       });
 
@@ -948,21 +1126,68 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
-                Webdokumentation
-                {client.customerNo && (
-                  <span className="ml-3 text-base font-normal text-gray-500 dark:text-gray-400">
-                    Kd-Nr. {client.customerNo}
+            <div className="flex-1">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
+                  Webdokumentation
+                  {client.customerNo && (
+                    <span className="ml-3 text-base font-normal text-gray-500 dark:text-gray-400">
+                      Kd-Nr. {client.customerNo}
+                    </span>
+                  )}
+                </h1>
+                {/* Status-Badge */}
+                {webDoc.confirmedAt ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Vom Kunden bestätigt
+                  </span>
+                ) : releaseData.releasedAt ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Übermittelt
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    In Bearbeitung
                   </span>
                 )}
-              </h1>
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {client.name}
               </p>
             </div>
           </div>
         </div>
+
+        {/* Locked Banner - wenn Webdoku bereits an Kunden übermittelt */}
+        {isLocked && (
+          <div className="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-medium text-amber-800 dark:text-amber-200">
+                  Bearbeitung gesperrt
+                </h3>
+                <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                  Diese Webdokumentation wurde bereits an den Kunden übermittelt und kann daher nicht mehr bearbeitet werden.
+                  {isAdmin && " Als Admin können Sie die Freigabe unten zurückziehen, um die Bearbeitung wieder zu ermöglichen."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Step Progress Indicator */}
         <div className="mb-8 overflow-x-auto py-2">
@@ -980,12 +1205,18 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                   active={currentStep === step.number}
                   saved={savedSteps.has(step.number)}
                   disabled={isDisabled}
+                  hasFeedback={stepHasFeedback(step.number, feedbackData)}
+                  feedbackAcknowledged={stepFeedbackAcknowledged(step.number, feedbackData)}
                   onClick={() => setCurrentStep(step.number)}
                 />
                 {index < STEPS.length - 1 && (
                   <div
                     className={`h-1 w-6 md:w-12 mx-1 ${
-                      savedSteps.has(step.number) ? "bg-green-500" : "bg-gray-300 dark:bg-gray-700"
+                      stepHasFeedback(step.number, feedbackData) && !stepFeedbackAcknowledged(step.number, feedbackData) && savedSteps.has(step.number)
+                        ? "bg-amber-500"
+                        : savedSteps.has(step.number)
+                        ? "bg-green-500"
+                        : "bg-gray-300 dark:bg-gray-700"
                     }`}
                   />
                 )}
@@ -1055,16 +1286,18 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                               </p>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveContact(contact.id)}
-                            className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                            title="Entfernen"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
+                          {!isLocked && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveContact(contact.id)}
+                              className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                              title="Entfernen"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       ))}
 
@@ -1079,7 +1312,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     </div>
 
                     {/* Weitere Ansprechpartner hinzufügen */}
-                    {availableContacts.length > 0 && (
+                    {availableContacts.length > 0 && !isLocked && (
                       <div className="flex items-center gap-2">
                         <Select
                           onValueChange={(value) => {
@@ -1101,7 +1334,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     )}
 
                     {/* Button zum Anlegen eines neuen Ansprechpartners */}
-                    {!showNewContactForm && (
+                    {!showNewContactForm && !isLocked && (
                       <div className="mt-3">
                         <button
                           type="button"
@@ -1272,6 +1505,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     name="contactEmail"
                     type="email"
                     required
+                    disabled={isLocked}
                     defaultValue={webDoc.contactEmail || primaryContact?.email || client.email || ""}
                     placeholder="E-Mail-Adresse des Ansprechpartners"
                     className="w-full"
@@ -1291,6 +1525,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                       id="websiteDomain"
                       name="websiteDomain"
                       required
+                      disabled={isLocked}
                       defaultValue={webDoc.websiteDomain || projectDomain || ""}
                       placeholder="z.B. www.example.de"
                       className="w-full"
@@ -1300,7 +1535,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     <label htmlFor="domainStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Domain-Status <span className="text-red-500">*</span>
                     </label>
-                    <Select name="domainStatus" required defaultValue={webDoc.domainStatus || ""}>
+                    <Select name="domainStatus" required defaultValue={webDoc.domainStatus || ""} disabled={isLocked}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Status auswählen..." />
                       </SelectTrigger>
@@ -1323,6 +1558,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                   <Textarea
                     id="urgentNotes"
                     name="urgentNotes"
+                    disabled={isLocked}
                     defaultValue={webDoc.urgentNotes || ""}
                     placeholder="Wichtige Hinweise, die unbedingt beachtet werden müssen..."
                     rows={4}
@@ -1347,7 +1583,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <Button type="submit" disabled={isSaving} className={savedSteps.has(1) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
+                    <Button type="submit" disabled={isSaving || isLocked} className={savedSteps.has(1) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
                       {isSaving ? (
                         <>
                           <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -1394,6 +1630,14 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
           {currentStep === 2 && (
             <StepContent title="Schritt 2: Unternehmensschwerpunkte">
               <div className="space-y-6">
+                {/* Kundenfeedback (falls vorhanden) */}
+                <FeedbackBadge
+                  feedback={feedbackData}
+                  commentKey="focusComment"
+                  acknowledgedKey="focusAcknowledged"
+                  onAcknowledgeChange={(value) => handleFeedbackAcknowledge("focusAcknowledged", value)}
+                />
+
                 {/* Tipps Box */}
                 <div className="rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 p-4">
                   <div className="flex items-start gap-3">
@@ -1426,6 +1670,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     content={companyFocusContent}
                     onChange={setCompanyFocusContent}
                     placeholder="Beschreiben Sie hier die Schwerpunkte des Unternehmens, Produkte, Dienstleistungen, Alleinstellungsmerkmale, Zielgruppe etc..."
+                    disabled={isLocked}
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Nutzen Sie die Toolbar zum Formatieren: Fett, Kursiv, Unterstrichen, Listen etc.
@@ -1452,7 +1697,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <Button type="button" onClick={handleSaveStep2} disabled={isSaving} className={savedSteps.has(2) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
+                    <Button type="button" onClick={handleSaveStep2} disabled={isSaving || isLocked} className={savedSteps.has(2) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
                       {isSaving ? (
                         <>
                           <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -1499,6 +1744,14 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
           {currentStep === 3 && (
             <StepContent title="Schritt 3: Websiteaufbau">
               <div className="space-y-6">
+                {/* Kundenfeedback (falls vorhanden) */}
+                <FeedbackBadge
+                  feedback={feedbackData}
+                  commentKey="structureComment"
+                  acknowledgedKey="structureAcknowledged"
+                  onAcknowledgeChange={(value) => handleFeedbackAcknowledge("structureAcknowledged", value)}
+                />
+
                 {/* Info Box */}
                 <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4">
                   <div className="flex items-start gap-3">
@@ -1520,7 +1773,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                 </div>
 
                 {/* Schnellauswahl für häufige Menüpunkte */}
-                {MENU_ITEM_TEMPLATES.filter(
+                {!isLocked && MENU_ITEM_TEMPLATES.filter(
                   (template) => !menuItems.some((item) => item.name.toLowerCase() === template.toLowerCase())
                 ).length > 0 && (
                   <div>
@@ -1546,28 +1799,30 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                 )}
 
                 {/* Neuen Hauptmenüpunkt hinzufügen */}
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={newMenuItemName}
-                    onChange={(e) => setNewMenuItemName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleAddMainMenuItem();
-                    }}
-                    placeholder="Neuen Hauptmenüpunkt hinzufügen..."
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleAddMainMenuItem}
-                    disabled={isAddingMenuItem || !newMenuItemName.trim()}
-                    className="bg-cyan-600 hover:bg-cyan-700"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Hinzufügen
-                  </Button>
-                </div>
+                {!isLocked && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={newMenuItemName}
+                      onChange={(e) => setNewMenuItemName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleAddMainMenuItem();
+                      }}
+                      placeholder="Neuen Hauptmenüpunkt hinzufügen..."
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAddMainMenuItem}
+                      disabled={isAddingMenuItem || !newMenuItemName.trim()}
+                      className="bg-cyan-600 hover:bg-cyan-700"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Hinzufügen
+                    </Button>
+                  </div>
+                )}
 
                 {/* Wenn noch keine Menüpunkte existieren */}
                 {menuItems.length === 0 && (
@@ -1576,17 +1831,21 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
                     </svg>
                     <p className="text-gray-500 dark:text-gray-400 mb-4">Noch keine Menüpunkte angelegt</p>
-                    <Button
-                      type="button"
-                      onClick={handleCreateDefaultMenuItems}
-                      disabled={isAddingMenuItem}
-                      className="bg-cyan-600 hover:bg-cyan-700"
-                    >
-                      {isAddingMenuItem ? "Wird erstellt..." : "Standard-Menüpunkte erstellen"}
-                    </Button>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                      Erstellt &quot;Impressum&quot; und &quot;Datenschutz&quot; als Footer-Menüpunkte
-                    </p>
+                    {!isLocked && (
+                      <>
+                        <Button
+                          type="button"
+                          onClick={handleCreateDefaultMenuItems}
+                          disabled={isAddingMenuItem}
+                          className="bg-cyan-600 hover:bg-cyan-700"
+                        >
+                          {isAddingMenuItem ? "Wird erstellt..." : "Standard-Menüpunkte erstellen"}
+                        </Button>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                          Erstellt &quot;Impressum&quot; und &quot;Datenschutz&quot; als Footer-Menüpunkte
+                        </p>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -1608,30 +1867,32 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                             {/* Hauptmenüpunkt */}
                             <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800">
                               {/* Sortier-Buttons */}
-                              <div className="flex flex-col">
-                                <button
-                                  type="button"
-                                  onClick={() => handleMoveUp(item)}
-                                  disabled={index === 0}
-                                  className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
-                                  title="Nach oben"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                  </svg>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleMoveDown(item)}
-                                  disabled={index === mainMenuItems.length - 1}
-                                  className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
-                                  title="Nach unten"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                </button>
-                              </div>
+                              {!isLocked && (
+                                <div className="flex flex-col">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveUp(item)}
+                                    disabled={index === 0}
+                                    className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
+                                    title="Nach oben"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveDown(item)}
+                                    disabled={index === mainMenuItems.length - 1}
+                                    className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
+                                    title="Nach unten"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              )}
 
                               {/* Name (editierbar) */}
                               {editingItemId === item.id ? (
@@ -1680,7 +1941,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                               )}
 
                               {/* Aktionen */}
-                              {editingItemId !== item.id && (
+                              {editingItemId !== item.id && !isLocked && (
                                 <div className="flex items-center gap-1">
                                   <button
                                     type="button"
@@ -1732,30 +1993,32 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                                     className="flex items-center gap-2 p-2 pl-10 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 last:border-b-0"
                                   >
                                     {/* Sortier-Buttons */}
-                                    <div className="flex flex-col">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleMoveUp(subItem)}
-                                        disabled={subIndex === 0}
-                                        className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
-                                        title="Nach oben"
-                                      >
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                        </svg>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleMoveDown(subItem)}
-                                        disabled={subIndex === getSubMenuItems(item.id).length - 1}
-                                        className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
-                                        title="Nach unten"
-                                      >
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                      </button>
-                                    </div>
+                                    {!isLocked && (
+                                      <div className="flex flex-col">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleMoveUp(subItem)}
+                                          disabled={subIndex === 0}
+                                          className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
+                                          title="Nach oben"
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                          </svg>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleMoveDown(subItem)}
+                                          disabled={subIndex === getSubMenuItems(item.id).length - 1}
+                                          className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30"
+                                          title="Nach unten"
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    )}
 
                                     {/* Pfeil-Icon */}
                                     <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1796,7 +2059,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                                     )}
 
                                     {/* Aktionen */}
-                                    {editingItemId !== subItem.id && (
+                                    {editingItemId !== subItem.id && !isLocked && (
                                       <div className="flex items-center gap-1">
                                         <button
                                           type="button"
@@ -1959,7 +2222,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                               )}
 
                               {/* Aktionen */}
-                              {editingItemId !== item.id && (
+                              {editingItemId !== item.id && !isLocked && (
                                 <div className="flex items-center gap-1">
                                   <button
                                     type="button"
@@ -2003,7 +2266,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                           <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(optional)</span>
                         </h3>
                         {/* Dropdown um Hinweis hinzuzufügen */}
-                        {!editingNotesItemId && (
+                        {!editingNotesItemId && !isLocked && (
                           <Select
                             value=""
                             onValueChange={(value) => {
@@ -2186,6 +2449,14 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
           {currentStep === 4 && (
             <StepContent title="Schritt 4: Design & Vorgaben">
               <div className="space-y-8">
+                {/* Kundenfeedback (falls vorhanden) */}
+                <FeedbackBadge
+                  feedback={feedbackData}
+                  commentKey="designComment"
+                  acknowledgedKey="designAcknowledged"
+                  onAcknowledgeChange={(value) => handleFeedbackAcknowledge("designAcknowledged", value)}
+                />
+
                 {/* Bereich Design */}
                 <div className="space-y-4">
                   <h3 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
@@ -2541,7 +2812,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <Button type="button" onClick={handleSaveStep4} disabled={isSaving} className={savedSteps.has(4) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
+                    <Button type="button" onClick={handleSaveStep4} disabled={isSaving || isLocked} className={savedSteps.has(4) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
                       {isSaving ? (
                         <>
                           <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -2588,6 +2859,14 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
           {currentStep === 5 && (
             <StepContent title="Schritt 5: Formulare">
               <div className="space-y-6">
+                {/* Kundenfeedback (falls vorhanden) */}
+                <FeedbackBadge
+                  feedback={feedbackData}
+                  commentKey="formsComment"
+                  acknowledgedKey="formsAcknowledged"
+                  onAcknowledgeChange={(value) => handleFeedbackAcknowledge("formsAcknowledged", value)}
+                />
+
                 {/* Info-Box */}
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                   <div className="flex gap-3">
@@ -2601,41 +2880,77 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                   </div>
                 </div>
 
-                {/* Neues Formular hinzufügen */}
-                <div className="flex gap-3">
-                  <Input
-                    value={newFormName}
-                    onChange={(e) => setNewFormName(e.target.value)}
-                    placeholder="Formularname (z.B. Kontaktformular)"
-                    className="flex-1"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddForm();
+                {/* Checkbox: Kein Formular gewünscht */}
+                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <input
+                    type="checkbox"
+                    id="noFormsRequired"
+                    checked={noFormsRequired}
+                    disabled={isLocked}
+                    onChange={async (e) => {
+                      const newValue = e.target.checked;
+                      setNoFormsRequired(newValue);
+                      setIsSaving(true);
+                      try {
+                        await updateNoFormsRequired(projectId, newValue);
+                        setSavedSteps((prev) => new Set([...prev, 5]));
+                        setSaveMessage({ type: "success", text: "Gespeichert!" });
+                      } catch (error) {
+                        console.error("Fehler beim Speichern:", error);
+                        setSaveMessage({ type: "error", text: "Fehler beim Speichern" });
+                        setNoFormsRequired(!newValue); // Rollback
+                      } finally {
+                        setIsSaving(false);
+                        setTimeout(() => setSaveMessage(null), 3000);
                       }
                     }}
+                    className="h-5 w-5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 disabled:opacity-50"
                   />
-                  <Button
-                    type="button"
-                    onClick={handleAddForm}
-                    disabled={isAddingForm || !newFormName.trim()}
-                    className="bg-cyan-600 hover:bg-cyan-700"
-                  >
-                    {isAddingForm ? (
-                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Formular hinzufügen
-                      </>
-                    )}
-                  </Button>
+                  <label htmlFor="noFormsRequired" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                    Kein Formular gewünscht
+                  </label>
                 </div>
+
+                {/* Formular-Bereich (nur anzeigen wenn nicht "Kein Formular gewünscht") */}
+                {!noFormsRequired && (
+                  <>
+                    {/* Neues Formular hinzufügen */}
+                    {!isLocked && (
+                      <div className="flex gap-3">
+                        <Input
+                          value={newFormName}
+                          onChange={(e) => setNewFormName(e.target.value)}
+                          placeholder="Formularname (z.B. Kontaktformular)"
+                          className="flex-1"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddForm();
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleAddForm}
+                          disabled={isAddingForm || !newFormName.trim()}
+                          className="bg-cyan-600 hover:bg-cyan-700"
+                        >
+                          {isAddingForm ? (
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                              </svg>
+                              Formular hinzufügen
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
 
                 {/* Formularliste */}
                 {forms.length === 0 ? (
@@ -2690,6 +3005,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                           standardFields={STANDARD_FIELDS}
                           knownEmails={knownEmails}
                           isSaving={isSaving}
+                          isLocked={isLocked}
                           onToggleExpand={() => setExpandedFormId(expandedFormId === form.id ? null : form.id)}
                           onStartEdit={() => handleStartEditForm(form)}
                           onSaveEdit={() => handleSaveForm(form.id)}
@@ -2703,7 +3019,9 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                         />
                       );
                     })}
-                  </div>
+                    </div>
+                  )}
+                  </>
                 )}
 
                 {/* Buttons */}
@@ -3075,7 +3393,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <Button type="button" onClick={handleSaveStep6} disabled={isSaving} className={savedSteps.has(6) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
+                    <Button type="button" onClick={handleSaveStep6} disabled={isSaving || isLocked} className={savedSteps.has(6) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
                       {isSaving ? (
                         <>
                           <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -3350,21 +3668,48 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                   )}
                 </div>
 
-                {/* Weitere Infos */}
+                {/* Weitere Infos / Anmerkungen */}
                 <div className="space-y-4">
                   <h3 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
-                    Weitere Informationen
+                    Weitere Hinweise / Anmerkungen
                   </h3>
 
                   <Textarea
                     value={step7Data.materialNotes}
                     onChange={(e) => setStep7Data({ ...step7Data, materialNotes: e.target.value })}
-                    placeholder="Weitere Infos zum nachzureichenden Material..."
+                    placeholder="Weitere Infos zum nachzureichenden Material, die keiner spezifischen Unterseite zugeordnet werden..."
                     className="min-h-[100px]"
                   />
+
+                  {/* Checkboxen für allgemeines Material */}
+                  <div className="flex flex-wrap gap-6 pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={step7Data.materialNotesNeedsImages}
+                        onChange={(e) => setStep7Data({ ...step7Data, materialNotesNeedsImages: e.target.checked })}
+                        disabled={isLocked}
+                        className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Bilder benötigt</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={step7Data.materialNotesNeedsTexts}
+                        onChange={(e) => setStep7Data({ ...step7Data, materialNotesNeedsTexts: e.target.checked })}
+                        disabled={isLocked}
+                        className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{hasTextit ? "Stichpunkte" : "Texte"} benötigt</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Für allgemeines Material, das nicht einer bestimmten Seite zugeordnet wird. Der Kunde kann über das Kundenportal entsprechende Texte einreichen.
+                  </p>
                 </div>
 
                 {/* Frist */}
@@ -3417,7 +3762,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                       </span>
                     )}
                   </div>
-                  <Button type="button" onClick={handleSaveStep7} disabled={isSaving} className={savedSteps.has(7) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
+                  <Button type="button" onClick={handleSaveStep7} disabled={isSaving || isLocked} className={savedSteps.has(7) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
                     {isSaving ? (
                       <>
                         <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -3444,17 +3789,17 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                   </Button>
                 </div>
 
-                {/* Kundenfreigabe - ganz am Ende */}
+                {/* Übermittlung an Kunden - ganz am Ende */}
                 <div className="mt-8 pt-6 border-t-2 border-gray-300 dark:border-gray-600">
                   <h3 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2 pb-4">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
-                    Kundenfreigabe
+                    Übermittlung an Kunden
                   </h3>
 
                   {releaseData.releasedAt ? (
-                    // Bereits freigegeben - Anzeige des Status
+                    // Bereits übermittelt - Anzeige des Status
                     <div className="space-y-4">
                       <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                         <div className="flex gap-3">
@@ -3462,7 +3807,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <div className="text-sm text-green-700 dark:text-green-300">
-                            <p className="font-medium">Freigegeben für Kunden</p>
+                            <p className="font-medium">An Kunden übermittelt</p>
                             <p className="mt-1">
                               am: {new Date(releaseData.releasedAt).toLocaleDateString("de-DE")} um: {new Date(releaseData.releasedAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
                             </p>
@@ -3470,6 +3815,69 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                           </div>
                         </div>
                       </div>
+                      {/* Kundenbestätigung anzeigen */}
+                      {webDoc.confirmedAt ? (
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                          <div className="flex gap-3">
+                            <svg className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <div className="text-sm text-blue-700 dark:text-blue-300">
+                              <p className="font-medium">
+                                Vom Kunden bestätigt
+                                {feedbackData && (
+                                  <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Mit Anpassungswünschen
+                                  </span>
+                                )}
+                              </p>
+                              <p className="mt-1">
+                                am: {new Date(webDoc.confirmedAt).toLocaleDateString("de-DE")} um: {new Date(webDoc.confirmedAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
+                              </p>
+                              <p>von: {webDoc.confirmedByName}</p>
+                              {webDoc.confirmedByIp && (
+                                <p className="text-blue-600 dark:text-blue-400">IP: {webDoc.confirmedByIp}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                          <div className="flex gap-3">
+                            <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div className="text-sm text-amber-700 dark:text-amber-300">
+                              <p className="font-medium">Warte auf Kundenbestätigung</p>
+                              <p className="mt-1">Der Kunde hat die Webdokumentation noch nicht bestätigt.</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Allgemeines Kundenfeedback (falls vorhanden) */}
+                      {feedbackData?.generalComment && (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                          <div className="flex gap-3">
+                            <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            </svg>
+                            <div className="text-sm text-amber-700 dark:text-amber-300 flex-1">
+                              <p className="font-medium mb-2">
+                                Allgemeines Kundenfeedback
+                                {feedbackData.createdByName && (
+                                  <span className="font-normal ml-2">von {feedbackData.createdByName}</span>
+                                )}
+                              </p>
+                              <p className="whitespace-pre-wrap">{feedbackData.generalComment}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {isAdmin && (
                         <Button
                           type="button"
@@ -3488,15 +3896,15 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                           disabled={isReleasing}
                           className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20"
                         >
-                          {isReleasing ? "Wird zurückgezogen..." : "Freigabe zurückziehen"}
+                          {isReleasing ? "Wird zurückgezogen..." : "Übermittlung zurückziehen"}
                         </Button>
                       )}
                     </div>
                   ) : (
-                    // Noch nicht freigegeben
+                    // Noch nicht übermittelt
                     <div className="space-y-4">
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Die Webdokumentation ist noch nicht für den Kunden freigegeben. Nach der Freigabe wird sie im Kundenportal sichtbar.
+                        Die Webdokumentation wurde noch nicht an den Kunden übermittelt. Nach der Übermittlung wird sie im Kundenportal sichtbar.
                       </p>
                       <Button
                         type="button"
@@ -3523,20 +3931,20 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                             </svg>
-                            Wird freigegeben...
+                            Wird übermittelt...
                           </>
                         ) : (
                           <>
                             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                             </svg>
-                            Für den Kunden freigeben
+                            An Kunden übermitteln
                           </>
                         )}
                       </Button>
                       {!savedSteps.has(7) && (
                         <p className="text-xs text-amber-600 dark:text-amber-400">
-                          Bitte speichern Sie zuerst Schritt 7, bevor Sie die Webdokumentation freigeben können.
+                          Bitte speichern Sie zuerst Schritt 7, bevor Sie die Webdokumentation übermitteln können.
                         </p>
                       )}
                     </div>
@@ -3547,6 +3955,61 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
           )}
         </div>
       </div>
+
+      {/* Interner Vermerk - eigenständiger Bereich, nur bei vorhandenem Kundenfeedback */}
+      {feedbackData && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mt-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Interner Vermerk</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Notizen zum Kundenfeedback (nur intern sichtbar)
+                </p>
+              </div>
+            </div>
+            <Textarea
+              value={internalNoteText}
+              onChange={(e) => setInternalNoteText(e.target.value)}
+              placeholder="Hier können Sie interne Notizen zum Kundenfeedback hinterlegen..."
+              rows={4}
+              className="resize-none"
+            />
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                onClick={handleSaveInternalNote}
+                disabled={isSavingNote}
+                variant="outline"
+              >
+                {isSavingNote ? (
+                  <>
+                    <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Speichern...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    Vermerk speichern
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3558,6 +4021,8 @@ function StepIndicator({
   active,
   saved,
   disabled,
+  hasFeedback,
+  feedbackAcknowledged,
   onClick,
 }: {
   number: number;
@@ -3566,20 +4031,40 @@ function StepIndicator({
   active: boolean;
   saved: boolean;
   disabled: boolean;
+  hasFeedback?: boolean;
+  feedbackAcknowledged?: boolean;
   onClick: () => void;
 }) {
+  // Feedback vorhanden aber noch nicht beachtet = orange
+  // Feedback vorhanden und beachtet = grün (mit Sprechblasen-Badge)
+  const hasUnacknowledgedFeedback = hasFeedback && !feedbackAcknowledged;
+
   return (
     <button
       onClick={disabled ? undefined : onClick}
-      className={`flex flex-col items-center gap-1 md:gap-2 group ${
+      className={`flex flex-col items-center gap-1 md:gap-2 group relative ${
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
       }`}
-      title={disabled ? `Bitte zuerst Schritt ${number - 1} speichern` : title}
+      title={disabled ? `Bitte zuerst Schritt ${number - 1} speichern` : hasFeedback ? `${title} - Kundenfeedback ${feedbackAcknowledged ? "(wird beachtet)" : "vorhanden"}` : title}
       disabled={disabled}
     >
+      {/* Feedback-Indikator Badge - bleibt immer wenn Feedback vorhanden */}
+      {hasFeedback && (
+        <div className="absolute -top-1 -right-1 z-10">
+          <span className={`flex h-4 w-4 items-center justify-center rounded-full text-white shadow-sm ${
+            feedbackAcknowledged ? "bg-green-500" : "bg-amber-500"
+          }`}>
+            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+            </svg>
+          </span>
+        </div>
+      )}
       <div
         className={`flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full font-semibold transition ${
-          saved
+          hasUnacknowledgedFeedback && saved
+            ? "bg-amber-500 dark:bg-amber-600 text-white ring-2 ring-amber-300 dark:ring-amber-400"
+            : saved
             ? "bg-green-500 dark:bg-green-600 text-white"
             : active
             ? "bg-cyan-100 dark:bg-cyan-900 text-cyan-600 dark:text-cyan-300 ring-2 ring-cyan-600 dark:ring-cyan-500"
@@ -3589,9 +4074,15 @@ function StepIndicator({
         }`}
       >
         {saved ? (
-          <svg className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
+          hasUnacknowledgedFeedback ? (
+            <svg className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+            </svg>
+          ) : (
+            <svg className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          )
         ) : disabled ? (
           <svg className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -3602,7 +4093,13 @@ function StepIndicator({
       </div>
       <span
         className={`text-[10px] md:text-xs font-medium text-center max-w-[60px] md:max-w-none ${
-          saved ? "text-green-600 dark:text-green-400" : active ? "text-gray-900 dark:text-gray-100" : "text-gray-500 dark:text-gray-400"
+          hasUnacknowledgedFeedback && saved
+            ? "text-amber-600 dark:text-amber-400"
+            : saved
+            ? "text-green-600 dark:text-green-400"
+            : active
+            ? "text-gray-900 dark:text-gray-100"
+            : "text-gray-500 dark:text-gray-400"
         }`}
       >
         <span className="hidden md:inline">{title}</span>
@@ -3629,6 +4126,7 @@ function FormCard({
   editingData,
   standardFields,
   isSaving,
+  isLocked,
   onToggleExpand,
   onStartEdit,
   onSaveEdit,
@@ -3646,6 +4144,7 @@ function FormCard({
   standardFields: { type: WebDocuFormFieldType; label: string }[];
   knownEmails: { email: string; label: string }[];
   isSaving: boolean;
+  isLocked: boolean;
   onToggleExpand: () => void;
   onStartEdit: () => void;
   onSaveEdit: () => void;
@@ -3798,7 +4297,7 @@ function FormCard({
           )}
         </div>
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          {!isEditing && (
+          {!isEditing && !isLocked && (
             <>
               <button
                 onClick={onStartEdit}
@@ -3835,6 +4334,7 @@ function FormCard({
               <div className="flex-1 flex gap-2">
                 <Input
                   value={localEmail}
+                  disabled={isLocked}
                   onChange={(e) => {
                     setLocalEmail(e.target.value);
                     setEmailChanged(e.target.value !== (form.recipientEmail || ""));
@@ -3854,7 +4354,7 @@ function FormCard({
                   placeholder="empfaenger@firma.de"
                   className="flex-1"
                 />
-                {knownEmails.length > 0 && (
+                {knownEmails.length > 0 && !isLocked && (
                   <select
                     value=""
                     onChange={(e) => {
@@ -3913,11 +4413,12 @@ function FormCard({
                     <input
                       type="checkbox"
                       checked={state.enabled}
+                      disabled={isLocked}
                       onChange={() => handleToggleField(field.type)}
-                      className="w-4 h-4 text-cyan-600 rounded"
+                      className="w-4 h-4 text-cyan-600 rounded disabled:opacity-50"
                     />
                     <span className="text-sm flex-1">{field.label}</span>
-                    {state.enabled && (
+                    {state.enabled && !isLocked && (
                       <button
                         onClick={() => handleToggleRequired(field.type)}
                         className={`text-xs px-1.5 py-0.5 rounded ${
@@ -3929,6 +4430,15 @@ function FormCard({
                       >
                         {state.isRequired ? "*" : "opt"}
                       </button>
+                    )}
+                    {state.enabled && isLocked && (
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                        state.isRequired
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                      }`}>
+                        {state.isRequired ? "*" : "opt"}
+                      </span>
                     )}
                   </div>
                 );
@@ -3952,73 +4462,87 @@ function FormCard({
                       {field.type === "CUSTOM_SELECT" && "Dropdown"}
                     </span>
                     <span className="text-sm flex-1">{field.label}</span>
-                    <button
-                      onClick={() => {
-                        const updated = [...customFields];
-                        updated[index] = { ...updated[index], isRequired: !updated[index].isRequired };
-                        setCustomFields(updated);
-                      }}
-                      className={`text-xs px-1.5 py-0.5 rounded ${
+                    {!isLocked ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            const updated = [...customFields];
+                            updated[index] = { ...updated[index], isRequired: !updated[index].isRequired };
+                            setCustomFields(updated);
+                          }}
+                          className={`text-xs px-1.5 py-0.5 rounded ${
+                            field.isRequired
+                              ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                              : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                          }`}
+                        >
+                          {field.isRequired ? "*" : "opt"}
+                        </button>
+                        <button
+                          onClick={() => handleRemoveCustomField(index)}
+                          className="p-1 text-gray-400 hover:text-red-500"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </>
+                    ) : (
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${
                         field.isRequired
                           ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
                           : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
-                      }`}
-                    >
-                      {field.isRequired ? "*" : "opt"}
-                    </button>
-                    <button
-                      onClick={() => handleRemoveCustomField(index)}
-                      className="p-1 text-gray-400 hover:text-red-500"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                      }`}>
+                        {field.isRequired ? "*" : "opt"}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
             )}
-            <div className="flex gap-2">
-              <select
-                value={newCustomFieldType}
-                onChange={(e) => setNewCustomFieldType(e.target.value as typeof newCustomFieldType)}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm"
-              >
-                <option value="CUSTOM_TEXT">Textfeld</option>
-                <option value="CUSTOM_TEXTAREA">Textarea</option>
-                <option value="CUSTOM_CHECKBOX">Checkbox</option>
-                <option value="CUSTOM_SELECT">Dropdown</option>
-              </select>
-              <Input
-                value={newCustomFieldLabel}
-                onChange={(e) => setNewCustomFieldLabel(e.target.value)}
-                placeholder="Feldbezeichnung"
-                className="flex-1"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddCustomField();
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAddCustomField}
-                disabled={!newCustomFieldLabel.trim()}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </Button>
-            </div>
+            {!isLocked && (
+              <div className="flex gap-2">
+                <select
+                  value={newCustomFieldType}
+                  onChange={(e) => setNewCustomFieldType(e.target.value as typeof newCustomFieldType)}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm"
+                >
+                  <option value="CUSTOM_TEXT">Textfeld</option>
+                  <option value="CUSTOM_TEXTAREA">Textarea</option>
+                  <option value="CUSTOM_CHECKBOX">Checkbox</option>
+                  <option value="CUSTOM_SELECT">Dropdown</option>
+                </select>
+                <Input
+                  value={newCustomFieldLabel}
+                  onChange={(e) => setNewCustomFieldLabel(e.target.value)}
+                  placeholder="Feldbezeichnung"
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddCustomField();
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddCustomField}
+                  disabled={!newCustomFieldLabel.trim()}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Speichern-Button */}
           <div className="flex justify-end pt-2 border-t border-gray-200 dark:border-gray-700">
             <Button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || isLocked}
               className="bg-cyan-600 hover:bg-cyan-700"
             >
               {isSaving ? (

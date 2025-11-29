@@ -1,222 +1,251 @@
-# Naive Date Formatting - Zeitzonenprobleme vermeiden
+# Naive Date Handling - Anleitung für Entwickler
 
-## Übersicht
+## TL;DR - Schnellreferenz
 
-Diese Dokumentation beschreibt die "Naive Date Formatting"-Strategie, die in der gesamten Anwendung verwendet wird, um Zeitzonenprobleme zu vermeiden.
-
-## Das Problem
-
-### Ursprüngliche Situation
-
-Dates und Timestamps wurden in der Datenbank als UTC gespeichert (z.B. `2025-11-20T14:00:00.000Z`), aber sollten als **Berlin-Zeit ohne Zeitzonenkonversion** interpretiert werden.
-
-**Beispiel des Problems:**
-- Datenbank: `2025-11-20T14:00:00.000Z` (gespeichert als Mitternacht UTC, gemeint als 14:00 Berlin-Zeit)
-- Mit `Intl.DateTimeFormat` formatiert mit Timezone `Europe/Berlin`: **15:00 Uhr** ❌ (falsch!)
-- Gewünschte Anzeige: **14:00 Uhr** ✅
-
-### Ursache
-
-JavaScript's `Intl.DateTimeFormat` mit `timeZone: "Europe/Berlin"` konvertiert UTC-Zeiten in die Berlin-Zeitzone. Das führt zu einer Verschiebung um +1 Stunde (bzw. +2 Stunden während Sommerzeit).
-
-## Die Lösung: Naive Formatting
-
-### Prinzip
-
-Statt Timezone-Conversion zu verwenden, extrahieren wir die Datums- und Zeitkomponenten **direkt aus dem ISO-String** mittels Regex, ohne Zeitzonenkonversion.
-
-### Implementierung
+**Problem:** Benutzer gibt 16:00 ein → wird als 15:00 oder 17:00 angezeigt
+**Lösung:** Zentrale Bibliothek verwenden
 
 ```typescript
-// Naive date formatting - extracts date components directly from ISO string
-const formatDate = (d?: Date | string | null) => {
-  if (!d) return "-";
-  try {
-    const dateStr = typeof d === 'string' ? d : d.toISOString();
-    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (!match) return "-";
-    const [, year, month, day] = match;
-    return `${day}.${month}.${year}`;
-  } catch {
-    return "-";
-  }
-};
+// SPEICHERN (in Server Actions)
+import { toNaiveDate } from "@/lib/naive-date";
+const toDate = toNaiveDate;
 
-// Naive date/time formatting
-const formatDateTime = (d?: Date | string | null) => {
-  if (!d) return "-";
+// ANZEIGEN (in React-Komponenten)
+// Entweder aus Bibliothek:
+import { formatNaiveDateTime } from "@/lib/naive-date";
+
+// Oder lokale Funktion:
+function formatDateTime(date: Date | string | null | undefined): string {
+  if (!date) return "";
   try {
-    const dateStr = typeof d === 'string' ? d : d.toISOString();
+    const dateStr = typeof date === 'string' ? date : date.toISOString();
     const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-    if (!match) return "-";
+    if (!match) return "";
     const [, year, month, day, hours, minutes] = match;
     return `${day}.${month}.${year}, ${hours}:${minutes}`;
   } catch {
-    return "-";
+    return "";
   }
-};
-
-// Naive time formatting
-const formatTime = (d?: Date | string | null) => {
-  if (!d) return "-";
-  try {
-    const dateStr = typeof d === 'string' ? d : d.toISOString();
-    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-    if (!match) return "-";
-    const hours = match[4];
-    const minutes = match[5];
-    return `${hours}:${minutes}`;
-  } catch {
-    return "-";
-  }
-};
+}
 ```
 
-### Regex-Erklärung
+---
 
-```
-^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})
-│  │      │      │      │      │
-│  │      │      │      │      └─ Minuten (Index 5)
-│  │      │      │      └──────── Stunden (Index 4)
-│  │      │      └─────────────── Tag (Index 3)
-│  │      └────────────────────── Monat (Index 2)
-│  └───────────────────────────── Jahr (Index 1)
-└──────────────────────────────── Start of String
-```
+## Wann tritt das Problem auf?
 
-## Betroffene Dateien
+Das Zeitzonenproblem tritt auf, wenn:
+1. Ein `datetime-local` Input verwendet wird (liefert z.B. `"2025-11-28T16:00"`)
+2. Dieser String mit `new Date(s)` geparst wird
+3. Das Datum später mit `Intl.DateTimeFormat` oder `toLocaleString` angezeigt wird
 
-Die Naive Formatting Funktionen wurden in folgenden Dateien implementiert:
-
-### ✅ Implementiert in:
-
-- **[/app/projects/page.tsx](../app/projects/page.tsx)** - Projektliste
-- **[/app/projects/[id]/page.tsx](../app/projects/[id]/page.tsx)** - Projekt-Detailseite
-- **[/app/film-projects/page.tsx](../app/film-projects/page.tsx)** - Filmprojekt-Liste
-- **[/app/film-projects/[id]/page.tsx](../app/film-projects/[id]/page.tsx)** - Filmprojekt-Detailseite
-- **[/app/appointments/page.tsx](../app/appointments/page.tsx)** - Termin-Kalender (NEU in v2.3.5)
-
-## Vorher/Nachher Vergleich
-
-### ❌ Vorher (mit Intl.DateTimeFormat)
+## Warum passiert das?
 
 ```typescript
-const formatDateTime = (value: Date) => {
-  return new Intl.DateTimeFormat("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Berlin"  // ← Verursacht Zeitzonenverschiebung!
-  }).format(value);
-};
+// Input vom datetime-local: "2025-11-28T16:00"
+const date = new Date("2025-11-28T16:00");
+// JavaScript interpretiert das als LOKALE Zeit (Berlin = UTC+1)
+// Intern speichert es: 2025-11-28T15:00:00.000Z (UTC)
 
-// Datenbank: 2025-11-20T14:00:00.000Z
-// Ausgabe: 20.11.2025, 15:00 ❌ (1 Stunde zu viel!)
+// Beim Anzeigen auf dem Server (der evtl. in UTC läuft):
+date.toLocaleString("de-DE"); // Kann 15:00, 16:00 oder 17:00 sein!
 ```
 
-### ✅ Nachher (mit Naive Formatting)
+## Die Lösung
+
+### 1. Beim Speichern: `toNaiveDate` verwenden
+
+Die Funktion hängt ein `Z` an den String an, bevor `new Date()` aufgerufen wird. Dadurch wird der String als UTC interpretiert und **nicht** als lokale Zeit konvertiert.
 
 ```typescript
-const formatDateTime = (d?: Date | string | null) => {
-  if (!d) return "-";
+// In: app/projects/new/actions.ts, app/projects/[id]/edit/actions.ts, etc.
+import { toNaiveDate } from "@/lib/naive-date";
+const toDate = toNaiveDate;
+
+// Im Zod-Schema:
+webDate: z.string().optional().transform(toDate),
+```
+
+**Was passiert:**
+- Input: `"2025-11-28T16:00"`
+- `toNaiveDate` macht daraus: `"2025-11-28T16:00:00.000Z"`
+- Gespeichert wird: `2025-11-28T16:00:00.000Z` ✅
+
+### 2. Beim Anzeigen: Regex-Extraktion verwenden
+
+Statt `Intl.DateTimeFormat` zu verwenden, extrahieren wir die Komponenten direkt aus dem ISO-String:
+
+```typescript
+function formatDateTime(date: Date | string | null | undefined): string {
+  if (!date) return "";
   try {
-    const dateStr = typeof d === 'string' ? d : d.toISOString();
+    // Date-Objekt zu ISO-String konvertieren
+    const dateStr = typeof date === 'string' ? date : date.toISOString();
+    // Regex extrahiert: Jahr, Monat, Tag, Stunden, Minuten
     const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-    if (!match) return "-";
+    if (!match) return "";
     const [, year, month, day, hours, minutes] = match;
     return `${day}.${month}.${year}, ${hours}:${minutes}`;
   } catch {
-    return "-";
+    return "";
   }
-};
-
-// Datenbank: 2025-11-20T14:00:00.000Z
-// Ausgabe: 20.11.2025, 14:00 ✅ (korrekt!)
+}
 ```
 
-## Wichtige Hinweise
+**Was passiert:**
+- DB liefert: `2025-11-28T16:00:00.000Z`
+- Regex extrahiert: Jahr=2025, Monat=11, Tag=28, Stunden=16, Minuten=00
+- Ausgabe: `28.11.2025, 16:00` ✅
 
-### ⚠️ Wann NICHT verwenden
+---
 
-Diese Strategie funktioniert nur, wenn:
-- Dates in der Datenbank als "naive" UTC-Zeiten gespeichert werden
-- Die Zeiten als lokale Zeit (Berlin) ohne Timezone-Info gemeint sind
-- Keine echte Zeitzonenkonversion gewünscht ist
+## Zentrale Bibliothek: `lib/naive-date.ts`
 
-### ✅ Wann verwenden
+### Verfügbare Funktionen
 
-Verwende Naive Formatting wenn:
-- Du Termine/Daten anzeigen willst, die in der Datenbank als UTC gespeichert sind
-- Die UTC-Zeit als lokale Berlin-Zeit interpretiert werden soll
-- Keine Sommerzeit/Winterzeit-Konversion stattfinden soll
+| Funktion | Verwendung | Beispiel |
+|----------|------------|----------|
+| `toNaiveDate(s)` | Speichern | `"16:00"` → `Date` mit 16:00:00.000Z |
+| `formatNaiveDate(d)` | Anzeige | `28.11.2025` |
+| `formatNaiveDateShort(d)` | Anzeige kurz | `28.11.25` |
+| `formatNaiveDateTime(d)` | Anzeige mit Zeit | `28.11.2025, 16:00` |
+| `formatNaiveDateTimeShort(d)` | Anzeige kurz mit Zeit | `28.11.25 um 16:00 Uhr` |
+| `formatNaiveTime(d)` | Nur Uhrzeit | `16:00` |
+
+### Wann die Bibliothek importieren?
+
+**Für Server Actions (Speichern):**
+```typescript
+import { toNaiveDate } from "@/lib/naive-date";
+```
+
+**Für React-Komponenten (Anzeigen):**
+- Bibliothek importieren wenn mehrere Formate benötigt werden
+- Lokale Funktion wenn nur ein spezifisches Format benötigt wird
+
+---
+
+## Checkliste für neue Dateien
+
+### Neue Server Action mit Datumsfeldern
+
+1. ✅ `import { toNaiveDate } from "@/lib/naive-date";`
+2. ✅ `const toDate = toNaiveDate;` (für Kompatibilität)
+3. ✅ Im Zod-Schema: `.transform(toDate)` für alle Datumsfelder
+
+### Neue React-Seite mit Datumsanzeige
+
+1. ✅ Lokale `formatDate`/`formatDateTime` Funktion erstellen
+2. ✅ Regex-basierte Extraktion verwenden (NICHT `Intl.DateTimeFormat`)
+3. ✅ `typeof date === 'string' ? date : date.toISOString()` für beide Typen
+
+---
 
 ## Häufige Fehler
 
-### ❌ Falsche Array-Destrukturierung
+### ❌ FALSCH: `new Date(s)` ohne Z
 
 ```typescript
-// FALSCH - überspringt Indizes
+const toDate = (s?: string | null) => (s && s.trim() ? new Date(s) : null);
+// "16:00" wird als lokale Zeit interpretiert → speichert 15:00 UTC
+```
+
+### ✅ RICHTIG: Z anhängen
+
+```typescript
+const toDate = (s?: string | null) => {
+  if (!s || !s.trim()) return null;
+  const trimmed = s.trim();
+  if (!trimmed.includes('T')) {
+    return new Date(trimmed + 'T00:00:00.000Z');
+  }
+  return new Date(trimmed + ':00.000Z');
+};
+```
+
+### ❌ FALSCH: `Intl.DateTimeFormat` mit Timezone
+
+```typescript
+new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin" }).format(date);
+// Konvertiert UTC zurück zu lokaler Zeit!
+```
+
+### ✅ RICHTIG: Regex-Extraktion
+
+```typescript
+const dateStr = date.toISOString();
+const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+const [, year, month, day, hours, minutes] = match;
+```
+
+### ❌ FALSCH: Falsche Array-Destrukturierung
+
+```typescript
 const [, , , hours, minutes] = match;
-// match[3] = day, aber wird als hours verwendet!
+// match[3] ist der TAG, nicht die Stunden!
 ```
 
-### ✅ Korrekte Verwendung
+### ✅ RICHTIG: Alle Positionen benennen
 
 ```typescript
-// RICHTIG - explizite Indizierung
-const hours = match[4];    // Index 4 = Stunden
-const minutes = match[5];  // Index 5 = Minuten
+const [, year, month, day, hours, minutes] = match;
+// Index: 0=full, 1=year, 2=month, 3=day, 4=hours, 5=minutes
 ```
 
-### ❌ Falsches Filtering im Kalender
+---
 
+## Betroffene Dateien (Stand: November 2025)
+
+### Projektverwaltung - Speichern
+
+- `lib/naive-date.ts` - Zentrale Bibliothek
+- `app/projects/new/actions.ts` - Projekt erstellen
+- `app/projects/[id]/edit/actions.ts` - Projekt bearbeiten
+- `app/film-projects/[id]/edit/actions.ts` - Filmprojekt bearbeiten
+- `app/api/projects/create/route.ts` - API Route
+
+### Projektverwaltung - Anzeigen
+
+- `app/projects/page.tsx`
+- `app/projects/[id]/page.tsx`
+- `app/film-projects/page.tsx`
+- `app/film-projects/[id]/page.tsx`
+- `app/appointments/page.tsx`
+- `app/clients/[id]/page.tsx`
+
+### Kundenportal - Anzeigen
+
+- `app/(authenticated)/projekte/page.tsx`
+- `app/(authenticated)/projekte/[id]/page.tsx`
+
+---
+
+## Debugging
+
+### Symptom: Zeit ist um 1-2 Stunden verschoben
+
+1. **Prüfe die Datenbank:** Welche Zeit steht dort? (z.B. mit Prisma Studio)
+   - Erwartet: `16:00:00.000Z` für Eingabe 16:00
+   - Problem: `15:00:00.000Z` → Speichern verwendet nicht `toNaiveDate`
+
+2. **Prüfe die Anzeige:** Wird Regex oder Intl verwendet?
+   - Suche nach `Intl.DateTimeFormat` oder `toLocaleString` → ersetzen mit Regex
+
+### Symptom: Datum funktioniert, Zeit nicht
+
+Prüfe ob das Regex-Match die Zeit-Komponenten enthält:
 ```typescript
-// FALSCH - verwendet day als hours
-const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-const [, year, month, hours] = match;  // hours ist eigentlich day!
+// Nur Datum:
+dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+// Mit Zeit:
+dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
 ```
 
-### ✅ Korrektes Filtering
+---
 
-```typescript
-// RICHTIG
-const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-const [, year, month, day] = match;
-return parseInt(day) === targetDay;
-```
+## Warum keine externe Library?
 
-## Tests & Validierung
-
-### Manuelle Tests
-
-1. Öffne die Projektliste `/projects`
-2. Überprüfe, dass ein Projekt mit Webtermin um 14:00 Uhr auch als **14:00** angezeigt wird
-3. Öffne die Projekt-Detailseite
-4. Überprüfe, dass alle Timestamps konsistent sind
-5. Öffne den Termin-Kalender `/appointments`
-6. Überprüfe, dass Termine am richtigen Tag mit der richtigen Uhrzeit angezeigt werden
-
-### Beispiel-Test
-
-```typescript
-// Input: 2025-11-20T14:00:00.000Z
-const result = formatDateTime("2025-11-20T14:00:00.000Z");
-console.log(result); // "20.11.2025, 14:00" ✅
-```
-
-## Changelog
-
-### Version 2.3.5 (12.11.2024)
-- ✅ Implementierung der Naive Formatting-Strategie in allen relevanten Dateien
-- ✅ Behebung des Zeitzonenproblems (14:00 wurde als 15:00 angezeigt)
-- ✅ Neue Termin-Kalender-Seite mit korrekter Zeitanzeige
-- ✅ Fix: Array-Destrukturierung in formatTime korrigiert
-
-## Weitere Informationen
-
-Siehe auch:
-- [Deployment Guide](DEPLOYMENT.md) - Deployment-Konfiguration
-- [Changelog](/app/changelog/page.tsx) - User-facing Changelog
+- `date-fns`, `dayjs`, `luxon` etc. lösen das Problem nicht automatisch
+- Die Kernursache ist JavaScript's Interpretation von Datetime-Strings
+- Unsere Lösung ist minimal und verständlich
+- Keine zusätzliche Dependency nötig

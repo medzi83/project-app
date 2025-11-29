@@ -50,6 +50,7 @@ export default async function WebDokuPage({ params }: Props) {
                   },
                 },
               },
+              feedback: true,
             },
           },
         },
@@ -119,6 +120,7 @@ export default async function WebDokuPage({ params }: Props) {
         otherSpecs: webDoc.otherSpecs,
         mapIntegration: webDoc.mapIntegration,
         // Schritt 5: Formulare
+        noFormsRequired: webDoc.noFormsRequired ?? false,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         forms: ((webDoc as any).forms || []).map((f: any) => ({
           id: f.id,
@@ -158,10 +160,33 @@ export default async function WebDokuPage({ params }: Props) {
         materialLogoNeeded: webDoc.materialLogoNeeded,
         materialAuthcodeNeeded: webDoc.materialAuthcodeNeeded,
         materialNotes: webDoc.materialNotes,
+        materialNotesNeedsImages: webDoc.materialNotesNeedsImages,
+        materialNotesNeedsTexts: webDoc.materialNotesNeedsTexts,
         materialDeadline: webDoc.materialDeadline?.toISOString().split("T")[0] || null,
         // Kundenfreigabe
         releasedAt: webDoc.releasedAt?.toISOString() || null,
         releasedByName: webDoc.releasedByName,
+        // Kundenbestätigung
+        confirmedAt: webDoc.confirmedAt?.toISOString() || null,
+        confirmedByName: webDoc.confirmedByName,
+        confirmedByIp: webDoc.confirmedByIp,
+        // Kundenfeedback
+        feedback: webDoc.feedback ? {
+          id: webDoc.feedback.id,
+          generalComment: webDoc.feedback.generalComment,
+          focusComment: webDoc.feedback.focusComment,
+          structureComment: webDoc.feedback.structureComment,
+          designComment: webDoc.feedback.designComment,
+          formsComment: webDoc.feedback.formsComment,
+          focusAcknowledged: webDoc.feedback.focusAcknowledged,
+          structureAcknowledged: webDoc.feedback.structureAcknowledged,
+          designAcknowledged: webDoc.feedback.designAcknowledged,
+          formsAcknowledged: webDoc.feedback.formsAcknowledged,
+          createdAt: webDoc.feedback.createdAt.toISOString(),
+          createdByName: webDoc.feedback.createdByName,
+        } : null,
+        // Interner Vermerk
+        internalNote: webDoc.internalNote,
       }}
       client={{
         id: project.client.id,

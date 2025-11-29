@@ -886,9 +886,20 @@ export default async function ClientDetailPage({ params }: Props) {
         {/* Tab: Projekte */}
         <TabsContent value="projekte" className="space-y-4">
           <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-foreground">
-          Projekte ({client.projects.length})
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-foreground">
+            Projekte ({client.projects.length})
+          </h2>
+          <Link
+            href={`/projects/new?cid=${client.id}`}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Neues Projekt
+          </Link>
+        </div>
           {/* Show warning for UMSETZUNG projects without installation */}
           {isAdmin && client.projects.some((p) =>
             p.type === "WEBSITE" &&

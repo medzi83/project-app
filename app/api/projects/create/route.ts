@@ -6,9 +6,10 @@ import { deriveProjectStatus } from "@/lib/project-status";
 import { getAuthSession } from "@/lib/authz";
 import { normalizeAgentIdForDB } from "@/lib/agent-helpers";
 import { processTriggers } from "@/lib/email/trigger-service";
+import { toNaiveDate } from "@/lib/naive-date";
 
 /** Helpers */
-const toDate = (s?: string | null) => (s && s.trim() ? new Date(s) : null);
+const toDate = toNaiveDate;
 const toMinutesFromHours = (s?: string | null) => {
   if (!s) return null;
   const normalized = s.replace(",", ".").trim();

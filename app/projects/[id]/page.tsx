@@ -7,6 +7,7 @@ import InlineCell from "@/components/InlineCell";
 import ClientReassignment from "@/components/ClientReassignment";
 import { BackButton } from "@/components/BackButton";
 import { createWebDocumentation, deleteWebDocumentation } from "./webdoku/actions";
+import DangerActionButton from "@/components/DangerActionButton";
 import type { WebsitePriority, ProductionStatus, MaterialStatus, SEOStatus, TextitStatus, CMS as PrismaCMS } from "@prisma/client";
 
 // Naive date/time formatting - extracts components directly from ISO string without timezone conversion
@@ -61,7 +62,17 @@ export default async function ProjectDetail({ params }: Props) {
       agent: true,
       website: {
         include: {
-          webDocumentation: true,
+          webDocumentation: {
+            include: {
+              feedback: true,
+              generalTextSubmission: true,
+              menuItems: {
+                include: {
+                  textSubmission: true,
+                },
+              },
+            },
+          },
         },
       },
       joomlaInstallations: {
@@ -900,13 +911,22 @@ export default async function ProjectDetail({ params }: Props) {
                             Freigegeben am {new Date(website.webDocumentation.releasedAt).toLocaleDateString("de-DE")} um {new Date(website.webDocumentation.releasedAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr von {website.webDocumentation.releasedByName}
                           </p>
                         )}
-                        {/* Kunden-Bestätigung (wird später implementiert) */}
+                        {/* Kunden-Bestätigung */}
                         {website.webDocumentation.confirmedAt && (
                           <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1">
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                             </svg>
                             Vom Kunden bestätigt am {new Date(website.webDocumentation.confirmedAt).toLocaleDateString("de-DE")} um {new Date(website.webDocumentation.confirmedAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
+                            {website.webDocumentation.feedback ? (
+                              <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                mit Anmerkungen
+                              </span>
+                            ) : (
+                              <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                änderungsfrei
+                              </span>
+                            )}
                           </p>
                         )}
                       </>
@@ -934,20 +954,18 @@ export default async function ProjectDetail({ params }: Props) {
                         Öffnen
                       </Link>
                       {role === "ADMIN" && (
-                        <form action={async () => {
-                          "use server";
-                          await deleteWebDocumentation(project.id);
-                        }}>
-                          <button
-                            type="submit"
-                            className="inline-flex items-center gap-2 px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors font-medium text-sm"
-                            title="Webdoku löschen"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </form>
+                        <DangerActionButton
+                          action={async () => {
+                            "use server";
+                            await deleteWebDocumentation(project.id);
+                          }}
+                          confirmText="Möchten Sie die Webdokumentation wirklich unwiderruflich löschen? Alle Daten inkl. Menüstruktur, Impressum, Material-Einreichungen und Kundenfeedback gehen verloren."
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors font-medium text-sm"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </DangerActionButton>
                       )}
                     </>
                   ) : (
@@ -988,6 +1006,192 @@ export default async function ProjectDetail({ params }: Props) {
             </div>
           </div>
         )}
+
+        {/* Material Card - Only show when webDocumentation exists */}
+        {canEdit && website?.webDocumentation && (() => {
+          const webDoku = website.webDocumentation;
+          const menuItems = webDoku.menuItems || [];
+
+          // Bilder-Statistik
+          const menuItemsNeedingImages = menuItems.filter((m) => m.needsImages);
+          const totalImagesNeeded = menuItemsNeedingImages.length +
+            (webDoku.materialLogoNeeded ? 1 : 0) +
+            (webDoku.materialNotesNeedsImages ? 1 : 0);
+
+          // Texte-Statistik
+          const menuItemsNeedingTexts = menuItems.filter((m) => m.needsTexts);
+          const textsSubmitted = menuItemsNeedingTexts.filter(
+            (m) => m.textSubmission?.submittedAt
+          ).length;
+          const generalTextSubmitted = webDoku.materialNotesNeedsTexts && webDoku.generalTextSubmission?.submittedAt ? 1 : 0;
+          const totalTextsNeeded = menuItemsNeedingTexts.length + (webDoku.materialNotesNeedsTexts ? 1 : 0);
+          const totalTextsSubmitted = textsSubmitted + generalTextSubmitted;
+
+          // Prüfstatus für eingereichte Texte
+          let textsApproved = 0;
+          let textsRejected = 0;
+          let textsPending = 0;
+
+          for (const item of menuItemsNeedingTexts) {
+            if (item.textSubmission?.submittedAt) {
+              if (item.textSubmission.suitable === true) {
+                textsApproved++;
+              } else if (item.textSubmission.suitable === false) {
+                textsRejected++;
+              } else {
+                textsPending++;
+              }
+            }
+          }
+
+          if (webDoku.materialNotesNeedsTexts && webDoku.generalTextSubmission?.submittedAt) {
+            if (webDoku.generalTextSubmission.suitable === true) {
+              textsApproved++;
+            } else if (webDoku.generalTextSubmission.suitable === false) {
+              textsRejected++;
+            } else {
+              textsPending++;
+            }
+          }
+
+          // Authcode
+          const authcodeNeeded = webDoku.materialAuthcodeNeeded;
+
+          // Prüfen ob überhaupt Material benötigt wird
+          const hasMaterialRequirements = totalImagesNeeded > 0 || totalTextsNeeded > 0 || authcodeNeeded;
+
+          if (!hasMaterialRequirements) return null;
+
+          const allTextsSubmitted = totalTextsNeeded > 0 && totalTextsSubmitted === totalTextsNeeded;
+
+          return (
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+              <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+                <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Material
+                </h2>
+              </div>
+              <div className="p-6 space-y-4">
+                {/* Bilder-Status */}
+                {totalImagesNeeded > 0 && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Bilder</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {totalImagesNeeded} {totalImagesNeeded === 1 ? "Bereich benötigt" : "Bereiche benötigen"} Bilder
+                        {webDoku.materialLogoNeeded && <span className="ml-1">(inkl. Logo)</span>}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-700">
+                      Offen
+                    </span>
+                  </div>
+                )}
+
+                {/* Texte-Status */}
+                {totalTextsNeeded > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        allTextsSubmitted
+                          ? "bg-green-100 dark:bg-green-900/30"
+                          : "bg-purple-100 dark:bg-purple-900/30"
+                      }`}>
+                        <svg className={`w-5 h-5 ${
+                          allTextsSubmitted
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-purple-600 dark:text-purple-400"
+                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {website.textit && website.textit !== "NEIN" ? "Stichpunkte" : "Texte"}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {allTextsSubmitted
+                            ? `Alle ${totalTextsSubmitted} ${totalTextsSubmitted === 1 ? "Text eingereicht" : "Texte eingereicht"}`
+                            : `${totalTextsSubmitted} von ${totalTextsNeeded} eingereicht`
+                          }
+                        </p>
+                      </div>
+                      {allTextsSubmitted ? (
+                        <Link
+                          href={`/projects/${project.id}/material-text`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          Anzeigen
+                        </Link>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-700">
+                          {totalTextsSubmitted > 0 ? "Teilweise" : "Offen"}
+                        </span>
+                      )}
+                    </div>
+                    {/* Prüfstatus für eingereichte Texte */}
+                    {totalTextsSubmitted > 0 && (
+                      <div className="ml-[52px]">
+                        <div className="flex items-center gap-2 text-xs">
+                          {textsApproved > 0 && (
+                            <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
+                              <span className="w-2 h-2 rounded-full bg-green-500" />
+                              {textsApproved} geprüft
+                            </span>
+                          )}
+                          {textsPending > 0 && (
+                            <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                              <span className="w-2 h-2 rounded-full bg-blue-500" />
+                              {textsPending} offen
+                            </span>
+                          )}
+                          {textsRejected > 0 && (
+                            <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+                              <span className="w-2 h-2 rounded-full bg-amber-500" />
+                              {textsRejected} ungeeignet
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Authcode-Status */}
+                {authcodeNeeded && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Authcode</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Wird zum Zeitpunkt der Onlinestellung benötigt
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
+                      Ausstehend
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Additional Info */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">

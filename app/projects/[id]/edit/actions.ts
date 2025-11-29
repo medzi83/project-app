@@ -4,12 +4,13 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { deriveProjectStatus } from "@/lib/project-status";
 import { normalizeAgentIdForDB } from "@/lib/agent-helpers";
+import { toNaiveDate } from "@/lib/naive-date";
 import { requireRole } from "@/lib/authz";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 /** Hilfsfunktionen */
-const toDate = (s?: string | null) => (s && s.trim() ? new Date(s) : null);
+const toDate = toNaiveDate;
 const toMinutesFromHours = (s?: string | null) => {
   if (!s) return null;
   const normalized = s.replace(",", ".").trim();

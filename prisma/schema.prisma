@@ -229,6 +229,7 @@ model WebDocumentation {
   mapIntegration     WebDocuMapIntegration?      // Map-Einbindung
 
   // ===== Schritt 5: Formulare =====
+  noFormsRequired    Boolean                     @default(false) // Kein Formular gewünscht
   forms              WebDocuForm[]
 
   // ===== Schritt 6: Impressum & Datenschutz =====
@@ -253,10 +254,15 @@ model WebDocumentation {
   imprintHasPrivacyOfficer Boolean?              // Haben Sie einen Datenschutzbeauftragten benannt?
 
   // ===== Schritt 7: Material =====
-  materialLogoNeeded     Boolean?                // Logo nachzureichend (nur wenn hasLogo=true in Step 4)
-  materialAuthcodeNeeded Boolean?                // Authcode nachzureichend (nur wenn domainStatus=EXISTS_TRANSFER)
-  materialNotes          String?                 // Weitere Infos / Anmerkungen
-  materialDeadline       DateTime?               // Frist für Materialeinsendung
+  materialLogoNeeded       Boolean?                // Logo nachzureichend (nur wenn hasLogo=true in Step 4)
+  materialAuthcodeNeeded   Boolean?                // Authcode nachzureichend (nur wenn domainStatus=EXISTS_TRANSFER)
+  materialNotes            String?                 // Weitere Infos / Anmerkungen (allgemeines Material)
+  materialNotesNeedsImages Boolean?                // Allgemeines Material: Bilder benötigt
+  materialNotesNeedsTexts  Boolean?                // Allgemeines Material: Texte/Stichpunkte benötigt
+  materialDeadline         DateTime?               // Frist für Materialeinsendung
+
+  // Vom Kunden eingereichte Texte für allgemeines Material
+  generalTextSubmission    MaterialGeneralSubmission?
 
   // ===== Kundenfreigabe =====
   releasedAt             DateTime?               // Zeitpunkt der Freigabe für den Kunden
@@ -267,6 +273,10 @@ model WebDocumentation {
   confirmedAt            DateTime?               // Zeitpunkt der Bestätigung durch den Kunden
   confirmedByPersonId    String?                 // ID der AuthorizedPerson die bestätigt hat
   confirmedByName        String?                 // Name der Person (für Anzeige)
+  confirmedByIp          String?                 // IP-Adresse des Kunden bei Bestätigung
+
+  // ===== Interner Vermerk (für Agenten) =====
+  internalNote           String?                 // Interner Vermerk für spätere Verwendung
 
   createdAt          DateTime                    @default(now())
   updatedAt          DateTime                    @updatedAt
@@ -274,6 +284,34 @@ model WebDocumentation {
 
   // Ansprechpartner für diese Webdoku (Verknüpfung zu AuthorizedPerson)
   contacts           WebDocumentationContact[]
+
+  // Kundenfeedback (optional, nur wenn mit Anpassungswünschen bestätigt)
+  feedback           WebDocuFeedback?
+}
+
+// Kundenfeedback zur Webdokumentation
+// Wird erstellt wenn Kunde "Mit Anpassungswünschen bestätigen" wählt
+model WebDocuFeedback {
+  id                     String            @id @default(cuid())
+  webDocumentationId     String            @unique  // Nur ein Feedback pro Webdoku
+
+  // Feedback-Bereiche (alle optional - Kunde wählt was er kommentieren will)
+  generalComment         String?           // Allgemeines Feedback
+  focusComment           String?           // Kommentar zu Schwerpunkten (Schritt 2)
+  structureComment       String?           // Kommentar zu Websiteaufbau/Menüs (Schritt 3)
+  designComment          String?           // Kommentar zu Designwünschen (Schritt 4)
+  formsComment           String?           // Kommentar zu Formularen (Schritt 5)
+
+  // Status-Tracking durch Agent ("wird beachtet")
+  focusAcknowledged      Boolean           @default(false)
+  structureAcknowledged  Boolean           @default(false)
+  designAcknowledged     Boolean           @default(false)
+  formsAcknowledged      Boolean           @default(false)
+
+  createdAt              DateTime          @default(now())
+  createdByName          String?           // Name des Kunden der das Feedback gegeben hat
+
+  webDocumentation       WebDocumentation  @relation(fields: [webDocumentationId], references: [projectId], onDelete: Cascade)
 }
 
 // Formular für Webdokumentation (Schritt 5)
@@ -348,9 +386,54 @@ model WebDocuMenuItem {
   webDocumentation     WebDocumentation  @relation(fields: [webDocumentationId], references: [projectId], onDelete: Cascade)
   parent               WebDocuMenuItem?  @relation("MenuItemHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children             WebDocuMenuItem[] @relation("MenuItemHierarchy")
+  textSubmission       MaterialTextSubmission? // Vom Kunden eingereichte Texte
 
   @@index([webDocumentationId])
   @@index([parentId])
+}
+
+// Vom Kunden eingereichte Texte/Stichpunkte pro Menüpunkt
+model MaterialTextSubmission {
+  id                 String          @id @default(cuid())
+  menuItemId         String          @unique // Nur eine Text-Einreichung pro Menüpunkt
+  content            String          // Der eingereichte Text (RichText/HTML)
+  submittedAt        DateTime?       // Zeitpunkt der finalen Einreichung (null = noch nicht eingereicht)
+  submittedByName    String?         // Name des Kunden der eingereicht hat
+  isResubmission     Boolean         @default(false) // true = wurde nach Ablehnung erneut eingereicht
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  // Bewertung durch Agent/Admin
+  reviewedAt         DateTime?       // Zeitpunkt der Bewertung (null = noch nicht bewertet)
+  reviewedBy         String?         // User-ID des Bewerters
+  reviewedByName     String?         // Name des Bewerters
+  suitable           Boolean?        // true = geeignet, false = ungeeignet, null = nicht bewertet
+  reviewNote         String?         // Hinweis bei Ablehnung (warum ungeeignet)
+  previousReviewNote String?         // Vorheriger Ablehnungsgrund (bei erneuter Einreichung zur Dokumentation)
+
+  menuItem           WebDocuMenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+}
+
+// Vom Kunden eingereichte Texte für allgemeines Material (Weitere Hinweise/Anmerkungen)
+model MaterialGeneralSubmission {
+  id                   String           @id @default(cuid())
+  webDocumentationId   String           @unique // Nur eine allgemeine Text-Einreichung pro Webdoku
+  content              String           // Der eingereichte Text (RichText/HTML)
+  submittedAt          DateTime?        // Zeitpunkt der finalen Einreichung (null = noch nicht eingereicht)
+  submittedByName      String?          // Name des Kunden der eingereicht hat
+  isResubmission       Boolean          @default(false) // true = wurde nach Ablehnung erneut eingereicht
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  // Bewertung durch Agent/Admin
+  reviewedAt           DateTime?        // Zeitpunkt der Bewertung (null = noch nicht bewertet)
+  reviewedBy           String?          // User-ID des Bewerters
+  reviewedByName       String?          // Name des Bewerters
+  suitable             Boolean?         // true = geeignet, false = ungeeignet, null = nicht bewertet
+  reviewNote           String?          // Hinweis bei Ablehnung (warum ungeeignet)
+  previousReviewNote   String?          // Vorheriger Ablehnungsgrund (bei erneuter Einreichung zur Dokumentation)
+
+  webDocumentation     WebDocumentation @relation(fields: [webDocumentationId], references: [projectId], onDelete: Cascade)
 }
 
 // Verknüpfungstabelle für Ansprechpartner in der Webdokumentation

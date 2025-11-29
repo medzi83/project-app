@@ -56,6 +56,26 @@ export async function createWebDocumentation(projectId: string) {
     },
   });
 
+  // Standard-Footer-Menüpunkte (Impressum, Datenschutz) automatisch erstellen
+  await prisma.webDocuMenuItem.createMany({
+    data: [
+      {
+        webDocumentationId: project.id,
+        name: "Impressum",
+        parentId: null,
+        sortOrder: 0,
+        isFooterMenu: true,
+      },
+      {
+        webDocumentationId: project.id,
+        name: "Datenschutz",
+        parentId: null,
+        sortOrder: 1,
+        isFooterMenu: true,
+      },
+    ],
+  });
+
   revalidatePath(`/projects/${projectId}`);
   revalidatePath(`/projects/${projectId}/webdoku`);
 
@@ -488,6 +508,24 @@ export async function updateWebDocumentationStep4(data: {
 // ===== Schritt 5: Formulare =====
 
 /**
+ * Setzt das Flag "Kein Formular gewünscht"
+ */
+export async function updateNoFormsRequired(
+  projectId: string,
+  noFormsRequired: boolean
+) {
+  await requireRole(["ADMIN", "AGENT"]);
+
+  await prisma.webDocumentation.update({
+    where: { projectId },
+    data: { noFormsRequired },
+  });
+
+  revalidatePath(`/projects/${projectId}/webdoku`);
+  return { success: true };
+}
+
+/**
  * Erstellt ein neues Formular
  */
 export async function createForm(
@@ -792,6 +830,8 @@ export async function updateWebDocumentationStep7(data: {
   materialLogoNeeded: boolean | null;
   materialAuthcodeNeeded: boolean | null;
   materialNotes: string | null;
+  materialNotesNeedsImages: boolean | null;
+  materialNotesNeedsTexts: boolean | null;
   materialDeadline: string | null; // ISO-String für Datum
 }) {
   await requireRole(["ADMIN", "AGENT"]);
@@ -872,8 +912,16 @@ export async function releaseWebDocumentationForCustomer(projectId: string) {
     return { success: false, error: "Webdokumentation nicht gefunden" };
   }
 
+  // Vollständigen Namen aus der DB laden (fullName hat Vor- und Zuname)
+  const user = session.user.id
+    ? await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { fullName: true, name: true },
+      })
+    : null;
+
   const releasedAt = new Date();
-  const releasedByName = session.user.name || session.user.email || "Unbekannt";
+  const releasedByName = user?.fullName || user?.name || session.user.name || session.user.email || "Unbekannt";
 
   // Freigabe setzen
   await prisma.webDocumentation.update({
@@ -917,6 +965,55 @@ export async function revokeWebDocumentationRelease(projectId: string) {
       releasedByUserId: null,
       releasedByName: null,
     },
+  });
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}/webdoku`);
+
+  return { success: true };
+}
+
+// ===== Kundenfeedback =====
+
+/**
+ * Setzt den "wird beachtet"-Status für einen Feedback-Bereich
+ */
+export async function updateFeedbackAcknowledged(
+  feedbackId: string,
+  field: "focusAcknowledged" | "structureAcknowledged" | "designAcknowledged" | "formsAcknowledged",
+  value: boolean
+) {
+  await requireRole(["ADMIN", "AGENT"]);
+
+  const feedback = await prisma.webDocuFeedback.findUnique({
+    where: { id: feedbackId },
+    select: { webDocumentationId: true },
+  });
+
+  if (!feedback) {
+    return { success: false, error: "Feedback nicht gefunden" };
+  }
+
+  await prisma.webDocuFeedback.update({
+    where: { id: feedbackId },
+    data: { [field]: value },
+  });
+
+  revalidatePath(`/projects/${feedback.webDocumentationId}`);
+  revalidatePath(`/projects/${feedback.webDocumentationId}/webdoku`);
+
+  return { success: true };
+}
+
+/**
+ * Aktualisiert den internen Vermerk der Webdokumentation
+ */
+export async function updateInternalNote(projectId: string, internalNote: string | null) {
+  await requireRole(["ADMIN", "AGENT"]);
+
+  await prisma.webDocumentation.update({
+    where: { projectId },
+    data: { internalNote: internalNote?.trim() || null },
   });
 
   revalidatePath(`/projects/${projectId}`);

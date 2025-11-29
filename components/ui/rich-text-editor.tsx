@@ -10,6 +10,7 @@ interface RichTextEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export function RichTextEditor({
@@ -17,6 +18,7 @@ export function RichTextEditor({
   onChange,
   placeholder = "Text eingeben...",
   className = "",
+  disabled = false,
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -33,6 +35,7 @@ export function RichTextEditor({
       }),
     ],
     content,
+    editable: !disabled,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
@@ -50,13 +53,14 @@ export function RichTextEditor({
   }
 
   return (
-    <div className={`border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800 ${className}`}>
+    <div className={`border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800 ${disabled ? "opacity-60" : ""} ${className}`}>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-1 px-2 py-1.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
         {/* Fett */}
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           active={editor.isActive("bold")}
+          disabled={disabled}
           title="Fett (Strg+B)"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,6 +73,7 @@ export function RichTextEditor({
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleItalic().run()}
           active={editor.isActive("italic")}
+          disabled={disabled}
           title="Kursiv (Strg+I)"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,6 +85,7 @@ export function RichTextEditor({
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           active={editor.isActive("underline")}
+          disabled={disabled}
           title="Unterstrichen (Strg+U)"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,6 +97,7 @@ export function RichTextEditor({
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleStrike().run()}
           active={editor.isActive("strike")}
+          disabled={disabled}
           title="Durchgestrichen"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,6 +111,7 @@ export function RichTextEditor({
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           active={editor.isActive("bulletList")}
+          disabled={disabled}
           title="Aufzählung"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,6 +126,7 @@ export function RichTextEditor({
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           active={editor.isActive("orderedList")}
+          disabled={disabled}
           title="Nummerierte Liste"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +142,7 @@ export function RichTextEditor({
         {/* Rückgängig */}
         <ToolbarButton
           onClick={() => editor.chain().focus().undo().run()}
-          disabled={!editor.can().undo()}
+          disabled={disabled || !editor.can().undo()}
           title="Rückgängig (Strg+Z)"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -144,7 +153,7 @@ export function RichTextEditor({
         {/* Wiederholen */}
         <ToolbarButton
           onClick={() => editor.chain().focus().redo().run()}
-          disabled={!editor.can().redo()}
+          disabled={disabled || !editor.can().redo()}
           title="Wiederholen (Strg+Y)"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -10,7 +10,23 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 /** Helpers */
-const toDate = (s?: string | null) => (s && s.trim() ? new Date(s) : null);
+// Naive Date-Speicherung: Die eingegebene Zeit wird exakt so gespeichert wie eingegeben,
+// ohne Zeitzonenkonvertierung. "16:00" eingegeben → "16:00:00.000Z" gespeichert.
+// Das Z am Ende macht den String zu einem UTC-String, sodass keine lokale Konvertierung stattfindet.
+const toDate = (s?: string | null) => {
+  if (!s || !s.trim()) return null;
+  const trimmed = s.trim();
+  // Wenn der String bereits ein Z oder Timezone-Offset hat, direkt parsen
+  if (trimmed.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(trimmed)) {
+    return new Date(trimmed);
+  }
+  // Ansonsten Z anhängen, damit die Zeit als UTC interpretiert wird (keine lokale Konvertierung)
+  // Falls nur Datum ohne Zeit, Mitternacht anhängen
+  if (!trimmed.includes('T')) {
+    return new Date(trimmed + 'T00:00:00.000Z');
+  }
+  return new Date(trimmed + ':00.000Z');
+};
 const toMinutesFromHours = (s?: string | null) => {
   if (!s) return null;
   const normalized = s.replace(",", ".").trim();

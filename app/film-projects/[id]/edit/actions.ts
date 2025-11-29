@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/lib/authz";
+import { toNaiveDate } from "@/lib/naive-date";
 import { revalidatePath } from "next/cache";
 import type { FilmScope, FilmPriority, FilmProjectStatus } from "@prisma/client";
 
@@ -32,7 +33,7 @@ export async function updateFilmProject(formData: FormData) {
   const lastContact = formData.get("lastContact") as string;
   const note = formData.get("note") as string;
 
-  const toDate = (s?: string | null) => (s && s.trim() ? new Date(s) : null);
+  const toDate = toNaiveDate;
   const toLink = (s?: string | null) => {
     if (!s) return null;
     const trimmed = s.trim();
