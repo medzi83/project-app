@@ -26,11 +26,6 @@ export default async function NewProjectPage({ searchParams }: Props) {
   const [clients, agents, agencies] = await Promise.all([
     prisma.client.findMany({
       orderBy: { name: "asc" },
-      include: {
-        agency: {
-          select: { id: true, name: true },
-        },
-      },
     }),
     prisma.user.findMany({
       where: { role: "AGENT", active: true },
@@ -46,17 +41,6 @@ export default async function NewProjectPage({ searchParams }: Props) {
   const clientOptions: Option[] = clients.map((c) => ({
     value: c.id,
     label: c.customerNo ? `${c.customerNo} | ${c.name}` : c.name,
-  }));
-
-  // Prepare client data with LuckyCloud info for the form
-  const clientsData = clients.map((c) => ({
-    id: c.id,
-    name: c.name,
-    customerNo: c.customerNo,
-    luckyCloudLibraryId: c.luckyCloudLibraryId,
-    luckyCloudLibraryName: c.luckyCloudLibraryName,
-    luckyCloudFolderPath: c.luckyCloudFolderPath,
-    agency: c.agency,
   }));
 
   const websiteAgents = agents.filter(a => a.categories.includes("WEBSEITE"));
@@ -160,6 +144,12 @@ export default async function NewProjectPage({ searchParams }: Props) {
               <button type="submit" className="rounded bg-black dark:bg-blue-600 px-4 py-2 text-white hover:bg-gray-800 dark:hover:bg-blue-700">Kunde speichern</button>
             </div>
           </form>
+          <div className="mt-4 p-3 rounded-lg bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800">
+            <p className="text-sm text-sky-800 dark:text-sky-200">
+              <strong>LuckyCloud:</strong> Die Cloud-Zuordnung (Bibliothek/Ordner) kann nach dem Anlegen des Kunden im{' '}
+              <span className="font-medium">Kundendetailblatt &rarr; Basisdaten</span> eingerichtet werden.
+            </p>
+          </div>
         </div>
       </details>
 
@@ -180,7 +170,6 @@ export default async function NewProjectPage({ searchParams }: Props) {
 
           <UnifiedProjectForm
             clientOptions={clientOptions}
-            clientsData={clientsData}
             websiteAgentOptions={websiteAgentOptions}
             filmAgentOptions={filmAgentOptions}
             printDesignAgentOptions={printDesignAgentOptions}

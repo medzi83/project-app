@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { EmailConfirmationDialog } from "@/components/EmailConfirmationDialog";
-import { LuckyCloudClientCard, type LuckyCloudClientData } from "@/components/LuckyCloudClientCard";
 
 type Option = { value: string; label: string };
 
@@ -65,29 +64,14 @@ const PRINT_DESIGN_TYPE_OPTIONS: Option[] = (Object.keys(PRINT_DESIGN_TYPE_LABEL
   label: PRINT_DESIGN_TYPE_LABELS[value],
 }));
 
-type ClientWithLuckyCloud = {
-  id: string;
-  name: string;
-  customerNo: string | null;
-  luckyCloudLibraryId: string | null;
-  luckyCloudLibraryName: string | null;
-  luckyCloudFolderPath: string | null;
-  agency: {
-    id: string;
-    name: string;
-  } | null;
-};
-
 export function UnifiedProjectForm({
   clientOptions,
-  clientsData,
   websiteAgentOptions,
   filmAgentOptions,
   printDesignAgentOptions,
   clientIdFromQuery,
 }: {
   clientOptions: Option[];
-  clientsData: ClientWithLuckyCloud[];
   websiteAgentOptions: Option[];
   filmAgentOptions: Option[];
   printDesignAgentOptions: Option[];
@@ -142,11 +126,6 @@ export function UnifiedProjectForm({
   const selectedClientLabel = selectedClient
     ? clientOptions.find(c => c.value === selectedClient)?.label || ""
     : "";
-
-  // Get full client data for LuckyCloud card
-  const selectedClientData: LuckyCloudClientData | null = selectedClient
-    ? clientsData.find(c => c.id === selectedClient) ?? null
-    : null;
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -334,16 +313,6 @@ export function UnifiedProjectForm({
             <p className="text-sm text-muted-foreground dark:text-gray-400">
               💡 Kunde nicht in der Liste? Lege zuerst oben einen neuen Kunden an.
             </p>
-          )}
-
-          {/* LuckyCloud-Zuordnung für den ausgewählten Kunden */}
-          {selectedClientData && (
-            <div className="mt-4">
-              <LuckyCloudClientCard
-                client={selectedClientData}
-                canEdit={true}
-              />
-            </div>
           )}
         </div>
       </div>

@@ -8,6 +8,7 @@ import ClientReassignment from "@/components/ClientReassignment";
 import { BackButton } from "@/components/BackButton";
 import { createWebDocumentation, deleteWebDocumentation } from "./webdoku/actions";
 import DangerActionButton from "@/components/DangerActionButton";
+import { LuckyCloudProjectFolderCard } from "@/components/LuckyCloudProjectFolderCard";
 import type { WebsitePriority, ProductionStatus, MaterialStatus, SEOStatus, TextitStatus, CMS as PrismaCMS } from "@prisma/client";
 
 // Naive date/time formatting - extracts components directly from ISO string without timezone conversion
@@ -58,7 +59,16 @@ export default async function ProjectDetail({ params }: Props) {
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
-      client: true,
+      client: {
+        include: {
+          agency: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
       agent: true,
       website: {
         include: {
@@ -1125,6 +1135,27 @@ export default async function ProjectDetail({ params }: Props) {
             )}
           </div>
         </div>
+
+        {/* LuckyCloud Material-Ordner - Only for website projects with canEdit */}
+        {canEdit && website && project.client && (
+          <LuckyCloudProjectFolderCard
+            data={{
+              projectId: project.id,
+              projectTitle: project.title,
+              luckyCloudFolderPath: website.luckyCloudFolderPath ?? null,
+              client: {
+                id: project.client.id,
+                name: project.client.name,
+                customerNo: project.client.customerNo,
+                luckyCloudLibraryId: project.client.luckyCloudLibraryId,
+                luckyCloudLibraryName: project.client.luckyCloudLibraryName,
+                luckyCloudFolderPath: project.client.luckyCloudFolderPath,
+                agency: project.client.agency,
+              },
+            }}
+            canEdit={canEdit}
+          />
+        )}
 
       </div>
     </div>
