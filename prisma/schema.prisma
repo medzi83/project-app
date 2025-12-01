@@ -98,6 +98,10 @@ model Client {
   portalPasswordHash  String?
   portalLastLogin     DateTime?
   portalInvitedAt     DateTime?
+  // LuckyCloud-Zuordnung
+  luckyCloudLibraryId   String?            // Seafile Library-ID
+  luckyCloudLibraryName String?            // Library-Name (zur Anzeige)
+  luckyCloudFolderPath  String?            // Ordnerpfad innerhalb der Library
   authorizedPersons   AuthorizedPerson[]
   agency              Agency?              @relation(fields: [agencyId], references: [id])
   server              Server?              @relation("ClientToServer", fields: [serverId], references: [id])

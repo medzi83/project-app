@@ -26,6 +26,11 @@ export default async function NewProjectPage({ searchParams }: Props) {
   const [clients, agents, agencies] = await Promise.all([
     prisma.client.findMany({
       orderBy: { name: "asc" },
+      include: {
+        agency: {
+          select: { id: true, name: true },
+        },
+      },
     }),
     prisma.user.findMany({
       where: { role: "AGENT", active: true },
@@ -41,6 +46,17 @@ export default async function NewProjectPage({ searchParams }: Props) {
   const clientOptions: Option[] = clients.map((c) => ({
     value: c.id,
     label: c.customerNo ? `${c.customerNo} | ${c.name}` : c.name,
+  }));
+
+  // Prepare client data with LuckyCloud info for the form
+  const clientsData = clients.map((c) => ({
+    id: c.id,
+    name: c.name,
+    customerNo: c.customerNo,
+    luckyCloudLibraryId: c.luckyCloudLibraryId,
+    luckyCloudLibraryName: c.luckyCloudLibraryName,
+    luckyCloudFolderPath: c.luckyCloudFolderPath,
+    agency: c.agency,
   }));
 
   const websiteAgents = agents.filter(a => a.categories.includes("WEBSEITE"));
@@ -164,6 +180,7 @@ export default async function NewProjectPage({ searchParams }: Props) {
 
           <UnifiedProjectForm
             clientOptions={clientOptions}
+            clientsData={clientsData}
             websiteAgentOptions={websiteAgentOptions}
             filmAgentOptions={filmAgentOptions}
             printDesignAgentOptions={printDesignAgentOptions}

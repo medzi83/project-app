@@ -26,6 +26,7 @@ import { isFavoriteClient } from "@/app/actions/favorites";
 import { AuthorizedPersons } from "./AuthorizedPersons";
 import { ClientPortalCard } from "./ClientPortalCard";
 import { ContractDataEditor } from "./ContractDataEditor";
+import { LuckyCloudClientCard } from "@/components/LuckyCloudClientCard";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -774,20 +775,39 @@ export default async function ClientDetailPage({ params }: Props) {
             </section>
           </div>
 
-          {/* Vertragsdaten */}
-          <section className="rounded-lg border border-border bg-card p-4">
-            <ContractDataEditor
-              clientId={client.id}
-              contract={client.contract ? {
-                ...client.contract,
-                // Convert Decimal to string for client component serialization
-                setupFee: client.contract.setupFee?.toString() ?? null,
-                monthlyAmount: client.contract.monthlyAmount?.toString() ?? null,
-              } : null}
-              isAdmin={isAdmin}
-              canEdit={canEditClientData}
-            />
-          </section>
+          {/* Vertragsdaten und LuckyCloud */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* Vertragsdaten */}
+            <section className="rounded-lg border border-border bg-card p-4">
+              <ContractDataEditor
+                clientId={client.id}
+                contract={client.contract ? {
+                  ...client.contract,
+                  // Convert Decimal to string for client component serialization
+                  setupFee: client.contract.setupFee?.toString() ?? null,
+                  monthlyAmount: client.contract.monthlyAmount?.toString() ?? null,
+                } : null}
+                isAdmin={isAdmin}
+                canEdit={canEditClientData}
+              />
+            </section>
+
+            {/* LuckyCloud-Zuordnung */}
+            {isAdmin && (
+              <LuckyCloudClientCard
+                client={{
+                  id: client.id,
+                  name: client.name,
+                  customerNo: client.customerNo,
+                  luckyCloudLibraryId: client.luckyCloudLibraryId,
+                  luckyCloudLibraryName: client.luckyCloudLibraryName,
+                  luckyCloudFolderPath: client.luckyCloudFolderPath,
+                  agency: client.agency,
+                }}
+                canEdit={isAdmin}
+              />
+            )}
+          </div>
 
           {/* Kundenportal und Joomla Installationen */}
           <div className="grid gap-4 lg:grid-cols-2">

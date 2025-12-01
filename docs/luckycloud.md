@@ -250,6 +250,11 @@ Der Menüpunkt "Luckycloud" ist im Admin-Bereich unter `/admin/luckycloud` verf�
    - Suchergebnisse zeigen Ordnername und Pfad
    - Klick auf Ergebnis navigiert direkt zum Ordner
 
+7. **Auto-Load**
+   - Bibliotheken werden automatisch beim Laden der Seite geladen
+   - Optional: Standard-Bibliothek kann per `defaultLibraryId` vorkonfiguriert werden
+   - Button-Text ändert sich zu "Aktualisieren" wenn bereits geladen
+
 ### Unterstützte Dateitypen
 
 **Bilder (mit Thumbnail & Bewertung):**

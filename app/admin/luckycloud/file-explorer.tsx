@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -58,7 +58,7 @@ import {
   FolderPlus
 } from 'lucide-react';
 
-type Library = {
+export type Library = {
   id: string;
   name: string;
   size: number;
@@ -692,7 +692,33 @@ function FileListItem({
   );
 }
 
-export function LuckyCloudFileExplorer({ agency }: { agency: 'eventomaxx' | 'vendoweb' }) {
+type LuckyCloudFileExplorerProps = {
+  agency: 'eventomaxx' | 'vendoweb';
+  /** ID der Bibliothek die automatisch geöffnet werden soll */
+  defaultLibraryId?: string;
+  /** Bibliotheken automatisch beim Start laden */
+  autoLoad?: boolean;
+  /** Nur diese Bibliothek-IDs anzeigen (Whitelist) */
+  libraryIds?: string[];
+  /** Nur diese Bibliothek-Namen anzeigen (Whitelist, case-insensitive) */
+  libraryNames?: string[];
+  /** Callback wenn sich Library oder Pfad ändert */
+  onSelectionChange?: (selection: {
+    libraries: Library[];
+    libraryId: string | null;
+    libraryName: string | null;
+    path: string;
+  }) => void;
+};
+
+export function LuckyCloudFileExplorer({
+  agency,
+  defaultLibraryId,
+  autoLoad = true,
+  libraryIds,
+  libraryNames,
+  onSelectionChange,
+}: LuckyCloudFileExplorerProps) {
   const [state, setState] = useState<ExplorerState>({
     status: 'idle',
     libraries: [],
@@ -700,6 +726,7 @@ export function LuckyCloudFileExplorer({ agency }: { agency: 'eventomaxx' | 'ven
     currentPath: '/',
     items: [],
   });
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   const [preview, setPreview] = useState<PreviewState>({
     isOpen: false,
@@ -738,7 +765,7 @@ export function LuckyCloudFileExplorer({ agency }: { agency: 'eventomaxx' | 'ven
     createProjectFolders: false,
   });
 
-  const loadLibraries = async () => {
+  const loadLibraries = async (openLibraryId?: string) => {
     setState(prev => ({ ...prev, status: 'loading' }));
 
     try {
@@ -746,10 +773,56 @@ export function LuckyCloudFileExplorer({ agency }: { agency: 'eventomaxx' | 'ven
       const data = await response.json();
 
       if (response.ok && data.success) {
+        let libraries = data.libraries as Library[];
+
+        // Bibliotheken filtern falls Whitelist angegeben
+        if (libraryIds && libraryIds.length > 0) {
+          libraries = libraries.filter(lib => libraryIds.includes(lib.id));
+        } else if (libraryNames && libraryNames.length > 0) {
+          const lowerNames = libraryNames.map(n => n.toLowerCase());
+          // Teilübereinstimmung: Bibliotheksname enthält einen der Filternamen
+          libraries = libraries.filter(lib => {
+            const libNameLower = lib.name.toLowerCase();
+            return lowerNames.some(filterName => libNameLower.includes(filterName));
+          });
+        }
+
+        // Falls eine Standard-Bibliothek angegeben wurde, diese direkt öffnen
+        if (openLibraryId) {
+          const targetLibrary = libraries.find(lib => lib.id === openLibraryId);
+          if (targetLibrary) {
+            setState(prev => ({
+              ...prev,
+              status: 'loaded',
+              libraries,
+              currentLibrary: null,
+              currentPath: '/',
+              items: [],
+            }));
+            // Bibliothek direkt öffnen
+            loadDirectory(targetLibrary, '/');
+            return;
+          }
+        }
+
+        // Falls nur eine Bibliothek vorhanden, diese direkt öffnen
+        if (libraries.length === 1) {
+          setState(prev => ({
+            ...prev,
+            status: 'loaded',
+            libraries,
+            currentLibrary: null,
+            currentPath: '/',
+            items: [],
+          }));
+          loadDirectory(libraries[0], '/');
+          return;
+        }
+
         setState(prev => ({
           ...prev,
           status: 'loaded',
-          libraries: data.libraries,
+          libraries,
           currentLibrary: null,
           currentPath: '/',
           items: [],
@@ -769,6 +842,28 @@ export function LuckyCloudFileExplorer({ agency }: { agency: 'eventomaxx' | 'ven
       }));
     }
   };
+
+  // Automatisch laden beim Start
+  useEffect(() => {
+    if (autoLoad && !initialLoadDone) {
+      setInitialLoadDone(true);
+      loadLibraries(defaultLibraryId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLoad, defaultLibraryId]);
+
+  // Selection-Change-Callback aufrufen
+  useEffect(() => {
+    if (onSelectionChange) {
+      onSelectionChange({
+        libraries: state.libraries,
+        libraryId: state.currentLibrary?.id || null,
+        libraryName: state.currentLibrary?.name || null,
+        path: state.currentPath,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.libraries, state.currentLibrary, state.currentPath]);
 
   const loadDirectory = async (library: Library, path: string = '/') => {
     setState(prev => ({ ...prev, status: 'loading', currentLibrary: library, currentPath: path }));
@@ -1249,7 +1344,7 @@ export function LuckyCloudFileExplorer({ agency }: { agency: 'eventomaxx' | 'ven
         <Button
           variant="outline"
           size="sm"
-          onClick={loadLibraries}
+          onClick={() => loadLibraries()}
           disabled={state.status === 'loading'}
         >
           {state.status === 'loading' ? (
@@ -1257,7 +1352,7 @@ export function LuckyCloudFileExplorer({ agency }: { agency: 'eventomaxx' | 'ven
           ) : (
             <RefreshCw className="h-4 w-4" />
           )}
-          <span className="ml-2">Bibliotheken laden</span>
+          <span className="ml-2">{state.libraries.length > 0 ? 'Aktualisieren' : 'Bibliotheken laden'}</span>
         </Button>
 
         {state.currentLibrary && (
@@ -1466,7 +1561,7 @@ export function LuckyCloudFileExplorer({ agency }: { agency: 'eventomaxx' | 'ven
         </ScrollArea>
       )}
 
-      {state.status === 'idle' && (
+      {state.status === 'idle' && !autoLoad && (
         <p className="text-sm text-muted-foreground">
           Klicken Sie auf &quot;Bibliotheken laden&quot; um die Luckycloud-Bibliotheken anzuzeigen.
         </p>
