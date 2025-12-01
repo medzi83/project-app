@@ -1639,11 +1639,35 @@ export default async function DashboardPage({
       : null,
   ].filter((group): group is { key: string; title: string; items: AgentAgendaEntry[] } => group !== null);
 
-  // Get most recent project update for KPI tile
-  const mostRecentProject = await prisma.project.findFirst({
-    where: baseWhere,
-    orderBy: { updatedAt: "desc" },
-    select: { updatedAt: true },
+  // Zähle Projekte mit zu prüfendem Material (eingereichte Texte ohne Bewertung)
+  const projectsNeedingMaterialReview = await prisma.project.count({
+    where: {
+      type: "WEBSITE",
+      website: {
+        webDocumentation: {
+          OR: [
+            // Allgemeiner Text eingereicht aber nicht geprüft
+            {
+              generalTextSubmission: {
+                submittedAt: { not: null },
+                suitable: null,
+              },
+            },
+            // MenuItem-Texte eingereicht aber nicht geprüft
+            {
+              menuItems: {
+                some: {
+                  textSubmission: {
+                    submittedAt: { not: null },
+                    suitable: null,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
   });
 
   const renderAgendaEntry = (entry: AgentAgendaEntry) => {
@@ -1821,12 +1845,20 @@ export default async function DashboardPage({
           );
         })}
 
-        <div className="rounded-2xl bg-gradient-to-br from-slate-600 to-gray-700 dark:from-slate-700 dark:to-gray-800 p-5 shadow-lg">
-          <div className="text-xs uppercase tracking-wide text-white/80 dark:text-white/70 font-semibold">Letztes Projekt-Update</div>
-          <div className="mt-3 text-base font-bold text-white dark:text-gray-100 sm:text-lg">
-            {formatDate(mostRecentProject?.updatedAt)}
-          </div>
-        </div>
+        <Link
+          href="/projects?needsReview=1"
+          className={`group rounded-2xl p-5 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 ${
+            projectsNeedingMaterialReview > 0
+              ? "bg-gradient-to-br from-amber-500 to-orange-600"
+              : "bg-gradient-to-br from-slate-500 to-gray-600"
+          }`}
+        >
+          <div className="text-xs uppercase tracking-wide text-white/80 font-semibold">Material prüfen</div>
+          <div className="mt-3 text-3xl sm:text-4xl font-bold text-white">{projectsNeedingMaterialReview}</div>
+          {projectsNeedingMaterialReview > 0 && (
+            <div className="mt-2 text-xs text-white/90">Eingereichtes Material prüfen →</div>
+          )}
+        </Link>
       </section>
 
       {/* Statusuebersicht */}

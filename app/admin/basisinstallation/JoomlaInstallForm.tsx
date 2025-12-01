@@ -18,6 +18,7 @@ type Props = {
     updatedAt: Date;
   }[];
   isNewCustomer?: boolean; // Flag to indicate if customer was just created
+  preselectedProjectId?: string; // Pre-select a project when coming from project page
 };
 
 type DirectoryStatus = {
@@ -82,10 +83,11 @@ export default function JoomlaInstallForm({
   clientId,
   clientProjects,
   isNewCustomer = false,
+  preselectedProjectId = "",
 }: Props) {
   const [folderName, setFolderName] = useState("");
   const [dbPassword, setDbPassword] = useState("");
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState(preselectedProjectId);
   const [mysqlServers, setMysqlServers] = useState<FroxlorMysqlServer[]>([]);
   const [selectedMysqlServerId, setSelectedMysqlServerId] = useState<number | null>(null);
   const [installing, setInstalling] = useState(false);

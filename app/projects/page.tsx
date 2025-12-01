@@ -42,6 +42,7 @@ type Search = {
   overdue?: string;
   client?: string;
   showBeendet?: string;
+  needsReview?: string;
 };
 
 const STATUSES = ["WEBTERMIN", "MATERIAL", "UMSETZUNG", "DEMO", "ONLINE"] as const;
@@ -309,6 +310,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
     overdue: str(spRaw.overdue) ?? undefined,
     client: str(spRaw.client) ?? undefined,
     showBeendet: str(spRaw.showBeendet) ?? undefined,
+    needsReview: str(spRaw.needsReview) ?? undefined,
   };
 
   const standardSortTriggered = str(spRaw.standardSort);
@@ -406,6 +408,38 @@ export default async function ProjectsPage({ searchParams }: Props) {
       },
     });
   }
+  if (sp.needsReview === "1") {
+    const andConditions = ensureAnd();
+    andConditions.push({
+      type: "WEBSITE",
+      website: {
+        is: {
+          webDocumentation: {
+            OR: [
+              // Allgemeiner Text eingereicht aber nicht geprüft
+              {
+                generalTextSubmission: {
+                  submittedAt: { not: null },
+                  suitable: null,
+                },
+              },
+              // MenuItem-Texte eingereicht aber nicht geprüft
+              {
+                menuItems: {
+                  some: {
+                    textSubmission: {
+                      submittedAt: { not: null },
+                      suitable: null,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+  }
   if (sp.status && sp.status.length > 0) {
     const now = new Date();
     const statusFilters: Prisma.ProjectWhereInput[] = [];
@@ -493,7 +527,40 @@ export default async function ProjectsPage({ searchParams }: Props) {
   const skip = (page - 1) * pageSize;
 
   const [projects, agentsAll, agentsActive, total, favoriteClientIds] = await Promise.all([
-    prisma.project.findMany({ where, include: { client: true, website: true, agent: true }, orderBy, skip, take: pageSize }),
+    prisma.project.findMany({
+      where,
+      include: {
+        client: true,
+        website: {
+          include: {
+            webDocumentation: {
+              select: {
+                generalTextSubmission: {
+                  select: {
+                    submittedAt: true,
+                    suitable: true,
+                  },
+                },
+                menuItems: {
+                  select: {
+                    textSubmission: {
+                      select: {
+                        submittedAt: true,
+                        suitable: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        agent: true,
+      },
+      orderBy,
+      skip,
+      take: pageSize,
+    }),
     prisma.user.findMany({
       where: { role: "AGENT" },
       orderBy: { name: "asc" },
@@ -678,6 +745,25 @@ export default async function ProjectsPage({ searchParams }: Props) {
         </CardContent>
       </Card>
 
+      {sp.needsReview === "1" && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-lg">
+              i
+            </div>
+            <div>
+              <p className="font-semibold text-amber-900 dark:text-amber-200">Eingereichtes Material prüfen</p>
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                Diese Projekte haben eingereichtes Material, das noch geprüft werden muss.
+              </p>
+            </div>
+          </div>
+          <Button type="button" variant="outline" asChild className="border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/50">
+            <Link href="/projects">Filter entfernen</Link>
+          </Button>
+        </div>
+      )}
+
       {renderPagination("mt-4")}
 
       {/* Table */}
@@ -756,6 +842,19 @@ export default async function ProjectsPage({ searchParams }: Props) {
 
               const isFavoriteClient = p.clientId && favoriteClientIds.has(p.clientId);
 
+              // Prüfe ob Materialprüfung notwendig ist (eingereichte Texte ohne Bewertung)
+              const webDoc = p.website?.webDocumentation;
+              const needsMaterialReview = webDoc ? (() => {
+                // Allgemeiner Text eingereicht aber nicht geprüft
+                const generalTextNeedsReview = webDoc.generalTextSubmission?.submittedAt && webDoc.generalTextSubmission?.suitable === null;
+                // MenuItem-Texte eingereicht aber nicht geprüft
+                const menuItemTextsNeedReview = webDoc.menuItems?.some(
+                  (item: { textSubmission?: { submittedAt?: Date | null; suitable?: boolean | null } | null }) =>
+                    item.textSubmission?.submittedAt && item.textSubmission?.suitable === null
+                );
+                return generalTextNeedsReview || menuItemTextsNeedReview;
+              })() : false;
+
               const rowClasses = ["transition-colors"];
               if (isStale) rowClasses.push("bg-destructive/10", "hover:bg-destructive/20");
               else rowClasses.push("hover:bg-muted/50");
@@ -763,15 +862,25 @@ export default async function ProjectsPage({ searchParams }: Props) {
               return (
                 <ProjectRow key={p.id} rowClasses={rowClasses.join(" ")} projectId={p.id}>
                   <TableCell>
-                    <span className={
-                      statusOnline
-                        ? "inline-flex items-center px-2 py-1 rounded-md bg-green-500/30 dark:bg-green-500/40 text-green-900 dark:text-green-100 text-xs font-semibold"
-                        : isDemo
-                        ? "inline-flex items-center px-2 py-1 rounded-md bg-cyan-300/40 dark:bg-cyan-400/30 text-cyan-900 dark:text-cyan-100 text-xs font-semibold"
-                        : statusGreen
-                        ? "inline-flex items-center px-2 py-1 rounded-md bg-green-500/30 dark:bg-green-500/40 text-green-900 dark:text-green-100 text-xs font-semibold"
-                        : ""
-                    } style={isKesStatus ? { fontStyle: "italic" } : undefined}>{statusLabel}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={
+                        statusOnline
+                          ? "inline-flex items-center px-2 py-1 rounded-md bg-green-500/30 dark:bg-green-500/40 text-green-900 dark:text-green-100 text-xs font-semibold"
+                          : isDemo
+                          ? "inline-flex items-center px-2 py-1 rounded-md bg-cyan-300/40 dark:bg-cyan-400/30 text-cyan-900 dark:text-cyan-100 text-xs font-semibold"
+                          : statusGreen
+                          ? "inline-flex items-center px-2 py-1 rounded-md bg-green-500/30 dark:bg-green-500/40 text-green-900 dark:text-green-100 text-xs font-semibold"
+                          : ""
+                      } style={isKesStatus ? { fontStyle: "italic" } : undefined}>{statusLabel}</span>
+                      {needsMaterialReview && (
+                        <span
+                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-xs font-bold cursor-help"
+                          title="Materialprüfung notwendig"
+                        >
+                          i
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <div className="flex flex-col gap-1">
@@ -798,7 +907,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
                       )}
                       <span className="truncate">{p.client?.name ?? "-"}</span>
                       {p.title && (
-                        <sup className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-help flex-shrink-0 leading-none" title={p.title}>
+                        <sup className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-blue-500 dark:bg-blue-600 text-white cursor-help flex-shrink-0 leading-none font-bold" title={p.title}>
                           +
                         </sup>
                       )}
@@ -933,6 +1042,7 @@ function makeSortHref({ current, key }: { current: Search; key: string }) {
   if (current.client) p.set("client", current.client);
   if (current.overdue === "1") p.set("overdue", "1");
   if (current.showBeendet === "1") p.set("showBeendet", "1");
+  if (current.needsReview === "1") p.set("needsReview", "1");
   return `/projects?${p.toString()}`;
 }
 
@@ -950,6 +1060,7 @@ function makePageHref({ current, page }: { current: Search; page: number }) {
   if (current.client) p.set("client", current.client);
   if (current.overdue === "1") p.set("overdue", "1");
   if (current.showBeendet === "1") p.set("showBeendet", "1");
+  if (current.needsReview === "1") p.set("needsReview", "1");
   p.set("page", String(page));
   return `/projects?${p.toString()}`;
 }
@@ -967,6 +1078,7 @@ function makePageSizeHref({ current, size }: { current: Search; size: number }) 
   if (current.client) p.set("client", current.client);
   if (current.overdue === "1") p.set("overdue", "1");
   if (current.showBeendet === "1") p.set("showBeendet", "1");
+  if (current.needsReview === "1") p.set("needsReview", "1");
   p.set("ps", String(size));
   p.set("page", "1");
   return `/projects?${p.toString()}`;
@@ -986,6 +1098,7 @@ function makeShowBeendetHref({ current, show }: { current: Search; show: boolean
   if (current.scope) p.set("scope", current.scope);
   if (current.client) p.set("client", current.client);
   if (current.overdue === "1") p.set("overdue", "1");
+  if (current.needsReview === "1") p.set("needsReview", "1");
   if (show) p.set("showBeendet", "1");
   return `/projects?${p.toString()}`;
 }

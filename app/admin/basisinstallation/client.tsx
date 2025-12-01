@@ -30,13 +30,15 @@ type Props = {
   clients: Client[];
   servers: Server[];
   preselectedClientId?: string;
+  preselectedProjectId?: string;
 };
 
 type Step = 1 | 2 | 3;
 
-export default function BasisinstallationClient({ clients, servers, preselectedClientId }: Props) {
+export default function BasisinstallationClient({ clients, servers, preselectedClientId, preselectedProjectId }: Props) {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [selectedClient, setSelectedClient] = useState(preselectedClientId || "");
+  const [selectedProject, setSelectedProject] = useState(preselectedProjectId || "");
   const [selectedServer, setSelectedServer] = useState("");
   const [isNewCustomer, setIsNewCustomer] = useState(false); // Track wenn User neuen Kunden anlegen will
   const [connectionStatus, setConnectionStatus] = useState<{
@@ -685,6 +687,7 @@ export default function BasisinstallationClient({ clients, servers, preselectedC
                   clientId={selectedClient}
                   clientProjects={client?.projects || []}
                   isNewCustomer={isNewlyCreatedInFroxlor}
+                  preselectedProjectId={selectedProject}
                 />
               )}
 

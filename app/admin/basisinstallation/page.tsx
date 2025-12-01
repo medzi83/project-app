@@ -14,6 +14,7 @@ export default async function BasisinstallationPage({ searchParams }: Props) {
 
   const params = await searchParams;
   const preselectedClientId = typeof params.clientId === "string" ? params.clientId : undefined;
+  const preselectedProjectId = typeof params.projectId === "string" ? params.projectId : undefined;
 
   const clients = await prisma.client.findMany({
     orderBy: { name: "asc" },
@@ -50,5 +51,5 @@ export default async function BasisinstallationPage({ searchParams }: Props) {
     },
   });
 
-  return <BasisinstallationClient clients={clients} servers={servers} preselectedClientId={preselectedClientId} />;
+  return <BasisinstallationClient clients={clients} servers={servers} preselectedClientId={preselectedClientId} preselectedProjectId={preselectedProjectId} />;
 }

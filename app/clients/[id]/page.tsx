@@ -862,18 +862,48 @@ export default async function ClientDetailPage({ params }: Props) {
                               </div>
                             )}
                           </div>
-                          <a
-                            href={installation.installUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-3 inline-flex items-center gap-1 px-3 py-1.5 rounded bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800 transition text-xs font-medium whitespace-nowrap"
-                          >
-                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                            Öffnen
-                          </a>
+                          <div className="ml-3 flex items-center gap-2">
+                            <a
+                              href={installation.installUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-700 dark:hover:bg-blue-800 transition text-xs font-medium whitespace-nowrap"
+                            >
+                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                              Öffnen
+                            </a>
+                            {isAdmin && (
+                              <DeleteInstallationButton
+                                installationId={installation.id}
+                                installationName={`${installation.standardDomain}/${installation.folderName}`}
+                              />
+                            )}
+                          </div>
                         </div>
+                        {/* Project Assignment */}
+                        {isAdmin && (
+                          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                            <InstallationProjectAssignment
+                              installationId={installation.id}
+                              clientProjects={client.projects.map(p => ({
+                                id: p.id,
+                                title: p.title,
+                                type: p.type,
+                                status: p.status,
+                                website: p.website ? {
+                                  pStatus: p.website.pStatus,
+                                  webDate: p.website.webDate,
+                                  demoDate: p.website.demoDate,
+                                  onlineDate: p.website.onlineDate,
+                                  materialStatus: p.website.materialStatus,
+                                } : null,
+                              }))}
+                              currentProjectId={installation.project?.id}
+                            />
+                          </div>
+                        )}
                       </div>
                     );
                   })}
