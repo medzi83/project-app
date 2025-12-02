@@ -890,6 +890,42 @@ export default async function ProjectDetail({ params }: Props) {
             (webDoku.materialLogoNeeded ? 1 : 0) +
             (webDoku.materialNotesNeedsImages ? 1 : 0);
 
+          // Bilder-Prüfstatus
+          let imagesComplete = 0;
+          let imagesNotReviewed = 0;
+
+          for (const item of menuItemsNeedingImages) {
+            if (item.imagesComplete === true) {
+              imagesComplete++;
+            } else if (item.imagesComplete === false) {
+              // Explizit als unvollständig markiert (auch wenn default false ist, schauen wir auf explizite Prüfung)
+              // Da imagesComplete standardmäßig false ist, zählen wir nur als "incomplete" wenn wirklich geprüft wurde
+              // Wir können das nicht direkt unterscheiden, daher: false = ungeprüft ODER unvollständig
+              // Besser: wir prüfen nur auf true
+              imagesNotReviewed++;
+            }
+          }
+
+          // Logo-Review
+          if (webDoku.materialLogoNeeded) {
+            if (webDoku.logoImagesComplete === true) {
+              imagesComplete++;
+            } else {
+              imagesNotReviewed++;
+            }
+          }
+
+          // General/Sonstiges-Review
+          if (webDoku.materialNotesNeedsImages) {
+            if (webDoku.generalImagesComplete === true) {
+              imagesComplete++;
+            } else {
+              imagesNotReviewed++;
+            }
+          }
+
+          const allImagesComplete = totalImagesNeeded > 0 && imagesComplete === totalImagesNeeded;
+
           // Texte-Statistik
           const menuItemsNeedingTexts = menuItems.filter((m) => m.needsTexts);
           const textsSubmitted = menuItemsNeedingTexts.filter(
@@ -949,22 +985,65 @@ export default async function ProjectDetail({ params }: Props) {
               <div className="p-6 space-y-4">
                 {/* Bilder-Status */}
                 {totalImagesNeeded > 0 && (
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        allImagesComplete
+                          ? "bg-green-100 dark:bg-green-900/30"
+                          : "bg-blue-100 dark:bg-blue-900/30"
+                      }`}>
+                        <svg className={`w-5 h-5 ${
+                          allImagesComplete
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-blue-600 dark:text-blue-400"
+                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">Bilder</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {allImagesComplete
+                            ? `Alle ${imagesComplete} ${imagesComplete === 1 ? "Bereich" : "Bereiche"} vollständig`
+                            : `${imagesComplete} von ${totalImagesNeeded} ${totalImagesNeeded === 1 ? "Bereich" : "Bereichen"} vollständig`
+                          }
+                          {webDoku.materialLogoNeeded && !allImagesComplete && <span className="ml-1">(inkl. Logo)</span>}
+                        </p>
+                      </div>
+                      <Link
+                        href={`/projects/${project.id}/material-dokumente`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                          allImagesComplete
+                            ? "bg-green-600 text-white hover:bg-green-700"
+                            : "bg-blue-600 text-white hover:bg-blue-700"
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Anzeigen
+                      </Link>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Bilder</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {totalImagesNeeded} {totalImagesNeeded === 1 ? "Bereich benötigt" : "Bereiche benötigen"} Bilder
-                        {webDoku.materialLogoNeeded && <span className="ml-1">(inkl. Logo)</span>}
-                      </p>
-                    </div>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-700">
-                      Offen
-                    </span>
+                    {/* Prüfstatus für Bilder */}
+                    {(imagesComplete > 0 || imagesNotReviewed > 0) && !allImagesComplete && (
+                      <div className="ml-[52px]">
+                        <div className="flex items-center gap-2 text-xs">
+                          {imagesComplete > 0 && (
+                            <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
+                              <span className="w-2 h-2 rounded-full bg-green-500" />
+                              {imagesComplete} vollständig
+                            </span>
+                          )}
+                          {imagesNotReviewed > 0 && (
+                            <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                              <span className="w-2 h-2 rounded-full bg-blue-500" />
+                              {imagesNotReviewed} offen
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1026,7 +1105,7 @@ export default async function ProjectDetail({ params }: Props) {
                           {textsPending > 0 && (
                             <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
                               <span className="w-2 h-2 rounded-full bg-blue-500" />
-                              {textsPending} offen
+                              {textsPending} zu prüfen
                             </span>
                           )}
                           {textsRejected > 0 && (

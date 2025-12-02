@@ -295,7 +295,19 @@ export async function uploadFile(
     throw new Error(`Datei konnte nicht hochgeladen werden: ${response.status} - ${text}`);
   }
 
-  return response.json();
+  // Seafile gibt bei erfolgreichem Upload einen Text mit der Datei-ID zurück (nicht JSON)
+  const responseText = await response.text();
+  // Die Antwort ist z.B. "\"abc123\"" oder nur "abc123"
+  const fileId = responseText.replace(/^"|"$/g, '').trim();
+
+  // Datei-Größe aus dem Blob ermitteln
+  const fileSize = blob instanceof Blob ? blob.size : (file as ArrayBuffer).byteLength;
+
+  return {
+    name: filename,
+    id: fileId,
+    size: fileSize,
+  };
 }
 
 /**

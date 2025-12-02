@@ -957,13 +957,17 @@ export async function revokeWebDocumentationRelease(projectId: string) {
     return { success: false, error: "Webdokumentation nicht gefunden" };
   }
 
-  // Freigabe zurückziehen
+  // Freigabe zurückziehen - auch Kundenbestätigung zurücksetzen
   await prisma.webDocumentation.update({
     where: { projectId },
     data: {
       releasedAt: null,
       releasedByUserId: null,
       releasedByName: null,
+      // Kundenbestätigung ebenfalls zurücksetzen
+      confirmedAt: null,
+      confirmedByName: null,
+      confirmedByIp: null,
     },
   });
 

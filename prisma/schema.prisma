@@ -267,6 +267,25 @@ model WebDocumentation {
   materialNotesNeedsTexts  Boolean?                // Allgemeines Material: Texte/Stichpunkte benötigt
   materialDeadline         DateTime?               // Frist für Materialeinsendung
 
+  // Bilder-Status für Logo (vom Kunden als vollständig markiert)
+  logoImagesSubmittedAt    DateTime?               // Zeitpunkt der Markierung "Logo vollständig"
+  logoImagesSubmittedByName String?                // Name des Kunden der markiert hat
+  // Bilder-Status für Logo (vom Agenten geprüft)
+  logoImagesReviewedAt     DateTime?               // Zeitpunkt der Prüfung durch Agenten
+  logoImagesReviewedById   String?                 // ID des Agenten der geprüft hat
+  logoImagesReviewedByName String?                 // Name des Agenten
+  logoImagesComplete       Boolean?                // Vom Agenten als vollständig markiert
+  logoImagesAgentComment   String?                 // Kommentar/Hinweis des Agenten an den Kunden
+  // Bilder-Status für Sonstiges/Allgemeines Material (vom Kunden als vollständig markiert)
+  generalImagesSubmittedAt DateTime?               // Zeitpunkt der Markierung "Sonstige Bilder vollständig"
+  generalImagesSubmittedByName String?             // Name des Kunden der markiert hat
+  // Bilder-Status für Sonstiges/Allgemeines (vom Agenten geprüft)
+  generalImagesReviewedAt     DateTime?            // Zeitpunkt der Prüfung durch Agenten
+  generalImagesReviewedById   String?              // ID des Agenten der geprüft hat
+  generalImagesReviewedByName String?              // Name des Agenten
+  generalImagesComplete       Boolean?             // Vom Agenten als vollständig markiert
+  generalImagesAgentComment   String?              // Kommentar/Hinweis des Agenten an den Kunden
+
   // Vom Kunden eingereichte Texte für allgemeines Material
   generalTextSubmission    MaterialGeneralSubmission?
 
@@ -386,6 +405,15 @@ model WebDocuMenuItem {
   needsImages          Boolean           @default(false) // Bilder nachzureichend
   needsTexts           Boolean           @default(false) // Texte/Stichpunkte nachzureichend
   materialNotes        String?           // Konkrete Material-Hinweise (z.B. welche Bilder/Texte benötigt werden)
+  // Bilder-Status (vom Kunden als vollständig markiert)
+  imagesSubmittedAt    DateTime?         // Zeitpunkt der Markierung als "Bilder vollständig"
+  imagesSubmittedByName String?          // Name des Kunden der markiert hat
+  // Bilder-Status (vom Agenten geprüft)
+  imagesReviewedAt     DateTime?         // Zeitpunkt der Prüfung durch Agenten
+  imagesReviewedById   String?           // ID des Agenten der geprüft hat
+  imagesReviewedByName String?           // Name des Agenten
+  imagesComplete       Boolean           @default(false) // Vom Agenten als vollständig markiert
+  imagesAgentComment   String?           // Kommentar/Hinweis des Agenten an den Kunden
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
 
