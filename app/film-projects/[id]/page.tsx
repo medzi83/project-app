@@ -558,10 +558,7 @@ export default async function FilmProjectDetailPage({ params }: Props) {
                 display={film.status ? STATUS_LABELS[film.status] : "-"}
                 value={film.status ?? undefined}
                 options={[
-                  { value: "AKTIV", label: "Aktiv" },
                   { value: "MMW", label: "Muss mal wieder" },
-                  { value: "WARTEN", label: "Warten auf Kunde" },
-                  { value: "VERZICHT", label: "Verzicht" },
                   { value: "BEENDET", label: "Beendet" },
                 ]}
                 canEdit={canEdit}

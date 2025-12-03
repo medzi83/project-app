@@ -58,11 +58,8 @@ const PRIORITY_LABELS: Record<FilmPriority, string> = {
   PRIO_2: "Prio 2",
 };
 
-const P_STATUS_LABELS: Record<FilmProjectStatus, string> = {
-  AKTIV: "aktiv",
+const P_STATUS_LABELS: Partial<Record<FilmProjectStatus, string>> = {
   BEENDET: "beendet",
-  WARTEN: "warten",
-  VERZICHT: "verzicht",
   MMW: "MMW",
 };
 
@@ -212,7 +209,7 @@ const PRIORITY_OPTIONS = (Object.keys(PRIORITY_LABELS) as FilmPriority[]).map((v
 
 const P_STATUS_OPTIONS = (Object.keys(P_STATUS_LABELS) as FilmProjectStatus[]).map((value) => ({
   value,
-  label: P_STATUS_LABELS[value],
+  label: P_STATUS_LABELS[value]!,
 }));
 
 type FilmProjectRow = {

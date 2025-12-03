@@ -201,8 +201,8 @@ export default function InlineCell({
         >
           {(options ?? [
             { value: "unknown", label: "(nicht gesetzt)" },
-            { value: "yes", label: "Ja" },
-            { value: "no", label: "Nein" },
+            { value: "yes", label: "ja" },
+            { value: "no", label: "nein" },
           ]).map((o, index) => (
             <option key={o.value ? `${o.value}-${index}` : `none-${index}`} value={o.value}>
               {o.label}

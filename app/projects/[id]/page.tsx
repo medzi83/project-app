@@ -40,7 +40,7 @@ const fmtDateTime = (d?: Date | string | null) => {
   }
 };
 const mm = (n?: number | null) => (n ? `${Math.floor(n / 60)}h ${n % 60}m` : "-");
-const yesNo = (v?: boolean | null) => (v === true ? "Ja" : v === false ? "Nein" : "-");
+const yesNo = (v?: boolean | null) => (v === true ? "ja" : v === false ? "nein" : "-");
 const linkify = (u?: string | null) => {
   if (!u) return "-";
   const hasProto = /^https?:\/\//i.test(u);
@@ -591,7 +591,7 @@ export default async function ProjectDetail({ params }: Props) {
               <div>
                 <dt className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Relaunch</dt>
                 <dd className="text-sm text-gray-900 dark:text-gray-100">
-                  <InlineCell target="website" id={project.id} name="isRelaunch" type="tri" display={website?.isRelaunch ? "Ja" : "Nein"} value={website?.isRelaunch ?? false} canEdit={canEdit} />
+                  <InlineCell target="website" id={project.id} name="isRelaunch" type="tri" display={website?.isRelaunch ? "ja" : "nein"} value={website?.isRelaunch ?? false} canEdit={canEdit} />
                 </dd>
               </div>
             </div>
@@ -660,7 +660,7 @@ export default async function ProjectDetail({ params }: Props) {
               <div>
                 <dt className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Barrierefrei</dt>
                 <dd className="text-sm text-gray-900 dark:text-gray-100">
-                  <InlineCell target="website" id={project.id} name="accessible" type="tri" display={website?.accessible == null ? "-" : website?.accessible ? "Ja" : "Nein"} value={website?.accessible ?? null} canEdit={canEdit} />
+                  <InlineCell target="website" id={project.id} name="accessible" type="tri" display={website?.accessible == null ? "-" : website?.accessible ? "ja" : "nein"} value={website?.accessible ?? null} canEdit={canEdit} />
                 </dd>
               </div>
             </div>
