@@ -11,8 +11,10 @@ import {
   isAgencyConfigured,
   listDirectory,
   getFileComments,
+  addFileComment,
   moveFile,
   type LuckyCloudAgency,
+  type LuckyCloudComment,
 } from '@/lib/luckycloud';
 
 type Agency = 'eventomaxx' | 'vendoweb';
@@ -360,8 +362,8 @@ export async function moveUnsuitableImagesToSubfolder(
 
         if (files.length === 0) continue;
 
-        // Dateien mit "NICHT GEEIGNET" Kommentar finden
-        const unsuitableFiles: string[] = [];
+        // Dateien mit "NICHT GEEIGNET" Kommentar finden und Kommentare speichern
+        const unsuitableFiles: { fileName: string; comments: LuckyCloudComment[] }[] = [];
 
         for (const file of files) {
           try {
@@ -373,7 +375,8 @@ export async function moveUnsuitableImagesToSubfolder(
             );
 
             if (hasUnsuitableComment) {
-              unsuitableFiles.push(file.name);
+              // Datei und alle Kommentare speichern für späteres Wiederherstellen
+              unsuitableFiles.push({ fileName: file.name, comments });
             }
           } catch {
             // Fehler bei einzelnen Dateien ignorieren
@@ -405,15 +408,29 @@ export async function moveUnsuitableImagesToSubfolder(
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
 
-        // Ungeeignete Dateien verschieben
-        for (const fileName of unsuitableFiles) {
+        // Ungeeignete Dateien verschieben und Kommentare wiederherstellen
+        for (const { fileName, comments } of unsuitableFiles) {
           const srcPath = `${folderPath}/${fileName}`;
+          const dstPath = `${unsuitableFolderPath}/${fileName}`;
           try {
             await moveFile(agencyKey, libraryId, srcPath, unsuitableFolderPath);
             movedFiles.push({
               from: srcPath,
-              to: `${unsuitableFolderPath}/${fileName}`,
+              to: dstPath,
             });
+
+            // Kommentare am neuen Pfad wiederherstellen
+            // Kurze Verzögerung damit die API die Datei registriert hat
+            await new Promise((resolve) => setTimeout(resolve, 200));
+
+            for (const comment of comments) {
+              try {
+                await addFileComment(agencyKey, libraryId, dstPath, comment.comment);
+              } catch (commentError) {
+                // Fehler beim Kommentar-Hinzufügen loggen aber nicht als Fehler behandeln
+                console.warn(`Kommentar konnte nicht wiederhergestellt werden für ${dstPath}:`, commentError);
+              }
+            }
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             errors.push(`Fehler beim Verschieben von "${folderName}/${fileName}": ${errorMessage}`);
