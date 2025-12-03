@@ -345,6 +345,49 @@ export async function getDownloadLink(
 }
 
 /**
+ * Verschiebt eine Datei in ein anderes Verzeichnis
+ */
+export async function moveFile(
+  agency: LuckyCloudAgency,
+  libraryId: string,
+  srcFilePath: string,
+  dstDir: string,
+  dstLibraryId?: string
+): Promise<void> {
+  const config = getAgencyConfig(agency);
+  if (!config) {
+    throw new Error(`LuckyCloud ist für Agentur "${agency}" nicht konfiguriert`);
+  }
+
+  const token = await getAuthToken(agency);
+  const url = new URL(`${config.url}/api2/repos/${libraryId}/file/`);
+  url.searchParams.set('p', srcFilePath);
+
+  const body: Record<string, string> = {
+    operation: 'move',
+    dst_repo: dstLibraryId || libraryId, // dst_repo ist immer erforderlich
+    dst_dir: dstDir,
+  };
+
+  const response = await fetch(url.toString(), {
+    method: 'POST',
+    headers: {
+      Authorization: `Token ${token}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams(body),
+    redirect: 'manual', // Wichtig: 301 nicht automatisch folgen
+  });
+
+  // Seafile API gibt 301 MOVED PERMANENTLY bei Erfolg zurück
+  // oder 200/201 bei manchen Implementierungen
+  if (response.status !== 301 && response.status !== 200 && response.status !== 201) {
+    const responseText = await response.text();
+    throw new Error(`Datei konnte nicht verschoben werden: ${response.status} - ${responseText}`);
+  }
+}
+
+/**
  * Löscht eine Datei
  */
 export async function deleteFile(

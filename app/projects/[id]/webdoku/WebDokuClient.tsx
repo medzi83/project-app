@@ -35,8 +35,6 @@ import {
   updateFormFields,
   releaseWebDocumentationForCustomer,
   revokeWebDocumentationRelease,
-  updateFeedbackAcknowledged,
-  updateInternalNote,
 } from "./actions";
 // Typ für Formularfelder (wird nach Migration aus @prisma/client importiert)
 type WebDocuFormFieldType =
@@ -103,6 +101,8 @@ type WebDocumentation = {
   // Schritt 4: Design & Vorgaben
   hasLogo: boolean | null;
   hasCIDefined: boolean | null;
+  ciColorCode: string | null;
+  ciFontFamily: string | null;
   colorOrientation: string | null;
   colorCodes: string | null;
   topWebsite: string | null;
@@ -153,25 +153,13 @@ type WebDocumentation = {
   confirmedAt: string | null; // ISO-String
   confirmedByName: string | null;
   confirmedByIp: string | null;
-  // Kundenfeedback
-  feedback: WebDocuFeedback | null;
+  // Kundenablehnung
+  rejectedAt: string | null; // ISO-String
+  rejectedByName: string | null;
+  rejectedByIp: string | null;
+  rejectedSteps: number[];
   // Interner Vermerk
   internalNote: string | null;
-};
-
-type WebDocuFeedback = {
-  id: string;
-  generalComment: string | null;
-  focusComment: string | null;
-  structureComment: string | null;
-  designComment: string | null;
-  formsComment: string | null;
-  focusAcknowledged: boolean;
-  structureAcknowledged: boolean;
-  designAcknowledged: boolean;
-  formsAcknowledged: boolean;
-  createdAt: string;
-  createdByName: string | null;
 };
 
 type Client = {
@@ -260,40 +248,6 @@ function isStepSaved(step: number, webDoc: WebDocumentation): boolean {
   }
 }
 
-// Prüft ob ein Step Kundenfeedback hat
-function stepHasFeedback(step: number, feedback: WebDocuFeedback | null): boolean {
-  if (!feedback) return false;
-  switch (step) {
-    case 2:
-      return !!feedback.focusComment?.trim();
-    case 3:
-      return !!feedback.structureComment?.trim();
-    case 4:
-      return !!feedback.designComment?.trim();
-    case 5:
-      return !!feedback.formsComment?.trim();
-    default:
-      return false;
-  }
-}
-
-// Prüft ob das Feedback eines Steps als "wird beachtet" markiert ist
-function stepFeedbackAcknowledged(step: number, feedback: WebDocuFeedback | null): boolean {
-  if (!feedback) return false;
-  switch (step) {
-    case 2:
-      return !!feedback.focusComment?.trim() && feedback.focusAcknowledged;
-    case 3:
-      return !!feedback.structureComment?.trim() && feedback.structureAcknowledged;
-    case 4:
-      return !!feedback.designComment?.trim() && feedback.designAcknowledged;
-    case 5:
-      return !!feedback.formsComment?.trim() && feedback.formsAcknowledged;
-    default:
-      return false;
-  }
-}
-
 const STEPS = [
   { number: 1, title: "Allgemeines", shortTitle: "Allg." },
   { number: 2, title: "Unternehmensschwerpunkte", shortTitle: "Schwerpunkte" },
@@ -324,62 +278,6 @@ function getDomainStatusOptions(agency: string | null) {
     { value: "EXISTS_TRANSFER", label: `Vorhanden (Domain wird zu ${agencyName} transferiert)` },
     { value: "AT_AGENCY", label: `Schon bei ${agencyName}` },
   ];
-}
-
-// Feedback-Badge Komponente für die Anzeige von Kundenfeedback in den Schritten
-function FeedbackBadge({
-  feedback,
-  commentKey,
-  acknowledgedKey,
-  onAcknowledgeChange,
-}: {
-  feedback: WebDocuFeedback | null;
-  commentKey: "focusComment" | "structureComment" | "designComment" | "formsComment";
-  acknowledgedKey: "focusAcknowledged" | "structureAcknowledged" | "designAcknowledged" | "formsAcknowledged";
-  onAcknowledgeChange: (value: boolean) => void;
-}) {
-  if (!feedback || !feedback[commentKey]) return null;
-
-  const comment = feedback[commentKey];
-  const isAcknowledged = feedback[acknowledgedKey];
-
-  return (
-    <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
-      <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 mt-0.5">
-          <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-          </svg>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <h4 className="font-medium text-amber-900 dark:text-amber-100">
-              Kundenfeedback
-              {feedback.createdByName && (
-                <span className="ml-2 text-sm font-normal text-amber-700 dark:text-amber-300">
-                  von {feedback.createdByName}
-                </span>
-              )}
-            </h4>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isAcknowledged}
-                onChange={(e) => onAcknowledgeChange(e.target.checked)}
-                className="w-4 h-4 rounded border-amber-300 text-green-600 focus:ring-green-500"
-              />
-              <span className={`text-sm font-medium ${isAcknowledged ? "text-green-700 dark:text-green-400" : "text-amber-700 dark:text-amber-300"}`}>
-                wird beachtet
-              </span>
-            </label>
-          </div>
-          <p className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">
-            {comment}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function WebDokuClient({ projectId, webDoc, client, projectDomain, hasTextit, isAdmin }: Props) {
@@ -450,6 +348,8 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
   const [step4Data, setStep4Data] = useState({
     hasLogo: webDoc.hasLogo,
     hasCIDefined: webDoc.hasCIDefined,
+    ciColorCode: webDoc.ciColorCode || "",
+    ciFontFamily: webDoc.ciFontFamily || "",
     colorOrientation: webDoc.colorOrientation,
     colorCodes: webDoc.colorCodes || "",
     topWebsite: webDoc.topWebsite || "",
@@ -549,27 +449,10 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
     return map;
   });
 
-  // State für Feedback
-  const [feedbackData, setFeedbackData] = useState<WebDocuFeedback | null>(webDoc.feedback);
-
-  // State für internen Vermerk
-  const [internalNoteText, setInternalNoteText] = useState(webDoc.internalNote || "");
-  const [isSavingNote, setIsSavingNote] = useState(false);
-
   // Update forms wenn webDoc sich ändert
   useEffect(() => {
     setForms(webDoc.forms);
   }, [webDoc.forms]);
-
-  // Update feedback wenn webDoc sich ändert
-  useEffect(() => {
-    setFeedbackData(webDoc.feedback);
-  }, [webDoc.feedback]);
-
-  // Update internal note wenn webDoc sich ändert
-  useEffect(() => {
-    setInternalNoteText(webDoc.internalNote || "");
-  }, [webDoc.internalNote]);
 
   // Update menuItemMaterials wenn menuItems sich ändern
   useEffect(() => {
@@ -579,40 +462,6 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
     });
     setMenuItemMaterials(map);
   }, [menuItems]);
-
-  // Handler für Feedback-Acknowledged Checkbox
-  const handleFeedbackAcknowledge = async (
-    field: "focusAcknowledged" | "structureAcknowledged" | "designAcknowledged" | "formsAcknowledged",
-    value: boolean
-  ) => {
-    if (!feedbackData) return;
-
-    // Optimistisches Update
-    setFeedbackData((prev) => prev ? { ...prev, [field]: value } : null);
-
-    try {
-      await updateFeedbackAcknowledged(feedbackData.id, field, value);
-    } catch (error) {
-      console.error("Fehler beim Aktualisieren des Feedback-Status:", error);
-      // Rollback bei Fehler
-      setFeedbackData((prev) => prev ? { ...prev, [field]: !value } : null);
-    }
-  };
-
-  // Handler für internen Vermerk speichern
-  const handleSaveInternalNote = async () => {
-    setIsSavingNote(true);
-    try {
-      await updateInternalNote(projectId, internalNoteText || null);
-      setSaveMessage({ type: "success", text: "Interner Vermerk gespeichert!" });
-      setTimeout(() => setSaveMessage(null), 3000);
-    } catch (error) {
-      console.error("Fehler beim Speichern des internen Vermerks:", error);
-      setSaveMessage({ type: "error", text: "Fehler beim Speichern" });
-    } finally {
-      setIsSavingNote(false);
-    }
-  };
 
   // Speichern-Handler für Schritt 1
   const handleSaveStep1 = async (formData: FormData) => {
@@ -686,6 +535,8 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
         projectId,
         hasLogo: step4Data.hasLogo,
         hasCIDefined: step4Data.hasCIDefined,
+        ciColorCode: step4Data.ciColorCode || null,
+        ciFontFamily: step4Data.ciFontFamily || null,
         colorOrientation: step4Data.colorOrientation as "LOGO" | "PRINT" | "CI_SHEET" | "WEBSITE" | null,
         colorCodes: step4Data.colorCodes || null,
         topWebsite: step4Data.topWebsite || null,
@@ -714,14 +565,15 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
     }
   };
 
-  // Speichern-Handler für Schritt 6
+  // Speichern-Handler für Schritt 6 ("Kunde wurde informiert")
   const handleSaveStep6 = async () => {
     setIsSaving(true);
     setSaveMessage(null);
     try {
+      // imprintFromWebsite wird auf false gesetzt als Marker, dass der Kunde informiert wurde
       const result = await updateWebDocumentationStep6({
         projectId,
-        imprintFromWebsite: step6Data.imprintFromWebsite,
+        imprintFromWebsite: false,
         imprintAddress: step6Data.imprintAddress || null,
         imprintLegalForm: step6Data.imprintLegalForm || null,
         imprintOwner: step6Data.imprintOwner || null,
@@ -742,7 +594,9 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
         imprintHasPrivacyOfficer: step6Data.imprintHasPrivacyOfficer,
       });
       if (result.success) {
-        setSaveMessage({ type: "success", text: "Gespeichert!" });
+        // Lokalen State aktualisieren damit isStepSaved(6) true liefert
+        setStep6Data((prev) => ({ ...prev, imprintFromWebsite: false }));
+        setSaveMessage({ type: "success", text: "Bestätigt!" });
         setSavedSteps((prev) => new Set(prev).add(6));
         setTimeout(() => setSaveMessage(null), 3000);
       } else {
@@ -801,6 +655,13 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
       setIsSaving(false);
     }
   };
+
+  // ===== Validierung Schritt 5: Formulare =====
+  // Schritt 5 ist vollständig wenn:
+  // - "Kein Formular gewünscht" aktiviert ist ODER
+  // - Formularfelder gespeichert wurden (savedSteps enthält 5) UND alle Formulare eine Empfänger-E-Mail haben
+  const allFormsHaveEmail = forms.length === 0 || forms.every((f) => f.recipientEmail && f.recipientEmail.trim() !== "");
+  const isStep5Complete = noFormsRequired || (savedSteps.has(5) && allFormsHaveEmail);
 
   // ===== Handler für Schritt 3: Menüpunkte =====
 
@@ -1017,13 +878,19 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
     setIsAddingForm(true);
     try {
       const result = await createForm(projectId, newFormName.trim());
-      if (result.success) {
+      if (result.success && result.form) {
+        // Lokalen State aktualisieren
+        setForms((prev) => [...prev, {
+          id: result.form.id,
+          name: result.form.name,
+          recipientEmail: result.form.recipientEmail,
+          sortOrder: result.form.sortOrder,
+          fields: [],
+        }]);
         setNewFormName("");
         setSavedSteps((prev) => new Set(prev).add(5));
         // Neues Formular expandieren
-        if (result.form) {
-          setExpandedFormId(result.form.id);
-        }
+        setExpandedFormId(result.form.id);
       }
     } catch (error) {
       console.error("Fehler beim Erstellen des Formulars:", error);
@@ -1076,6 +943,14 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
     selectedFields: { type: WebDocuFormFieldType; isRequired: boolean }[],
     customFields: { type: WebDocuFormFieldType; label: string; isRequired: boolean }[]
   ) => {
+    // Prüfen ob das Formular eine Empfänger-E-Mail hat
+    const form = forms.find((f) => f.id === formId);
+    if (!form?.recipientEmail || form.recipientEmail.trim() === "") {
+      setSaveMessage({ type: "error", text: "Bitte zuerst eine Empfänger-E-Mail eingeben!" });
+      setTimeout(() => setSaveMessage(null), 5000);
+      return;
+    }
+
     setIsSaving(true);
     try {
       const fields = [
@@ -1144,6 +1019,13 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     </svg>
                     Vom Kunden bestätigt
                   </span>
+                ) : webDoc.rejectedAt ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Vom Kunden abgelehnt
+                  </span>
                 ) : releaseData.releasedAt ? (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1167,8 +1049,58 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
           </div>
         </div>
 
+        {/* Ablehnung Banner - wenn vom Kunden abgelehnt */}
+        {webDoc.rejectedAt && (
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-red-800 dark:text-red-200">
+                  Vom Kunden abgelehnt
+                </h3>
+                <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+                  Der Kunde hat Änderungswünsche und bittet um Rückmeldung.
+                  {webDoc.rejectedByName && (
+                    <span className="ml-1">
+                      Abgelehnt von {webDoc.rejectedByName} am {new Date(webDoc.rejectedAt).toLocaleDateString("de-DE")} um {new Date(webDoc.rejectedAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr.
+                    </span>
+                  )}
+                </p>
+                {webDoc.rejectedSteps.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">Bereiche mit Änderungswunsch:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {webDoc.rejectedSteps.sort((a, b) => a - b).map(stepNum => {
+                        const stepInfo = STEPS.find(s => s.number === stepNum);
+                        return (
+                          <button
+                            key={stepNum}
+                            type="button"
+                            onClick={() => setCurrentStep(stepNum)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors cursor-pointer"
+                          >
+                            <span className="font-semibold">{stepNum}.</span>
+                            <span>{stepInfo?.title || `Schritt ${stepNum}`}</span>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Locked Banner - wenn Webdoku bereits an Kunden übermittelt */}
-        {isLocked && (
+        {isLocked && !webDoc.rejectedAt && (
           <div className="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-4">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
@@ -1205,16 +1137,12 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                   active={currentStep === step.number}
                   saved={savedSteps.has(step.number)}
                   disabled={isDisabled}
-                  hasFeedback={stepHasFeedback(step.number, feedbackData)}
-                  feedbackAcknowledged={stepFeedbackAcknowledged(step.number, feedbackData)}
                   onClick={() => setCurrentStep(step.number)}
                 />
                 {index < STEPS.length - 1 && (
                   <div
                     className={`h-1 w-6 md:w-12 mx-1 ${
-                      stepHasFeedback(step.number, feedbackData) && !stepFeedbackAcknowledged(step.number, feedbackData) && savedSteps.has(step.number)
-                        ? "bg-amber-500"
-                        : savedSteps.has(step.number)
+                      savedSteps.has(step.number)
                         ? "bg-green-500"
                         : "bg-gray-300 dark:bg-gray-700"
                     }`}
@@ -1630,14 +1558,6 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
           {currentStep === 2 && (
             <StepContent title="Schritt 2: Unternehmensschwerpunkte">
               <div className="space-y-6">
-                {/* Kundenfeedback (falls vorhanden) */}
-                <FeedbackBadge
-                  feedback={feedbackData}
-                  commentKey="focusComment"
-                  acknowledgedKey="focusAcknowledged"
-                  onAcknowledgeChange={(value) => handleFeedbackAcknowledge("focusAcknowledged", value)}
-                />
-
                 {/* Tipps Box */}
                 <div className="rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 p-4">
                   <div className="flex items-start gap-3">
@@ -1744,14 +1664,6 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
           {currentStep === 3 && (
             <StepContent title="Schritt 3: Websiteaufbau">
               <div className="space-y-6">
-                {/* Kundenfeedback (falls vorhanden) */}
-                <FeedbackBadge
-                  feedback={feedbackData}
-                  commentKey="structureComment"
-                  acknowledgedKey="structureAcknowledged"
-                  onAcknowledgeChange={(value) => handleFeedbackAcknowledge("structureAcknowledged", value)}
-                />
-
                 {/* Info Box */}
                 <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4">
                   <div className="flex items-start gap-3">
@@ -2449,14 +2361,6 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
           {currentStep === 4 && (
             <StepContent title="Schritt 4: Design & Vorgaben">
               <div className="space-y-8">
-                {/* Kundenfeedback (falls vorhanden) */}
-                <FeedbackBadge
-                  feedback={feedbackData}
-                  commentKey="designComment"
-                  acknowledgedKey="designAcknowledged"
-                  onAcknowledgeChange={(value) => handleFeedbackAcknowledge("designAcknowledged", value)}
-                />
-
                 {/* Bereich Design */}
                 <div className="space-y-4">
                   <h3 className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
@@ -2542,6 +2446,35 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                         )}
                       </div>
                     </div>
+
+                    {/* CI-Details (nur wenn CI definiert = Ja) */}
+                    {step4Data.hasCIDefined === true && (
+                      <>
+                        {/* CI-Farbcode */}
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            CI-Farbcode
+                          </label>
+                          <Input
+                            value={step4Data.ciColorCode}
+                            onChange={(e) => setStep4Data({ ...step4Data, ciColorCode: e.target.value })}
+                            placeholder="z.B. #FF5733, RGB(255, 87, 51)"
+                          />
+                        </div>
+
+                        {/* CI-Schriftart */}
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            CI-Schriftart
+                          </label>
+                          <Input
+                            value={step4Data.ciFontFamily}
+                            onChange={(e) => setStep4Data({ ...step4Data, ciFontFamily: e.target.value })}
+                            placeholder="z.B. Open Sans, Roboto, Montserrat"
+                          />
+                        </div>
+                      </>
+                    )}
 
                     {/* Farborientierung */}
                     <div className="space-y-2">
@@ -2859,14 +2792,6 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
           {currentStep === 5 && (
             <StepContent title="Schritt 5: Formulare">
               <div className="space-y-6">
-                {/* Kundenfeedback (falls vorhanden) */}
-                <FeedbackBadge
-                  feedback={feedbackData}
-                  commentKey="formsComment"
-                  acknowledgedKey="formsAcknowledged"
-                  onAcknowledgeChange={(value) => handleFeedbackAcknowledge("formsAcknowledged", value)}
-                />
-
                 {/* Info-Box */}
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                   <div className="flex gap-3">
@@ -3015,6 +2940,8 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                           onSaveFields={(selectedFields, customFields) => handleSaveFormFields(form.id, selectedFields, customFields)}
                           onSaveEmail={async (email) => {
                             await updateForm(form.id, { recipientEmail: email || null });
+                            // Lokalen State aktualisieren für Weiter-Button Validierung
+                            setForms((prev) => prev.map((f) => f.id === form.id ? { ...f, recipientEmail: email || null } : f));
                           }}
                         />
                       );
@@ -3043,9 +2970,15 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     type="button"
                     variant="outline"
                     onClick={() => setCurrentStep(6)}
-                    disabled={!savedSteps.has(5)}
+                    disabled={!isStep5Complete}
                     className="gap-2"
-                    title={!savedSteps.has(5) ? "Bitte zuerst speichern" : "Weiter zu Schritt 6"}
+                    title={
+                      !isStep5Complete
+                        ? !allFormsHaveEmail
+                          ? "Bitte bei allen Formularen eine Empfänger-E-Mail eingeben"
+                          : "Bitte Formularfelder speichern oder 'Kein Formular' wählen"
+                        : "Weiter zu Schritt 6"
+                    }
                   >
                     Weiter
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3060,27 +2993,23 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
           {currentStep === 6 && (
             <StepContent title="Schritt 6: Impressum & Datenschutz">
               <div className="space-y-8">
-                {/* Toggle: Von aktueller Webseite übernehmen */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={step6Data.imprintFromWebsite === true}
-                      onChange={(e) => setStep6Data({ ...step6Data, imprintFromWebsite: e.target.checked })}
-                      className="w-5 h-5 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500"
-                    />
+                {/* Hinweis für den Kunden */}
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                     <div>
-                      <span className="font-medium text-blue-900 dark:text-blue-100">Von aktueller Webseite übernehmen</span>
-                      <p className="text-sm text-blue-700 dark:text-blue-300">
-                        Impressum und Datenschutz werden von der bestehenden Webseite übernommen.
+                      <span className="font-medium text-amber-900 dark:text-amber-100">Hinweis</span>
+                      <p className="text-sm text-amber-700 dark:text-amber-300">
+                        Die folgenden Angaben zu Impressum und Datenschutz müssen vom Kunden selbst ausgefüllt werden.
                       </p>
                     </div>
-                  </label>
+                  </div>
                 </div>
 
-                {/* Formularfelder (nur anzeigen wenn nicht von Webseite übernommen) */}
-                {step6Data.imprintFromWebsite !== true && (
-                  <div className="space-y-6">
+                {/* Formularfelder */}
+                <div className="space-y-6">
                     {/* Anschrift */}
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -3375,7 +3304,6 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                       </div>
                     </div>
                   </div>
-                )}
 
                 {/* Buttons */}
                 <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -3400,21 +3328,21 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                           </svg>
-                          Speichern...
+                          Wird gespeichert...
                         </>
                       ) : savedSteps.has(6) ? (
                         <>
                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
-                          Gespeichert
+                          Kunde wurde informiert
                         </>
                       ) : (
                         <>
                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
-                          Speichern
+                          Kunde wurde informiert
                         </>
                       )}
                     </Button>
@@ -3424,7 +3352,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                       onClick={() => setCurrentStep(7)}
                       disabled={!savedSteps.has(6)}
                       className="gap-2"
-                      title={!savedSteps.has(6) ? "Bitte zuerst speichern" : "Weiter zu Schritt 7"}
+                      title={!savedSteps.has(6) ? "Bitte zuerst bestätigen, dass der Kunde informiert wurde" : "Weiter zu Schritt 7"}
                     >
                       Weiter
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3692,7 +3620,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                         checked={step7Data.materialNotesNeedsImages}
                         onChange={(e) => setStep7Data({ ...step7Data, materialNotesNeedsImages: e.target.checked })}
                         disabled={isLocked}
-                        className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                        className="w-5 h-5 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">Bilder benötigt</span>
                     </label>
@@ -3702,7 +3630,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                         checked={step7Data.materialNotesNeedsTexts}
                         onChange={(e) => setStep7Data({ ...step7Data, materialNotesNeedsTexts: e.target.checked })}
                         disabled={isLocked}
-                        className="w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                        className="w-5 h-5 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">{hasTextit ? "Stichpunkte" : "Texte"} benötigt</span>
                     </label>
@@ -3823,17 +3751,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                             <div className="text-sm text-blue-700 dark:text-blue-300">
-                              <p className="font-medium">
-                                Vom Kunden bestätigt
-                                {feedbackData && (
-                                  <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                    Mit Anpassungswünschen
-                                  </span>
-                                )}
-                              </p>
+                              <p className="font-medium">Vom Kunden bestätigt</p>
                               <p className="mt-1">
                                 am: {new Date(webDoc.confirmedAt).toLocaleDateString("de-DE")} um: {new Date(webDoc.confirmedAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
                               </p>
@@ -3853,26 +3771,6 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                             <div className="text-sm text-amber-700 dark:text-amber-300">
                               <p className="font-medium">Warte auf Kundenbestätigung</p>
                               <p className="mt-1">Der Kunde hat die Webdokumentation noch nicht bestätigt.</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Allgemeines Kundenfeedback (falls vorhanden) */}
-                      {feedbackData?.generalComment && (
-                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                          <div className="flex gap-3">
-                            <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                            </svg>
-                            <div className="text-sm text-amber-700 dark:text-amber-300 flex-1">
-                              <p className="font-medium mb-2">
-                                Allgemeines Kundenfeedback
-                                {feedbackData.createdByName && (
-                                  <span className="font-normal ml-2">von {feedbackData.createdByName}</span>
-                                )}
-                              </p>
-                              <p className="whitespace-pre-wrap">{feedbackData.generalComment}</p>
                             </div>
                           </div>
                         </div>
@@ -3955,61 +3853,6 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
           )}
         </div>
       </div>
-
-      {/* Interner Vermerk - eigenständiger Bereich, nur bei vorhandenem Kundenfeedback */}
-      {feedbackData && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mt-6">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Interner Vermerk</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Notizen zum Kundenfeedback (nur intern sichtbar)
-                </p>
-              </div>
-            </div>
-            <Textarea
-              value={internalNoteText}
-              onChange={(e) => setInternalNoteText(e.target.value)}
-              placeholder="Hier können Sie interne Notizen zum Kundenfeedback hinterlegen..."
-              rows={4}
-              className="resize-none"
-            />
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                onClick={handleSaveInternalNote}
-                disabled={isSavingNote}
-                variant="outline"
-              >
-                {isSavingNote ? (
-                  <>
-                    <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Speichern...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                    </svg>
-                    Vermerk speichern
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -4021,8 +3864,6 @@ function StepIndicator({
   active,
   saved,
   disabled,
-  hasFeedback,
-  feedbackAcknowledged,
   onClick,
 }: {
   number: number;
@@ -4031,40 +3872,20 @@ function StepIndicator({
   active: boolean;
   saved: boolean;
   disabled: boolean;
-  hasFeedback?: boolean;
-  feedbackAcknowledged?: boolean;
   onClick: () => void;
 }) {
-  // Feedback vorhanden aber noch nicht beachtet = orange
-  // Feedback vorhanden und beachtet = grün (mit Sprechblasen-Badge)
-  const hasUnacknowledgedFeedback = hasFeedback && !feedbackAcknowledged;
-
   return (
     <button
       onClick={disabled ? undefined : onClick}
       className={`flex flex-col items-center gap-1 md:gap-2 group relative ${
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
       }`}
-      title={disabled ? `Bitte zuerst Schritt ${number - 1} speichern` : hasFeedback ? `${title} - Kundenfeedback ${feedbackAcknowledged ? "(wird beachtet)" : "vorhanden"}` : title}
+      title={disabled ? `Bitte zuerst Schritt ${number - 1} speichern` : title}
       disabled={disabled}
     >
-      {/* Feedback-Indikator Badge - bleibt immer wenn Feedback vorhanden */}
-      {hasFeedback && (
-        <div className="absolute -top-1 -right-1 z-10">
-          <span className={`flex h-4 w-4 items-center justify-center rounded-full text-white shadow-sm ${
-            feedbackAcknowledged ? "bg-green-500" : "bg-amber-500"
-          }`}>
-            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-            </svg>
-          </span>
-        </div>
-      )}
       <div
         className={`flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full font-semibold transition ${
-          hasUnacknowledgedFeedback && saved
-            ? "bg-amber-500 dark:bg-amber-600 text-white ring-2 ring-amber-300 dark:ring-amber-400"
-            : saved
+          saved
             ? "bg-green-500 dark:bg-green-600 text-white"
             : active
             ? "bg-cyan-100 dark:bg-cyan-900 text-cyan-600 dark:text-cyan-300 ring-2 ring-cyan-600 dark:ring-cyan-500"
@@ -4074,15 +3895,9 @@ function StepIndicator({
         }`}
       >
         {saved ? (
-          hasUnacknowledgedFeedback ? (
-            <svg className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-            </svg>
-          ) : (
-            <svg className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          )
+          <svg className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
         ) : disabled ? (
           <svg className="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -4093,9 +3908,7 @@ function StepIndicator({
       </div>
       <span
         className={`text-[10px] md:text-xs font-medium text-center max-w-[60px] md:max-w-none ${
-          hasUnacknowledgedFeedback && saved
-            ? "text-amber-600 dark:text-amber-400"
-            : saved
+          saved
             ? "text-green-600 dark:text-green-400"
             : active
             ? "text-gray-900 dark:text-gray-100"
@@ -4328,7 +4141,7 @@ function FormCard({
           {/* Empfänger-E-Mail */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Empfänger-E-Mail-Adresse
+              Empfänger-E-Mail-Adresse <span className="text-red-500">*</span>
             </label>
             <div className="flex gap-2">
               <div className="flex-1 flex gap-2">

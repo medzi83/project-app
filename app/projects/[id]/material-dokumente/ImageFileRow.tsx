@@ -17,11 +17,14 @@ type Props = {
   fileName: string;
   fileSize?: number;
   mtime?: string;
+  isUnsuitable?: boolean; // Bild liegt im "ungeeignet" Unterordner
 };
 
 // Bewertungs-Konstanten (gleiche wie im LuckyCloud File Explorer)
 const RATING_SUITABLE = "GEEIGNET";
 const RATING_NOT_SUITABLE_PREFIX = "NICHT GEEIGNET";
+// Kommentar wenn Kunde abgelehntes Bild trotzdem möchte
+const CUSTOMER_WANTS_ANYWAY = "KUNDE WÜNSCHT TROTZDEM";
 
 // Begründungen für "Nicht geeignet"
 const NOT_SUITABLE_REASONS = [
@@ -75,6 +78,7 @@ export default function ImageFileRow({
   fileName,
   fileSize,
   mtime,
+  isUnsuitable = false,
 }: Props) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -155,6 +159,9 @@ export default function ImageFileRow({
   };
 
   const currentRating = getRating();
+
+  // Prüfen ob Kunde das Bild trotzdem wünscht
+  const customerWantsAnyway = comments.some((c) => c.comment === CUSTOMER_WANTS_ANYWAY);
 
   // Bewertung setzen
   const setRating = async (rating: "suitable" | "not-suitable", reason?: string) => {
@@ -245,7 +252,9 @@ export default function ImageFileRow({
             observer.observe(el);
           }
         }}
-        className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+        className={`flex items-center gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group ${
+          isUnsuitable ? "bg-gray-100 dark:bg-gray-800/50 opacity-60" : ""
+        }`}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
@@ -302,6 +311,14 @@ export default function ImageFileRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-900 dark:text-white truncate">{fileName}</span>
+            {isUnsuitable && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+                Verschoben in ungeeignet
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
             <span>{getFileExtension(fileName)}</span>
@@ -312,7 +329,7 @@ export default function ImageFileRow({
 
           {/* Bewertungs-Badge in der Zeile */}
           {currentRating && (
-            <div className="mt-1">
+            <div className="mt-1 flex flex-wrap gap-1">
               <span
                 className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
                   currentRating.type === "suitable"
@@ -336,6 +353,15 @@ export default function ImageFileRow({
                   </>
                 )}
               </span>
+              {/* Badge: Kunde wünscht trotzdem (nur bei abgelehnten Bildern) */}
+              {currentRating.type === "not-suitable" && customerWantsAnyway && (
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  Kunde wünscht trotzdem
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -457,27 +483,38 @@ export default function ImageFileRow({
 
           {/* Bewertungs-Badge in Lightbox */}
           {currentRating && (
-            <div
-              className={`absolute top-4 left-4 px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 ${
-                currentRating.type === "suitable"
-                  ? "bg-green-500 text-white"
-                  : "bg-red-500 text-white"
-              }`}
-            >
-              {currentRating.type === "suitable" ? (
-                <>
+            <div className="absolute top-4 left-4 flex flex-col gap-2">
+              <div
+                className={`px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 ${
+                  currentRating.type === "suitable"
+                    ? "bg-green-500 text-white"
+                    : "bg-red-500 text-white"
+                }`}
+              >
+                {currentRating.type === "suitable" ? (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Geeignet
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Ungeeignet{currentRating.reason && `: ${currentRating.reason}`}
+                  </>
+                )}
+              </div>
+              {/* Badge: Kunde wünscht trotzdem */}
+              {currentRating.type === "not-suitable" && customerWantsAnyway && (
+                <div className="px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2 bg-amber-500 text-white">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
-                  Geeignet
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  Ungeeignet{currentRating.reason && `: ${currentRating.reason}`}
-                </>
+                  Kunde wünscht trotzdem
+                </div>
               )}
             </div>
           )}

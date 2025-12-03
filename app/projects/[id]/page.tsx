@@ -9,6 +9,7 @@ import { BackButton } from "@/components/BackButton";
 import { createWebDocumentation, deleteWebDocumentation } from "./webdoku/actions";
 import DangerActionButton from "@/components/DangerActionButton";
 import { LuckyCloudProjectFolderCard } from "@/components/LuckyCloudProjectFolderCard";
+import SetMaterialCompleteButton from "./SetMaterialCompleteButton";
 import type { WebsitePriority, ProductionStatus, MaterialStatus, SEOStatus, TextitStatus, CMS as PrismaCMS } from "@prisma/client";
 
 // Naive date/time formatting - extracts components directly from ISO string without timezone conversion
@@ -74,7 +75,6 @@ export default async function ProjectDetail({ params }: Props) {
         include: {
           webDocumentation: {
             include: {
-              feedback: true,
               generalTextSubmission: true,
               menuItems: {
                 include: {
@@ -545,15 +545,15 @@ export default async function ProjectDetail({ params }: Props) {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Project Details - Compact Layout */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Projektdetails
             </h2>
           </div>
-          <div className="p-4">
+          <div className="p-6">
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               <div>
                 <dt className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Projekttitel</dt>
@@ -595,16 +595,16 @@ export default async function ProjectDetail({ params }: Props) {
 
         {/* Status & Settings */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               Status & Einstellungen
             </h2>
           </div>
-          <div className="p-4">
+          <div className="p-6">
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               <div>
                 <dt className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Priorität</dt>
@@ -654,15 +654,15 @@ export default async function ProjectDetail({ params }: Props) {
 
         {/* Termine */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               Termine
             </h2>
           </div>
-          <div className="p-4">
+          <div className="p-6">
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               <div className="flex items-start gap-2">
                 <div className="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full bg-blue-500"></div>
@@ -709,15 +709,15 @@ export default async function ProjectDetail({ params }: Props) {
 
         {/* Zeitaufwand */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Zeitaufwand
             </h2>
           </div>
-          <div className="p-4">
+          <div className="p-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                 <dt className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Umsetzung</dt>
@@ -790,13 +790,18 @@ export default async function ProjectDetail({ params }: Props) {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                             </svg>
                             Vom Kunden bestätigt am {new Date(website.webDocumentation.confirmedAt).toLocaleDateString("de-DE")} um {new Date(website.webDocumentation.confirmedAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
-                            {website.webDocumentation.feedback ? (
-                              <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                                mit Anmerkungen
-                              </span>
-                            ) : (
-                              <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                änderungsfrei
+                          </p>
+                        )}
+                        {/* Kunden-Ablehnung */}
+                        {website.webDocumentation.rejectedAt && !website.webDocumentation.confirmedAt && (
+                          <p className="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Vom Kunden abgelehnt am {new Date(website.webDocumentation.rejectedAt).toLocaleDateString("de-DE")} um {new Date(website.webDocumentation.rejectedAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
+                            {website.webDocumentation.rejectedSteps && website.webDocumentation.rejectedSteps.length > 0 && (
+                              <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                {website.webDocumentation.rejectedSteps.length} {website.webDocumentation.rejectedSteps.length === 1 ? "Bereich" : "Bereiche"}
                               </span>
                             )}
                           </p>
@@ -847,28 +852,47 @@ export default async function ProjectDetail({ params }: Props) {
                       const webDate = website.webDate ? new Date(website.webDate) : null;
                       const webDateDay = webDate ? new Date(webDate.getFullYear(), webDate.getMonth(), webDate.getDate()) : null;
                       const isWebterminToday = webDateDay && webDateDay.getTime() === today.getTime();
+                      const hasMaterialFolder = !!website.luckyCloudFolderPath;
 
-                      return isWebterminToday ? (
-                        <form action={async () => {
-                          "use server";
-                          await createWebDocumentation(project.id);
-                        }}>
-                          <button
-                            type="submit"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm shadow-sm"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      // Beide Bedingungen müssen erfüllt sein: Webtermin-Tag UND Material-Ordner zugeordnet
+                      if (isWebterminToday && hasMaterialFolder) {
+                        return (
+                          <form action={async () => {
+                            "use server";
+                            await createWebDocumentation(project.id);
+                          }}>
+                            <button
+                              type="submit"
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm shadow-sm"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                              </svg>
+                              Erstellen
+                            </button>
+                          </form>
+                        );
+                      }
+
+                      // Zeige Hinweis warum Button nicht aktiv ist
+                      if (!isWebterminToday) {
+                        return (
+                          <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg text-xs">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
-                            Erstellen
-                          </button>
-                        </form>
-                      ) : (
-                        <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg text-xs">
+                            Nur am Webtermin
+                          </span>
+                        );
+                      }
+
+                      // Webtermin ist heute aber kein Material-Ordner zugeordnet
+                      return (
+                        <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-lg text-xs">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                           </svg>
-                          Nur am Webtermin
+                          Material-Ordner fehlt
                         </span>
                       );
                     })()
@@ -890,41 +914,49 @@ export default async function ProjectDetail({ params }: Props) {
             (webDoku.materialLogoNeeded ? 1 : 0) +
             (webDoku.materialNotesNeedsImages ? 1 : 0);
 
-          // Bilder-Prüfstatus
+          // Bilder-Prüfstatus und Einreichungsstatus
           let imagesComplete = 0;
           let imagesNotReviewed = 0;
+          let imagesSubmitted = 0;
 
           for (const item of menuItemsNeedingImages) {
+            if (item.imagesSubmittedAt) {
+              imagesSubmitted++;
+            }
             if (item.imagesComplete === true) {
               imagesComplete++;
-            } else if (item.imagesComplete === false) {
-              // Explizit als unvollständig markiert (auch wenn default false ist, schauen wir auf explizite Prüfung)
-              // Da imagesComplete standardmäßig false ist, zählen wir nur als "incomplete" wenn wirklich geprüft wurde
-              // Wir können das nicht direkt unterscheiden, daher: false = ungeprüft ODER unvollständig
-              // Besser: wir prüfen nur auf true
+            } else if (item.imagesSubmittedAt) {
+              // Eingereicht aber noch nicht als vollständig markiert
               imagesNotReviewed++;
             }
           }
 
           // Logo-Review
           if (webDoku.materialLogoNeeded) {
+            if (webDoku.logoImagesSubmittedAt) {
+              imagesSubmitted++;
+            }
             if (webDoku.logoImagesComplete === true) {
               imagesComplete++;
-            } else {
+            } else if (webDoku.logoImagesSubmittedAt) {
               imagesNotReviewed++;
             }
           }
 
           // General/Sonstiges-Review
           if (webDoku.materialNotesNeedsImages) {
+            if (webDoku.generalImagesSubmittedAt) {
+              imagesSubmitted++;
+            }
             if (webDoku.generalImagesComplete === true) {
               imagesComplete++;
-            } else {
+            } else if (webDoku.generalImagesSubmittedAt) {
               imagesNotReviewed++;
             }
           }
 
           const allImagesComplete = totalImagesNeeded > 0 && imagesComplete === totalImagesNeeded;
+          const allImagesSubmitted = totalImagesNeeded > 0 && imagesSubmitted === totalImagesNeeded;
 
           // Texte-Statistik
           const menuItemsNeedingTexts = menuItems.filter((m) => m.needsTexts);
@@ -988,12 +1020,12 @@ export default async function ProjectDetail({ params }: Props) {
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        allImagesComplete
+                        allImagesSubmitted
                           ? "bg-green-100 dark:bg-green-900/30"
                           : "bg-blue-100 dark:bg-blue-900/30"
                       }`}>
                         <svg className={`w-5 h-5 ${
-                          allImagesComplete
+                          allImagesSubmitted
                             ? "text-green-600 dark:text-green-400"
                             : "text-blue-600 dark:text-blue-400"
                         }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1003,17 +1035,17 @@ export default async function ProjectDetail({ params }: Props) {
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">Bilder</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {allImagesComplete
-                            ? `Alle ${imagesComplete} ${imagesComplete === 1 ? "Bereich" : "Bereiche"} vollständig`
-                            : `${imagesComplete} von ${totalImagesNeeded} ${totalImagesNeeded === 1 ? "Bereich" : "Bereichen"} vollständig`
+                          {allImagesSubmitted
+                            ? `Alle ${imagesSubmitted} ${imagesSubmitted === 1 ? "Bereich eingereicht" : "Bereiche eingereicht"}`
+                            : `${imagesSubmitted} von ${totalImagesNeeded} ${totalImagesNeeded === 1 ? "Bereich" : "Bereichen"} eingereicht`
                           }
-                          {webDoku.materialLogoNeeded && !allImagesComplete && <span className="ml-1">(inkl. Logo)</span>}
+                          {webDoku.materialLogoNeeded && !allImagesSubmitted && <span className="ml-1">(inkl. Logo)</span>}
                         </p>
                       </div>
                       <Link
                         href={`/projects/${project.id}/material-dokumente`}
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                          allImagesComplete
+                          allImagesSubmitted
                             ? "bg-green-600 text-white hover:bg-green-700"
                             : "bg-blue-600 text-white hover:bg-blue-700"
                         }`}
@@ -1026,7 +1058,7 @@ export default async function ProjectDetail({ params }: Props) {
                       </Link>
                     </div>
                     {/* Prüfstatus für Bilder */}
-                    {(imagesComplete > 0 || imagesNotReviewed > 0) && !allImagesComplete && (
+                    {(imagesComplete > 0 || imagesNotReviewed > 0) && (
                       <div className="ml-[52px]">
                         <div className="flex items-center gap-2 text-xs">
                           {imagesComplete > 0 && (
@@ -1038,7 +1070,7 @@ export default async function ProjectDetail({ params }: Props) {
                           {imagesNotReviewed > 0 && (
                             <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
                               <span className="w-2 h-2 rounded-full bg-blue-500" />
-                              {imagesNotReviewed} offen
+                              {imagesNotReviewed} zu prüfen
                             </span>
                           )}
                         </div>
@@ -1139,6 +1171,24 @@ export default async function ProjectDetail({ params }: Props) {
                     </span>
                   </div>
                 )}
+
+                {/* Button zum Abschließen des Materials */}
+                {(() => {
+                  // Prüfen ob alles vollständig ist (Bilder und Texte)
+                  const imagesOk = totalImagesNeeded === 0 || allImagesComplete;
+                  const textsOk = totalTextsNeeded === 0 || allTextsSubmitted;
+                  const allMaterialComplete = imagesOk && textsOk;
+                  const materialStatusNotComplete = website.materialStatus !== "VOLLSTAENDIG" && website.materialStatus !== "ZU_UMSETZUNG";
+
+                  if (allMaterialComplete && materialStatusNotComplete) {
+                    return (
+                      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <SetMaterialCompleteButton projectId={project.id} />
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           );
@@ -1146,16 +1196,16 @@ export default async function ProjectDetail({ params }: Props) {
 
         {/* Demo Card - Always visible */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
               Demo
             </h2>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-6 space-y-3">
             {/* Benutzerdefinierter Demo-Link */}
             <div>
               <dt className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Benutzerdefinierter Link</dt>

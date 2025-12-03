@@ -218,6 +218,8 @@ model WebDocumentation {
   // Bereich Design
   hasLogo            Boolean?                    // Logo vorhanden ja/nein
   hasCIDefined       Boolean?                    // CI definiert ja/nein
+  ciColorCode        String?                     // CI-Farbcode (wenn CI definiert)
+  ciFontFamily       String?                     // CI-Schriftart (wenn CI definiert)
   colorOrientation   WebDocuColorOrientation?    // Farborientierung
   colorCodes         String?                     // Farben/Farbcodes (Freitext)
 
@@ -299,6 +301,12 @@ model WebDocumentation {
   confirmedByPersonId    String?                 // ID der AuthorizedPerson die bestätigt hat
   confirmedByName        String?                 // Name der Person (für Anzeige)
   confirmedByIp          String?                 // IP-Adresse des Kunden bei Bestätigung
+
+  // ===== Kundenablehnung =====
+  rejectedAt             DateTime?               // Zeitpunkt der Ablehnung durch den Kunden
+  rejectedByName         String?                 // Name der Person (für Anzeige)
+  rejectedByIp           String?                 // IP-Adresse des Kunden bei Ablehnung
+  rejectedSteps          Int[]                   // Ausgewählte Steps die angepasst werden sollen (1-7)
 
   // ===== Interner Vermerk (für Agenten) =====
   internalNote           String?                 // Interner Vermerk für spätere Verwendung

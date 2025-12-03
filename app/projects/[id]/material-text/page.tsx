@@ -30,9 +30,6 @@ export default async function MaterialTextPage({ params }: Props) {
             include: {
               generalTextSubmission: true,
               menuItems: {
-                where: {
-                  needsTexts: true,
-                },
                 include: {
                   textSubmission: true,
                 },
@@ -53,7 +50,10 @@ export default async function MaterialTextPage({ params }: Props) {
   if (!webDoku) notFound();
 
   // Get submitted texts
-  const menuItems = webDoku.menuItems || [];
+  // Alle Menüpunkte für Parent-Lookups
+  const allMenuItems = webDoku.menuItems || [];
+  // Nur Menüpunkte die Texte benötigen
+  const menuItems = allMenuItems.filter((m) => m.needsTexts);
   const submittedMenuItems = menuItems.filter(
     (m) => m.textSubmission?.submittedAt
   );
@@ -123,7 +123,8 @@ export default async function MaterialTextPage({ params }: Props) {
   // Helper to get parent name for context
   const getParentName = (item: typeof menuItems[number]): string | null => {
     if (!item.parentId) return null;
-    const parent = menuItems.find((m) => m.id === item.parentId);
+    // Suche in allMenuItems, da Parent evtl. keine Texte benötigt
+    const parent = allMenuItems.find((m) => m.id === item.parentId);
     return parent?.name || null;
   };
 
@@ -432,7 +433,8 @@ export default async function MaterialTextPage({ params }: Props) {
 
         {/* Orphan Children (children whose parent has no submission) - grouped by parent */}
         {orphanParentIds.map((parentId) => {
-          const parent = menuItems.find((m) => m.id === parentId);
+          // Suche in allMenuItems, da Parent evtl. keine Texte benötigt
+          const parent = allMenuItems.find((m) => m.id === parentId);
           const orphans = orphanChildren.filter((c) => c.parentId === parentId);
           return (
             <div key={parentId} className="space-y-2">

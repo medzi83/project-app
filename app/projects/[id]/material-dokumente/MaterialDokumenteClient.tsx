@@ -25,6 +25,7 @@ type FileItem = {
   type: "file" | "dir";
   size?: number;
   mtime?: string;
+  isUnsuitable?: boolean; // Markierung für Bilder aus dem "ungeeignet" Unterordner
 };
 
 type Props = {
@@ -197,7 +198,7 @@ export default function MaterialDokumenteClient({
     }
   };
 
-  // Dateien für einen Ordner laden
+  // Dateien für einen Ordner laden (inkl. "ungeeignet" Unterordner)
   const loadFolderFiles = useCallback(
     async (folderName: string) => {
       setFolderContents((prev) => ({
@@ -207,27 +208,47 @@ export default function MaterialDokumenteClient({
 
       try {
         const folderPath = `${basePath}/${folderName}`;
+        const allFiles: FileItem[] = [];
+
+        // Hauptordner laden
         const response = await fetch(
           `/api/admin/luckycloud/files?agency=${agency}&libraryId=${libraryId}&path=${encodeURIComponent(folderPath)}`
         );
         const data = await response.json();
 
         if (response.ok && data.success) {
-          // Nur Bilddateien filtern
+          // Nur Bilddateien filtern (keine Ordner)
           const imageFiles = (data.items || []).filter(
             (item: FileItem) => item.type === "file" && isImageFile(item.name)
           );
-          setFolderContents((prev) => ({
-            ...prev,
-            [folderName]: { files: imageFiles, loading: false },
-          }));
-        } else {
-          // Ordner existiert möglicherweise nicht - das ist OK
-          setFolderContents((prev) => ({
-            ...prev,
-            [folderName]: { files: [], loading: false },
-          }));
+          allFiles.push(...imageFiles);
         }
+
+        // "ungeeignet" Unterordner laden
+        const unsuitablePath = `${folderPath}/ungeeignet`;
+        try {
+          const unsuitableResponse = await fetch(
+            `/api/admin/luckycloud/files?agency=${agency}&libraryId=${libraryId}&path=${encodeURIComponent(unsuitablePath)}`
+          );
+          const unsuitableData = await unsuitableResponse.json();
+
+          if (unsuitableResponse.ok && unsuitableData.success) {
+            const unsuitableFiles = (unsuitableData.items || [])
+              .filter((item: FileItem) => item.type === "file" && isImageFile(item.name))
+              .map((item: FileItem) => ({
+                ...item,
+                isUnsuitable: true, // Markierung für UI
+              }));
+            allFiles.push(...unsuitableFiles);
+          }
+        } catch {
+          // "ungeeignet" Ordner existiert nicht - das ist OK
+        }
+
+        setFolderContents((prev) => ({
+          ...prev,
+          [folderName]: { files: allFiles, loading: false },
+        }));
       } catch {
         setFolderContents((prev) => ({
           ...prev,
@@ -291,6 +312,19 @@ export default function MaterialDokumenteClient({
       (sum, f) => sum + f.files.length,
       0
     ),
+    // Review-Status Statistiken
+    complete: folders.filter((f) => {
+      const review = getReview(f);
+      return review.complete === true;
+    }).length,
+    incomplete: folders.filter((f) => {
+      const review = getReview(f);
+      return review.complete === false && review.reviewedAt !== null;
+    }).length,
+    needsReview: folders.filter((f) => {
+      const review = getReview(f);
+      return review.reviewedAt === null;
+    }).length,
   };
 
   if (folders.length === 0) {
@@ -324,11 +358,11 @@ export default function MaterialDokumenteClient({
   return (
     <div className="space-y-6">
       {/* Fortschrittsübersicht */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+          <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <svg
-              className="w-5 h-5 text-blue-600 dark:text-blue-400"
+              className="w-5 h-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -340,39 +374,114 @@ export default function MaterialDokumenteClient({
                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-          </div>
-          <div>
-            <h3 className="font-medium text-gray-900 dark:text-white">
-              Übersicht Material-Dokumente
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {isLoading
-                ? "Wird geladen..."
-                : `${stats.foldersWithImages} von ${stats.totalFolders} Bereiche mit Bildern • ${stats.totalImages} Bilder gesamt`}
-            </p>
-          </div>
+            Übersicht Material-Dokumente
+          </h2>
         </div>
+        <div className="p-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <svg className="w-6 h-6 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Wird geladen...</span>
+            </div>
+          ) : (
+            <>
+              {/* Status-Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                {/* Bereiche mit Bildern */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Mit Bildern</span>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                    {stats.foldersWithImages} <span className="text-sm font-normal text-blue-600 dark:text-blue-400">/ {stats.totalFolders}</span>
+                  </div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400">{stats.totalImages} Bilder gesamt</div>
+                </div>
 
-        {/* Fortschrittsbalken */}
-        {!isLoading && stats.totalFolders > 0 && (
-          <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-500 transition-all duration-300"
-              style={{
-                width: `${(stats.foldersWithImages / stats.totalFolders) * 100}%`,
-              }}
-            />
-          </div>
-        )}
+                {/* Vollständig */}
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-xs font-medium text-green-700 dark:text-green-300">Vollständig</span>
+                  </div>
+                  <div className="text-2xl font-bold text-green-900 dark:text-green-100">
+                    {stats.complete} <span className="text-sm font-normal text-green-600 dark:text-green-400">/ {stats.totalFolders}</span>
+                  </div>
+                </div>
 
-        {/* Ordner-Pfad Info */}
-        <div className="mt-3 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-          </svg>
-          <span className="truncate" title={basePath}>
-            {basePath}
-          </span>
+                {/* Unvollständig */}
+                <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span className="text-xs font-medium text-red-700 dark:text-red-300">Unvollständig</span>
+                  </div>
+                  <div className="text-2xl font-bold text-red-900 dark:text-red-100">
+                    {stats.incomplete} <span className="text-sm font-normal text-red-600 dark:text-red-400">/ {stats.totalFolders}</span>
+                  </div>
+                </div>
+
+                {/* Zu prüfen */}
+                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span className="text-xs font-medium text-amber-700 dark:text-amber-300">Zu prüfen</span>
+                  </div>
+                  <div className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+                    {stats.needsReview} <span className="text-sm font-normal text-amber-600 dark:text-amber-400">/ {stats.totalFolders}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fortschrittsbalken */}
+              {stats.totalFolders > 0 && (
+                <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden flex">
+                  {stats.complete > 0 && (
+                    <div
+                      className="h-full bg-green-500 transition-all duration-300"
+                      style={{ width: `${(stats.complete / stats.totalFolders) * 100}%` }}
+                      title={`${stats.complete} vollständig`}
+                    />
+                  )}
+                  {stats.incomplete > 0 && (
+                    <div
+                      className="h-full bg-red-500 transition-all duration-300"
+                      style={{ width: `${(stats.incomplete / stats.totalFolders) * 100}%` }}
+                      title={`${stats.incomplete} unvollständig`}
+                    />
+                  )}
+                  {stats.needsReview > 0 && (
+                    <div
+                      className="h-full bg-amber-500 transition-all duration-300"
+                      style={{ width: `${(stats.needsReview / stats.totalFolders) * 100}%` }}
+                      title={`${stats.needsReview} zu prüfen`}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Ordner-Pfad Info */}
+              <div className="mt-4 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+                <span className="truncate" title={basePath}>
+                  {basePath}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -511,9 +620,9 @@ export default function MaterialDokumenteClient({
                         e.stopPropagation();
                         saveReview(folder, true);
                       }}
-                      disabled={isSaving || review.complete === true}
+                      disabled={isSaving || (review.complete === true && review.reviewedAt !== null)}
                       className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
-                        review.complete === true
+                        review.complete === true && review.reviewedAt !== null
                           ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
                           : "text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
                       }`}
@@ -537,9 +646,9 @@ export default function MaterialDokumenteClient({
                         e.stopPropagation();
                         saveReview(folder, false);
                       }}
-                      disabled={isSaving || review.complete === false}
+                      disabled={isSaving || (review.complete === false && review.reviewedAt !== null)}
                       className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
-                        review.complete === false
+                        review.complete === false && review.reviewedAt !== null
                           ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
                           : "text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                       }`}
@@ -686,13 +795,17 @@ export default function MaterialDokumenteClient({
                       <div className="divide-y divide-gray-200 dark:divide-gray-700">
                         {content.files.map((file) => (
                           <ImageFileRow
-                            key={file.name}
+                            key={`${file.isUnsuitable ? "unsuitable-" : ""}${file.name}`}
                             agency={agency}
                             libraryId={libraryId}
-                            filePath={`${basePath}/${folder.name}/${file.name}`}
+                            filePath={file.isUnsuitable
+                              ? `${basePath}/${folder.name}/ungeeignet/${file.name}`
+                              : `${basePath}/${folder.name}/${file.name}`
+                            }
                             fileName={file.name}
                             fileSize={file.size}
                             mtime={file.mtime}
+                            isUnsuitable={file.isUnsuitable}
                           />
                         ))}
                       </div>

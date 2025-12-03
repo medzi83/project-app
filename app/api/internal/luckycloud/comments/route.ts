@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
   getFileComments,
+  addFileComment,
   type LuckyCloudAgency,
 } from '@/lib/luckycloud';
 
@@ -146,6 +147,57 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error in luckycloud comments GET:', error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Unbekannter Fehler' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST: Kommentar zu einer Datei hinzufügen
+ *
+ * Body:
+ * - projectId: ID des Projekts
+ * - filePath: Pfad zur Datei relativ zum Projektordner (z.B. "Startseite/bild.jpg")
+ * - comment: Der Kommentartext
+ */
+export async function POST(request: NextRequest) {
+  const auth = authenticateRequest(request);
+  if (!auth.authorized) return auth.errorResponse!;
+
+  try {
+    const body = await request.json();
+    const { projectId, filePath, comment } = body;
+
+    if (!projectId) {
+      return NextResponse.json({ success: false, error: 'projectId ist erforderlich' }, { status: 400 });
+    }
+
+    if (!filePath) {
+      return NextResponse.json({ success: false, error: 'filePath ist erforderlich' }, { status: 400 });
+    }
+
+    if (!comment) {
+      return NextResponse.json({ success: false, error: 'comment ist erforderlich' }, { status: 400 });
+    }
+
+    const context = await loadProjectContext(projectId);
+    if ('error' in context) {
+      return NextResponse.json({ success: false, error: context.error }, { status: context.status });
+    }
+
+    const { agencyKey, libraryId, basePath } = context;
+    const fullFilePath = `${basePath}/${filePath}`;
+
+    const newComment = await addFileComment(agencyKey, libraryId, fullFilePath, comment);
+
+    return NextResponse.json({
+      success: true,
+      comment: newComment,
+    });
+  } catch (error) {
+    console.error('Error in luckycloud comments POST:', error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Unbekannter Fehler' },
       { status: 500 }

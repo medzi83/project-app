@@ -50,7 +50,6 @@ export default async function WebDokuPage({ params }: Props) {
                   },
                 },
               },
-              feedback: true,
             },
           },
         },
@@ -106,6 +105,8 @@ export default async function WebDokuPage({ params }: Props) {
         // Schritt 4: Design & Vorgaben
         hasLogo: webDoc.hasLogo,
         hasCIDefined: webDoc.hasCIDefined,
+        ciColorCode: webDoc.ciColorCode,
+        ciFontFamily: webDoc.ciFontFamily,
         colorOrientation: webDoc.colorOrientation,
         colorCodes: webDoc.colorCodes,
         topWebsite: webDoc.topWebsite,
@@ -170,21 +171,11 @@ export default async function WebDokuPage({ params }: Props) {
         confirmedAt: webDoc.confirmedAt?.toISOString() || null,
         confirmedByName: webDoc.confirmedByName,
         confirmedByIp: webDoc.confirmedByIp,
-        // Kundenfeedback
-        feedback: webDoc.feedback ? {
-          id: webDoc.feedback.id,
-          generalComment: webDoc.feedback.generalComment,
-          focusComment: webDoc.feedback.focusComment,
-          structureComment: webDoc.feedback.structureComment,
-          designComment: webDoc.feedback.designComment,
-          formsComment: webDoc.feedback.formsComment,
-          focusAcknowledged: webDoc.feedback.focusAcknowledged,
-          structureAcknowledged: webDoc.feedback.structureAcknowledged,
-          designAcknowledged: webDoc.feedback.designAcknowledged,
-          formsAcknowledged: webDoc.feedback.formsAcknowledged,
-          createdAt: webDoc.feedback.createdAt.toISOString(),
-          createdByName: webDoc.feedback.createdByName,
-        } : null,
+        // Kundenablehnung
+        rejectedAt: webDoc.rejectedAt?.toISOString() || null,
+        rejectedByName: webDoc.rejectedByName,
+        rejectedByIp: webDoc.rejectedByIp,
+        rejectedSteps: webDoc.rejectedSteps || [],
         // Interner Vermerk
         internalNote: webDoc.internalNote,
       }}

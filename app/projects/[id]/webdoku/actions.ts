@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/authz";
+import { moveUnsuitableImagesToSubfolder } from "@/lib/luckycloud-material-folders";
 import type {
   WebDocuDomainStatus,
   WebDocuColorOrientation,
@@ -56,24 +57,37 @@ export async function createWebDocumentation(projectId: string) {
     },
   });
 
-  // Standard-Footer-Menüpunkte (Impressum, Datenschutz) automatisch erstellen
+  // Standard-Footer-Menüpunkte (Impressum, Datenschutz, ggf. Barrierefreiheit) automatisch erstellen
+  const footerMenuItems = [
+    {
+      webDocumentationId: project.id,
+      name: "Impressum",
+      parentId: null,
+      sortOrder: 0,
+      isFooterMenu: true,
+    },
+    {
+      webDocumentationId: project.id,
+      name: "Datenschutz",
+      parentId: null,
+      sortOrder: 1,
+      isFooterMenu: true,
+    },
+  ];
+
+  // Bei barrierefreien Projekten auch "Barrierefreiheit" hinzufügen
+  if (project.website.accessible === true) {
+    footerMenuItems.push({
+      webDocumentationId: project.id,
+      name: "Barrierefreiheit",
+      parentId: null,
+      sortOrder: 2,
+      isFooterMenu: true,
+    });
+  }
+
   await prisma.webDocuMenuItem.createMany({
-    data: [
-      {
-        webDocumentationId: project.id,
-        name: "Impressum",
-        parentId: null,
-        sortOrder: 0,
-        isFooterMenu: true,
-      },
-      {
-        webDocumentationId: project.id,
-        name: "Datenschutz",
-        parentId: null,
-        sortOrder: 1,
-        isFooterMenu: true,
-      },
-    ],
+    data: footerMenuItems,
   });
 
   revalidatePath(`/projects/${projectId}`);
@@ -335,7 +349,7 @@ export async function reorderMenuItems(
 }
 
 /**
- * Erstellt die Standard-Footer-Menüpunkte (Impressum, Datenschutz)
+ * Erstellt die Standard-Footer-Menüpunkte (Impressum, Datenschutz, ggf. Barrierefreiheit)
  */
 export async function createDefaultMenuItems(projectId: string) {
   await requireRole(["ADMIN", "AGENT"]);
@@ -349,24 +363,43 @@ export async function createDefaultMenuItems(projectId: string) {
     return { success: false, error: "Es existieren bereits Menüpunkte" };
   }
 
+  // Projekt laden um barrierefrei-Status zu prüfen
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: { website: true },
+  });
+
   // Standard-Footer-Menüpunkte erstellen
+  const footerMenuItems = [
+    {
+      webDocumentationId: projectId,
+      name: "Impressum",
+      parentId: null,
+      sortOrder: 0,
+      isFooterMenu: true,
+    },
+    {
+      webDocumentationId: projectId,
+      name: "Datenschutz",
+      parentId: null,
+      sortOrder: 1,
+      isFooterMenu: true,
+    },
+  ];
+
+  // Bei barrierefreien Projekten auch "Barrierefreiheit" hinzufügen
+  if (project?.website?.accessible === true) {
+    footerMenuItems.push({
+      webDocumentationId: projectId,
+      name: "Barrierefreiheit",
+      parentId: null,
+      sortOrder: 2,
+      isFooterMenu: true,
+    });
+  }
+
   await prisma.webDocuMenuItem.createMany({
-    data: [
-      {
-        webDocumentationId: projectId,
-        name: "Impressum",
-        parentId: null,
-        sortOrder: 0,
-        isFooterMenu: true,
-      },
-      {
-        webDocumentationId: projectId,
-        name: "Datenschutz",
-        parentId: null,
-        sortOrder: 1,
-        isFooterMenu: true,
-      },
-    ],
+    data: footerMenuItems,
   });
 
   revalidatePath(`/projects/${projectId}/webdoku`);
@@ -461,6 +494,8 @@ export async function updateWebDocumentationStep4(data: {
   // Design
   hasLogo: boolean | null;
   hasCIDefined: boolean | null;
+  ciColorCode: string | null;
+  ciFontFamily: string | null;
   colorOrientation: WebDocuColorOrientation | null;
   colorCodes: string | null;
   // Umsetzungsvorgaben
@@ -923,13 +958,19 @@ export async function releaseWebDocumentationForCustomer(projectId: string) {
   const releasedAt = new Date();
   const releasedByName = user?.fullName || user?.name || session.user.name || session.user.email || "Unbekannt";
 
-  // Freigabe setzen
+  // Freigabe setzen und ggf. vorherige Ablehnung zurücksetzen
+  // (Bei erneuter Übermittlung hat der Kunde wieder die Möglichkeit, neu zu entscheiden)
   await prisma.webDocumentation.update({
     where: { projectId },
     data: {
       releasedAt,
       releasedByUserId: session.user.id,
       releasedByName,
+      // Vorherige Ablehnung zurücksetzen
+      rejectedAt: null,
+      rejectedByName: null,
+      rejectedByIp: null,
+      rejectedSteps: [],
     },
   });
 
@@ -958,13 +999,14 @@ export async function revokeWebDocumentationRelease(projectId: string) {
   }
 
   // Freigabe zurückziehen - auch Kundenbestätigung zurücksetzen
+  // WICHTIG: Ablehnung wird NICHT zurückgesetzt, damit der Agent sehen kann, welche Bereiche angepasst werden müssen
   await prisma.webDocumentation.update({
     where: { projectId },
     data: {
       releasedAt: null,
       releasedByUserId: null,
       releasedByName: null,
-      // Kundenbestätigung ebenfalls zurücksetzen
+      // Kundenbestätigung zurücksetzen
       confirmedAt: null,
       confirmedByName: null,
       confirmedByIp: null,
@@ -977,37 +1019,7 @@ export async function revokeWebDocumentationRelease(projectId: string) {
   return { success: true };
 }
 
-// ===== Kundenfeedback =====
-
-/**
- * Setzt den "wird beachtet"-Status für einen Feedback-Bereich
- */
-export async function updateFeedbackAcknowledged(
-  feedbackId: string,
-  field: "focusAcknowledged" | "structureAcknowledged" | "designAcknowledged" | "formsAcknowledged",
-  value: boolean
-) {
-  await requireRole(["ADMIN", "AGENT"]);
-
-  const feedback = await prisma.webDocuFeedback.findUnique({
-    where: { id: feedbackId },
-    select: { webDocumentationId: true },
-  });
-
-  if (!feedback) {
-    return { success: false, error: "Feedback nicht gefunden" };
-  }
-
-  await prisma.webDocuFeedback.update({
-    where: { id: feedbackId },
-    data: { [field]: value },
-  });
-
-  revalidatePath(`/projects/${feedback.webDocumentationId}`);
-  revalidatePath(`/projects/${feedback.webDocumentationId}/webdoku`);
-
-  return { success: true };
-}
+// ===== Interner Vermerk =====
 
 /**
  * Aktualisiert den internen Vermerk der Webdokumentation
@@ -1022,6 +1034,61 @@ export async function updateInternalNote(projectId: string, internalNote: string
 
   revalidatePath(`/projects/${projectId}`);
   revalidatePath(`/projects/${projectId}/webdoku`);
+
+  return { success: true };
+}
+
+/**
+ * Setzt den Material-Status eines Projekts auf "VOLLSTAENDIG"
+ */
+export async function setMaterialStatusComplete(projectId: string) {
+  await requireRole(["ADMIN", "AGENT"]);
+
+  if (!projectId) {
+    return { success: false, error: "Projekt-ID fehlt" };
+  }
+
+  // Prüfen ob das Projekt existiert
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      website: {
+        select: {
+          materialStatus: true,
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    return { success: false, error: "Projekt nicht gefunden" };
+  }
+
+  if (!project.website) {
+    return { success: false, error: "Kein Website-Projekt" };
+  }
+
+  // Material-Status auf VOLLSTAENDIG setzen
+  await prisma.projectWebsite.update({
+    where: { projectId },
+    data: { materialStatus: "VOLLSTAENDIG" },
+  });
+
+  // Ungeeignete Bilder in "ungeeignet" Unterordner verschieben (asynchron, Fehler werden geloggt)
+  try {
+    const moveResult = await moveUnsuitableImagesToSubfolder(projectId);
+    if (!moveResult.success) {
+      console.warn(`[setMaterialStatusComplete] Fehler beim Verschieben ungeeigneter Bilder für Projekt ${projectId}:`, moveResult.errors);
+    } else if (moveResult.movedFiles.length > 0) {
+      console.log(`[setMaterialStatusComplete] ${moveResult.movedFiles.length} ungeeignete Bilder verschoben für Projekt ${projectId}`);
+    }
+  } catch (error) {
+    // Fehler nur loggen, Material-Status trotzdem als vollständig markieren
+    console.error(`[setMaterialStatusComplete] Fehler beim Verschieben ungeeigneter Bilder für Projekt ${projectId}:`, error);
+  }
+
+  revalidatePath(`/projects/${projectId}`);
 
   return { success: true };
 }

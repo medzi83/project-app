@@ -826,7 +826,10 @@ export default async function ClientDetailPage({ params }: Props) {
             {/* Joomla Installations */}
             {client.joomlaInstallations.length > 0 && (
               <section className="rounded-lg border border-border bg-card p-4">
-                <h2 className="text-base font-medium text-foreground mb-3">
+                <h2 className="text-base font-semibold text-foreground flex items-center gap-2 mb-3">
+                  <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                  </svg>
                   Joomla Installationen ({client.joomlaInstallations.length})
                 </h2>
                 <div className="space-y-3">
@@ -1139,19 +1142,17 @@ export default async function ClientDetailPage({ params }: Props) {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
-                      {project.title && (
-                        <div className="text-lg font-bold text-foreground mb-1">
-                          {project.title}
-                        </div>
-                      )}
+                      <div className="text-lg font-bold text-foreground mb-1">
+                        {project.title || typeLabel}
+                      </div>
                       <div className="text-sm text-muted-foreground mb-1">
                         Status: {statusLabel}
+                        {statusDate && (
+                          <span className="text-xs ml-1">
+                            (seit {formatDateOnly(statusDate)})
+                          </span>
+                        )}
                       </div>
-                      {statusDate && (
-                        <div className="text-xs text-muted-foreground mb-2">
-                          seit {formatDateOnly(statusDate)}
-                        </div>
-                      )}
                       {project.agent && (
                         <div className="text-xs text-muted-foreground mb-1">
                           <span className="font-medium">Agent:</span> {project.agent.fullName || project.agent.name}
@@ -1160,6 +1161,11 @@ export default async function ClientDetailPage({ params }: Props) {
                       {project.website && project.website.domain && (
                         <div className="text-xs text-muted-foreground font-mono truncate">
                           {project.website.domain}
+                        </div>
+                      )}
+                      {project.type === "FILM" && project.film?.onlineLink && (
+                        <div className="text-xs text-muted-foreground font-mono truncate">
+                          {project.film.onlineLink}
                         </div>
                       )}
                     </Link>

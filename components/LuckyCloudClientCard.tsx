@@ -45,16 +45,6 @@ type FileItem = {
   mtime?: string;
 };
 
-// Standard-Unterordner für Projektordner
-const PROJECT_SUBFOLDERS = [
-  '!Wichtig',
-  'BFSG',
-  'Fotos',
-  'Inhalte',
-  'Logo',
-  'QM Check',
-  'SEO+',
-] as const;
 
 // Mapping von Agentur-Namen zu LuckyCloud-Agency-Keys
 // Prüft ob der Agenturname mit dem Key beginnt (case-insensitive)
@@ -277,28 +267,6 @@ export function LuckyCloudClientCard({
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Fehler beim Erstellen des Ordners');
-      }
-
-      // Kurz warten damit Seafile den Hauptordner synchronisieren kann
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Unterordner sequentiell erstellen (parallel führt zu Fehlern bei Seafile)
-      for (const subfolderName of PROJECT_SUBFOLDERS) {
-        const subResponse = await fetch(
-          `/api/admin/luckycloud/files?agency=${clientAgency}&libraryId=${selectedLibrary.id}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              path: newFolderPath,
-              folderName: subfolderName,
-            }),
-          }
-        );
-        const subData = await subResponse.json();
-        if (!subResponse.ok || !subData.success) {
-          console.warn(`Unterordner "${subfolderName}" konnte nicht erstellt werden:`, subData.error);
-        }
       }
 
       // Zuordnung speichern
@@ -752,9 +720,9 @@ export function LuckyCloudClientCard({
 
   return (
     <div className="rounded-lg border border-border bg-card p-4 space-y-4">
-      <div className="flex items-center gap-2">
-        <Cloud className="h-5 w-5 text-sky-500" />
-        <h3 className="font-semibold">LuckyCloud</h3>
+      <div className="flex items-center gap-2 mb-3">
+        <Cloud className="h-4 w-4 text-muted-foreground" />
+        <h2 className="text-base font-semibold text-foreground">LuckyCloud</h2>
       </div>
       {content}
     </div>
