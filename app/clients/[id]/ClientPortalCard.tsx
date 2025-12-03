@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { enablePortalAccess, disablePortalAccess, resetPortalPassword } from "./portal-actions";
+import { enablePortalAccess, disablePortalAccess, resetPortalPassword, sendPortalCredentialsEmail } from "./portal-actions";
 
 type Props = {
   clientId: string;
@@ -34,8 +34,10 @@ export function ClientPortalCard({
   isAdmin,
 }: Props) {
   const [loading, setLoading] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [localPortalEnabled, setLocalPortalEnabled] = useState(portalEnabled);
   const [localInvitedAt, setLocalInvitedAt] = useState(portalInvitedAt);
 
@@ -97,6 +99,59 @@ export function ClientPortalCard({
     navigator.clipboard.writeText(text);
   };
 
+  const handleSendEmail = async () => {
+    if (!generatedPassword) return;
+
+    setSendingEmail(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    const result = await sendPortalCredentialsEmail(clientId, generatedPassword);
+
+    if (result.success) {
+      setSuccessMessage("E-Mail wurde erfolgreich gesendet!");
+      setLocalInvitedAt(new Date());
+    } else {
+      setError(result.error || "Fehler beim Senden der E-Mail");
+    }
+
+    setSendingEmail(false);
+  };
+
+  const handleResendCredentials = async () => {
+    if (!confirm("Möchten Sie ein neues Passwort generieren und per E-Mail an den Kunden senden?")) return;
+
+    setSendingEmail(true);
+    setError(null);
+    setSuccessMessage(null);
+    setGeneratedPassword(null);
+
+    // Erst neues Passwort generieren
+    const resetResult = await resetPortalPassword(clientId);
+
+    if (!resetResult.success || !resetResult.password) {
+      setError(resetResult.error || "Fehler beim Generieren des Passworts");
+      setSendingEmail(false);
+      return;
+    }
+
+    // Dann E-Mail senden
+    const emailResult = await sendPortalCredentialsEmail(clientId, resetResult.password);
+
+    if (emailResult.success) {
+      setSuccessMessage("Neues Passwort wurde generiert und per E-Mail gesendet!");
+      setLocalInvitedAt(new Date());
+      // Passwort auch anzeigen, falls E-Mail nicht ankommt
+      setGeneratedPassword(resetResult.password);
+    } else {
+      // Passwort wurde generiert, aber E-Mail fehlgeschlagen - trotzdem anzeigen
+      setGeneratedPassword(resetResult.password);
+      setError(`Passwort wurde generiert, aber E-Mail-Versand fehlgeschlagen: ${emailResult.error}`);
+    }
+
+    setSendingEmail(false);
+  };
+
   return (
     <section className="rounded-lg border border-border bg-card p-4">
       <div className="flex items-center justify-between mb-4">
@@ -127,6 +182,16 @@ export function ClientPortalCard({
         </div>
       )}
 
+      {/* Success Message */}
+      {successMessage && (
+        <div className="mb-4 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+          <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {successMessage}
+        </div>
+      )}
+
       {/* Generated Password Display */}
       {generatedPassword && (
         <div className="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
@@ -142,14 +207,40 @@ export function ClientPortalCard({
               size="sm"
               onClick={() => copyToClipboard(generatedPassword)}
               className="shrink-0"
+              title="Passwort kopieren"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </Button>
           </div>
+          <div className="mt-3 flex items-center gap-2">
+            <Button
+              onClick={handleSendEmail}
+              disabled={sendingEmail}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {sendingEmail ? (
+                <>
+                  <svg className="h-4 w-4 mr-1.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Sende...
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Zugangsdaten per E-Mail senden
+                </>
+              )}
+            </Button>
+          </div>
           <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">
-            Bitte senden Sie dieses Passwort sicher an den Kunden.
+            Klicken Sie auf den Button, um die Zugangsdaten direkt an {clientEmail} zu senden.
           </p>
         </div>
       )}
@@ -198,16 +289,39 @@ export function ClientPortalCard({
           ) : (
             <>
               <Button
+                onClick={handleResendCredentials}
+                disabled={loading || sendingEmail}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {sendingEmail ? (
+                  <>
+                    <svg className="h-4 w-4 mr-1.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Sende...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Zugangsdaten senden
+                  </>
+                )}
+              </Button>
+              <Button
                 onClick={handleResetPassword}
-                disabled={loading}
+                disabled={loading || sendingEmail}
                 variant="outline"
                 size="sm"
               >
-                {loading ? "..." : "Neues Passwort"}
+                {loading ? "..." : "Nur Passwort neu"}
               </Button>
               <Button
                 onClick={handleDisable}
-                disabled={loading}
+                disabled={loading || sendingEmail}
                 variant="outline"
                 size="sm"
                 className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"

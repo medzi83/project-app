@@ -24,6 +24,36 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    date: "03.12.2024",
+    version: "2.5.0",
+    changes: [
+      {
+        title: "Kundenportal für Kunden",
+        description:
+          "Kunden haben jetzt ihr eigenes Portal unter portal.server-nord.de! Dort können sie sich einloggen und alle relevanten Informationen zu ihren Projekten einsehen und bearbeiten. Um einen Kunden freizuschalten, gehst du in die Kundendetails und aktivierst dort den Portal-Zugang. Der Kunde erhält dann seine Zugangsdaten und kann sich im Portal anmelden. Im Portal kann der Kunde die Webdokumentation einsehen und bestätigen, Bilder und Dokumente hochladen sowie Stichpunkte für die Texterstellung einreichen.",
+        type: "feature",
+      },
+      {
+        title: "Webdokumentation vollständig digital",
+        description:
+          "Die komplette Webdokumentation kann jetzt digital über die Projektverwaltung durchgeführt werden! In 7 übersichtlichen Schritten erfasst du alle wichtigen Informationen: Allgemeines (Domain, Ansprechpartner), Unternehmensschwerpunkte, Websiteaufbau (Menüstruktur), Design & Vorgaben (CI, Farben, Stil), Formulare, Impressum & Datenschutz sowie Material-Anforderungen. Nach dem Ausfüllen kann die Webdoku an den Kunden übermittelt werden - dieser bestätigt sie dann im Kundenportal. Ein Fortschrittsbalken zeigt jederzeit den aktuellen Status an.",
+        type: "feature",
+      },
+      {
+        title: "Materialverwaltung über PSN",
+        description:
+          "Bilder und Dokumente können jetzt direkt über PSN verwaltet werden! Alle hochgeladenen Bilder des Kunden werden direkt in Luckycloud hinterlegt. Auf der neuen Material-Dokumente-Seite siehst du alle Ordner, die der Kunde für sein Projekt hochgeladen hat (Logo, allgemeine Bilder, Bilder pro Menüpunkt). Du kannst die Uploads als vollständig oder unvollständig markieren und Hinweise für den Kunden hinterlassen. Die Thumbnails werden direkt aus LuckyCloud geladen. Voraussetzung: Der Kunde muss im Kundenblatt einer LuckyCloud-Bibliothek zugeordnet sein.",
+        type: "feature",
+      },
+      {
+        title: "Texterstellung für Webseiten",
+        description:
+          "Neue Texterstellung-Funktion für Webseitenprojekte! Sobald der Kunde seine Stichpunkte eingereicht hat und diese als geeignet markiert wurden, kann die Texterstellung gestartet werden. Du siehst alle eingereichten Stichpunkte und kannst für jeden Bereich einen vollständigen Text verfassen. Der integrierte Rich-Text-Editor unterstützt Formatierungen wie Überschriften, Listen und Links. Texte können als Entwurf gespeichert und später als fertig markiert werden. Ein Fortschrittsbalken zeigt den Gesamtfortschritt aller Texte.",
+        type: "feature",
+      },
+    ],
+  },
+  {
     date: "26.11.2024",
     version: "2.4.3",
     changes: [
