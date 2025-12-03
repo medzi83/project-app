@@ -68,11 +68,24 @@ const CONTRACT_SERVICE_LABELS: Record<ContractService, string> = {
   SOCIAL_MEDIA: "Social-Media",
 };
 
-// Berechnet Ende Mindestlaufzeit aus Vertragsbeginn + Laufzeit
+// Berechnet Ende Mindestlaufzeit aus Vertragsbeginn + Laufzeit (letzter Tag der Laufzeit)
+// Wenn Ablaufdatum weniger als 6 Monate in der Zukunft liegt, um 12 Monate verlängern
 const calculateMinTermEnd = (contractStart: Date | null | undefined, durationMonths: number | null | undefined): Date | null => {
   if (!contractStart || !durationMonths) return null;
   const date = new Date(contractStart);
   date.setMonth(date.getMonth() + durationMonths);
+  date.setDate(date.getDate() - 1); // Einen Tag abziehen für letzten Tag der Laufzeit
+
+  // Prüfen ob weniger als 6 Monate in der Zukunft
+  const now = new Date();
+  const sixMonthsFromNow = new Date(now);
+  sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+
+  // Solange verlängern bis mindestens 6 Monate in der Zukunft
+  while (date < sixMonthsFromNow) {
+    date.setMonth(date.getMonth() + 12);
+  }
+
   return date;
 };
 

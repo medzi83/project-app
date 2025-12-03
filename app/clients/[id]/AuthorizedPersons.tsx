@@ -18,6 +18,8 @@ type AuthorizedPerson = {
   position: string | null;
   phone: string | null;
   notes: string | null;
+  createdByClient?: boolean;
+  createdAt?: Date;
 };
 
 type Props = {
@@ -144,6 +146,22 @@ export function AuthorizedPersons({ clientId, authorizedPersons, isAdmin, canEdi
                 key={person.id}
                 className="border rounded-lg p-3 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50"
               >
+                {/* Badge for client-created persons */}
+                {person.createdByClient && (
+                  <div className="mb-2">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-medium">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      Vom Kunden hinzugefügt
+                      {person.createdAt && (
+                        <span className="text-amber-600 dark:text-amber-500">
+                          ({new Date(person.createdAt).toLocaleDateString("de-DE")})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
                 {/* Header with Name */}
                 <div className="mb-2">
                   <div className="font-semibold text-sm truncate">
@@ -356,6 +374,22 @@ export function AuthorizedPersons({ clientId, authorizedPersons, isAdmin, canEdi
               key={person.id}
               className="group relative border rounded-lg p-3 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-800/50 hover:shadow-md transition-shadow"
             >
+              {/* Badge for client-created persons */}
+              {person.createdByClient && (
+                <div className="mb-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-medium">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Vom Kunden hinzugefügt
+                    {person.createdAt && (
+                      <span className="text-amber-600 dark:text-amber-500">
+                        ({new Date(person.createdAt).toLocaleDateString("de-DE")})
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
               {/* Header with Name and Actions */}
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1 min-w-0">
