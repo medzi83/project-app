@@ -1461,6 +1461,11 @@ export default async function DashboardPage({
               onlineDate: true,
               materialStatus: true,
               pStatus: true,
+              webDocumentation: {
+                select: {
+                  confirmedAt: true,
+                },
+              },
             },
           },
           film: {
@@ -1517,6 +1522,7 @@ export default async function DashboardPage({
           demoDate: project.website.demoDate,
           onlineDate: project.website.onlineDate,
           materialStatus: project.website.materialStatus,
+          webDokuConfirmedAt: project.website.webDocumentation?.confirmedAt,
           now,
         });
 
@@ -1639,7 +1645,7 @@ export default async function DashboardPage({
       : null,
   ].filter((group): group is { key: string; title: string; items: AgentAgendaEntry[] } => group !== null);
 
-  // Zähle Projekte mit zu prüfendem Material (eingereichte Texte ohne Bewertung)
+  // Zähle Projekte mit zu prüfendem Material (eingereichte Texte oder Bilder ohne Bewertung)
   const projectsNeedingMaterialReview = await prisma.project.count({
     where: {
       type: "WEBSITE",
@@ -1663,6 +1669,28 @@ export default async function DashboardPage({
                   },
                 },
               },
+            },
+            // MenuItem-Bilder vom Kunden eingereicht aber noch nicht vom Agenten geprüft
+            {
+              menuItems: {
+                some: {
+                  needsImages: true,
+                  imagesSubmittedAt: { not: null },
+                  imagesReviewedAt: null,
+                },
+              },
+            },
+            // Logo-Bilder vom Kunden eingereicht aber noch nicht vom Agenten geprüft
+            {
+              materialLogoNeeded: true,
+              logoImagesSubmittedAt: { not: null },
+              logoImagesReviewedAt: null,
+            },
+            // Sonstige Bilder vom Kunden eingereicht aber noch nicht vom Agenten geprüft
+            {
+              materialNotesNeedsImages: true,
+              generalImagesSubmittedAt: { not: null },
+              generalImagesReviewedAt: null,
             },
           ],
         },

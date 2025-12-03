@@ -16,7 +16,7 @@ export const PRINT_DESIGN_STATUS_LABELS: Record<PrintDesignStatus, string> = {
   DESIGNABNAHME: "Designabnahme",
   FINALVERSION: "Finalversion",
   DRUCK: "Druck",
-  ABGESCHLOSSEN: "Abgeschlossen",
+  ABGESCHLOSSEN: "Beendet",
 };
 
 export const PRINT_DESIGN_TYPE_LABELS: Record<PrintDesignType, string> = {

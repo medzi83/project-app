@@ -13,9 +13,10 @@ type Props = {
     reviewedAt: Date | string | null;
     reviewedByName: string | null;
   } | null;
+  canEdit?: boolean;
 };
 
-export default function ReviewButtons({ type, itemId, projectId, currentReview }: Props) {
+export default function ReviewButtons({ type, itemId, projectId, currentReview, canEdit = true }: Props) {
   const [isPending, startTransition] = useTransition();
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
@@ -112,13 +113,15 @@ export default function ReviewButtons({ type, itemId, projectId, currentReview }
                 </>
               )}
             </div>
-            <button
-              onClick={handleReset}
-              disabled={isPending}
-              className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline disabled:opacity-50"
-            >
-              Zurücksetzen
-            </button>
+            {canEdit && (
+              <button
+                onClick={handleReset}
+                disabled={isPending}
+                className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline disabled:opacity-50"
+              >
+                Zurücksetzen
+              </button>
+            )}
           </div>
 
           {currentReview.reviewedAt && (
@@ -143,7 +146,21 @@ export default function ReviewButtons({ type, itemId, projectId, currentReview }
     );
   }
 
-  // Noch nicht bewertet - zeige Buttons
+  // Noch nicht bewertet - zeige Buttons (oder Status für Nicht-Editoren)
+  if (!canEdit) {
+    // Nicht-Editoren sehen nur den Status
+    return (
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Noch nicht bewertet</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
       {!showRejectForm ? (

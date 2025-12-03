@@ -434,6 +434,28 @@ export default async function ProjectsPage({ searchParams }: Props) {
                   },
                 },
               },
+              // MenuItem-Bilder vom Kunden eingereicht aber noch nicht vom Agenten geprüft
+              {
+                menuItems: {
+                  some: {
+                    needsImages: true,
+                    imagesSubmittedAt: { not: null },
+                    imagesReviewedAt: null,
+                  },
+                },
+              },
+              // Logo-Bilder vom Kunden eingereicht aber noch nicht vom Agenten geprüft
+              {
+                materialLogoNeeded: true,
+                logoImagesSubmittedAt: { not: null },
+                logoImagesReviewedAt: null,
+              },
+              // Sonstige Bilder vom Kunden eingereicht aber noch nicht vom Agenten geprüft
+              {
+                materialNotesNeedsImages: true,
+                generalImagesSubmittedAt: { not: null },
+                generalImagesReviewedAt: null,
+              },
             ],
           },
         },
@@ -535,6 +557,13 @@ export default async function ProjectsPage({ searchParams }: Props) {
           include: {
             webDocumentation: {
               select: {
+                confirmedAt: true,
+                materialLogoNeeded: true,
+                logoImagesSubmittedAt: true,
+                logoImagesReviewedAt: true,
+                materialNotesNeedsImages: true,
+                generalImagesSubmittedAt: true,
+                generalImagesReviewedAt: true,
                 generalTextSubmission: {
                   select: {
                     submittedAt: true,
@@ -543,6 +572,9 @@ export default async function ProjectsPage({ searchParams }: Props) {
                 },
                 menuItems: {
                   select: {
+                    needsImages: true,
+                    imagesSubmittedAt: true,
+                    imagesReviewedAt: true,
                     textSubmission: {
                       select: {
                         submittedAt: true,
@@ -819,6 +851,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
                 demoDate: p.website?.demoDate,
                 onlineDate: p.website?.onlineDate,
                 materialStatus: p.website?.materialStatus,
+                webDokuConfirmedAt: p.website?.webDocumentation?.confirmedAt,
               });
               const statusLabel = labelForProjectStatus(derivedStatus, { pStatus: p.website?.pStatus });
               const clientInactive = p.client?.workStopped || p.client?.finished;
@@ -842,7 +875,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
 
               const isFavoriteClient = p.clientId && favoriteClientIds.has(p.clientId);
 
-              // Prüfe ob Materialprüfung notwendig ist (eingereichte Texte ohne Bewertung)
+              // Prüfe ob Materialprüfung notwendig ist (eingereichte Texte oder Bilder ohne Bewertung)
               const webDoc = p.website?.webDocumentation;
               const needsMaterialReview = webDoc ? (() => {
                 // Allgemeiner Text eingereicht aber nicht geprüft
@@ -852,7 +885,16 @@ export default async function ProjectsPage({ searchParams }: Props) {
                   (item: { textSubmission?: { submittedAt?: Date | null; suitable?: boolean | null } | null }) =>
                     item.textSubmission?.submittedAt && item.textSubmission?.suitable === null
                 );
-                return generalTextNeedsReview || menuItemTextsNeedReview;
+                // MenuItem-Bilder vom Kunden eingereicht aber noch nicht vom Agenten geprüft
+                const menuItemImagesNeedReview = webDoc.menuItems?.some(
+                  (item: { needsImages?: boolean; imagesSubmittedAt?: Date | null; imagesReviewedAt?: Date | null }) =>
+                    item.needsImages && item.imagesSubmittedAt && !item.imagesReviewedAt
+                );
+                // Logo-Bilder eingereicht aber noch nicht geprüft
+                const logoImagesNeedReview = webDoc.materialLogoNeeded && webDoc.logoImagesSubmittedAt && !webDoc.logoImagesReviewedAt;
+                // Sonstige Bilder eingereicht aber noch nicht geprüft
+                const generalImagesNeedReview = webDoc.materialNotesNeedsImages && webDoc.generalImagesSubmittedAt && !webDoc.generalImagesReviewedAt;
+                return generalTextNeedsReview || menuItemTextsNeedReview || menuItemImagesNeedReview || logoImagesNeedReview || generalImagesNeedReview;
               })() : false;
 
               const rowClasses = ["transition-colors"];

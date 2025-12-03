@@ -148,7 +148,15 @@ export default async function ClientDetailPage({ params }: Props) {
         },
         projects: {
           include: {
-            website: true,
+            website: {
+              include: {
+                webDocumentation: {
+                  select: {
+                    confirmedAt: true,
+                  },
+                },
+              },
+            },
             film: {
               include: {
                 previewVersions: {
@@ -1079,6 +1087,7 @@ export default async function ClientDetailPage({ params }: Props) {
                     demoDate: project.website.demoDate,
                     onlineDate: project.website.onlineDate,
                     materialStatus: project.website.materialStatus,
+                    webDokuConfirmedAt: project.website.webDocumentation?.confirmedAt,
                   });
                   statusLabel = labelForProjectStatus(derivedStatus, { pStatus: project.website.pStatus });
                   statusDate = getWebsiteStatusDate(derivedStatus, project.website);

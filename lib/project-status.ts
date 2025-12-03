@@ -23,6 +23,7 @@ type DeriveProjectStatusInput = {
   demoDate?: DateLike;
   onlineDate?: DateLike;
   materialStatus?: MaterialStatusValue;
+  webDokuConfirmedAt?: DateLike;
   now?: Date;
 };
 
@@ -95,6 +96,7 @@ export function deriveProjectStatus({
   demoDate,
   onlineDate,
   materialStatus,
+  webDokuConfirmedAt,
   now,
 }: DeriveProjectStatusInput): ProjectStatus {
   const normalizedPStatus = normalizeStatus(pStatus);
@@ -126,6 +128,21 @@ export function deriveProjectStatus({
 
   const effectiveNow = now ?? new Date();
   const web = toDate(webDate);
+
+  // Wenn WebDoku vom Kunden bestätigt wurde → MATERIAL (falls nicht schon weiter)
+  const webDokuConfirmed = toDate(webDokuConfirmedAt);
+  if (webDokuConfirmed) {
+    // Kunde hat WebDoku bestätigt - prüfe ob schon in UMSETZUNG
+    if (normalizedPStatus && COMPLETE_STATUSES.has(normalizedPStatus)) {
+      return "UMSETZUNG";
+    }
+    const normalizedMaterial = normalizeMaterialStatus(materialStatus);
+    if (normalizedMaterial === MATERIAL_COMPLETE) {
+      return "UMSETZUNG";
+    }
+    return "MATERIAL";
+  }
+
   if (!web || web > effectiveNow) {
     return "WEBTERMIN";
   }
@@ -192,6 +209,13 @@ export function buildWebsiteStatusWhere(
               { webterminType: { not: "OHNE_TERMIN" } },
             ],
           },
+          // Exclude projects where WebDoku was confirmed by customer
+          {
+            OR: [
+              { webDocumentation: null },
+              { webDocumentation: { confirmedAt: null } },
+            ],
+          },
           {
             OR: [
               { webDate: null },
@@ -224,6 +248,14 @@ export function buildWebsiteStatusWhere(
                   { pStatus: { notIn: [VOLLST_A_K, VOLLST_K_E_S] } },
                 ],
               },
+              // WebDoku confirmed case: material incomplete, not complete
+              {
+                AND: [
+                  { webDocumentation: { confirmedAt: { not: null } } },
+                  { materialStatus: { in: INCOMPLETE_MATERIAL_STATUSES } },
+                  { pStatus: { notIn: [VOLLST_A_K, VOLLST_K_E_S] } },
+                ],
+              },
             ],
           },
         ],
@@ -252,6 +284,18 @@ export function buildWebsiteStatusWhere(
               {
                 AND: [
                   { webterminType: "OHNE_TERMIN" },
+                  {
+                    OR: [
+                      { pStatus: { in: [VOLLST_A_K, VOLLST_K_E_S] } },
+                      { materialStatus: MATERIAL_COMPLETE },
+                    ],
+                  },
+                ],
+              },
+              // WebDoku confirmed case: complete status or material complete
+              {
+                AND: [
+                  { webDocumentation: { confirmedAt: { not: null } } },
                   {
                     OR: [
                       { pStatus: { in: [VOLLST_A_K, VOLLST_K_E_S] } },

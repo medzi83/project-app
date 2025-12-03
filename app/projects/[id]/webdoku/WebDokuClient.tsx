@@ -180,6 +180,7 @@ type Props = {
   projectDomain: string | null;
   hasTextit: boolean; // true = Textit-Leistung vorhanden, zeigt "Stichpunkte" statt "Texte"
   isAdmin: boolean; // true = User ist Admin (kann Freigabe zurückziehen)
+  canEdit?: boolean; // true = User kann bearbeiten (ADMIN/AGENT), false = nur lesen (SALES)
 };
 
 // Prüft ob ein Schritt als "gespeichert" gilt
@@ -193,7 +194,8 @@ function isStepSaved(step: number, webDoc: WebDocumentation): boolean {
     case 2:
       return !!(webDoc.companyName || webDoc.companyFocus);
     case 3:
-      return webDoc.menuItems.length > 0;
+      // Nur Haupt-Menüpunkte zählen (nicht Footer wie Impressum/Datenschutz die automatisch erstellt werden)
+      return webDoc.menuItems.some((item) => !item.isFooterMenu);
     case 4:
       return !!(
         webDoc.hasLogo !== null ||
@@ -280,7 +282,7 @@ function getDomainStatusOptions(agency: string | null) {
   ];
 }
 
-export default function WebDokuClient({ projectId, webDoc, client, projectDomain, hasTextit, isAdmin }: Props) {
+export default function WebDokuClient({ projectId, webDoc, client, projectDomain, hasTextit, isAdmin, canEdit = true }: Props) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -292,6 +294,9 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
 
   // Webdoku ist gesperrt, wenn sie bereits an den Kunden freigegeben wurde
   const isLocked = !!releaseData.releasedAt;
+
+  // Bearbeitung ist deaktiviert wenn gesperrt ODER keine Berechtigung (SALES)
+  const isDisabled = isLocked || !canEdit;
 
   // Track welche Schritte bereits gespeichert wurden (initial aus webDoc berechnet)
   const [savedSteps, setSavedSteps] = useState<Set<number>>(() => {
@@ -1214,7 +1219,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                               </p>
                             </div>
                           </div>
-                          {!isLocked && (
+                          {!isDisabled && (
                             <button
                               type="button"
                               onClick={() => handleRemoveContact(contact.id)}
@@ -1240,7 +1245,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     </div>
 
                     {/* Weitere Ansprechpartner hinzufügen */}
-                    {availableContacts.length > 0 && !isLocked && (
+                    {availableContacts.length > 0 && !isDisabled && (
                       <div className="flex items-center gap-2">
                         <Select
                           onValueChange={(value) => {
@@ -1262,7 +1267,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     )}
 
                     {/* Button zum Anlegen eines neuen Ansprechpartners */}
-                    {!showNewContactForm && !isLocked && (
+                    {!showNewContactForm && !isDisabled && (
                       <div className="mt-3">
                         <button
                           type="button"
@@ -1433,7 +1438,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     name="contactEmail"
                     type="email"
                     required
-                    disabled={isLocked}
+                    disabled={isDisabled}
                     defaultValue={webDoc.contactEmail || primaryContact?.email || client.email || ""}
                     placeholder="E-Mail-Adresse des Ansprechpartners"
                     className="w-full"
@@ -1453,7 +1458,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                       id="websiteDomain"
                       name="websiteDomain"
                       required
-                      disabled={isLocked}
+                      disabled={isDisabled}
                       defaultValue={webDoc.websiteDomain || projectDomain || ""}
                       placeholder="z.B. www.example.de"
                       className="w-full"
@@ -1463,7 +1468,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     <label htmlFor="domainStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Domain-Status <span className="text-red-500">*</span>
                     </label>
-                    <Select name="domainStatus" required defaultValue={webDoc.domainStatus || ""} disabled={isLocked}>
+                    <Select name="domainStatus" required defaultValue={webDoc.domainStatus || ""} disabled={isDisabled}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Status auswählen..." />
                       </SelectTrigger>
@@ -1486,7 +1491,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                   <Textarea
                     id="urgentNotes"
                     name="urgentNotes"
-                    disabled={isLocked}
+                    disabled={isDisabled}
                     defaultValue={webDoc.urgentNotes || ""}
                     placeholder="Wichtige Hinweise, die unbedingt beachtet werden müssen..."
                     rows={4}
@@ -1511,7 +1516,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <Button type="submit" disabled={isSaving || isLocked} className={savedSteps.has(1) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
+                    <Button type="submit" disabled={isSaving || isDisabled} className={savedSteps.has(1) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
                       {isSaving ? (
                         <>
                           <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -1590,7 +1595,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     content={companyFocusContent}
                     onChange={setCompanyFocusContent}
                     placeholder="Beschreiben Sie hier die Schwerpunkte des Unternehmens, Produkte, Dienstleistungen, Alleinstellungsmerkmale, Zielgruppe etc..."
-                    disabled={isLocked}
+                    disabled={isDisabled}
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Nutzen Sie die Toolbar zum Formatieren: Fett, Kursiv, Unterstrichen, Listen etc.
@@ -1617,7 +1622,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <Button type="button" onClick={handleSaveStep2} disabled={isSaving || isLocked} className={savedSteps.has(2) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
+                    <Button type="button" onClick={handleSaveStep2} disabled={isSaving || isDisabled} className={savedSteps.has(2) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
                       {isSaving ? (
                         <>
                           <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -1685,7 +1690,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                 </div>
 
                 {/* Schnellauswahl für häufige Menüpunkte */}
-                {!isLocked && MENU_ITEM_TEMPLATES.filter(
+                {!isDisabled && MENU_ITEM_TEMPLATES.filter(
                   (template) => !menuItems.some((item) => item.name.toLowerCase() === template.toLowerCase())
                 ).length > 0 && (
                   <div>
@@ -1711,7 +1716,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                 )}
 
                 {/* Neuen Hauptmenüpunkt hinzufügen */}
-                {!isLocked && (
+                {!isDisabled && (
                   <div className="flex items-center gap-2">
                     <Input
                       value={newMenuItemName}
@@ -1743,7 +1748,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
                     </svg>
                     <p className="text-gray-500 dark:text-gray-400 mb-4">Noch keine Menüpunkte angelegt</p>
-                    {!isLocked && (
+                    {!isDisabled && (
                       <>
                         <Button
                           type="button"
@@ -1779,7 +1784,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                             {/* Hauptmenüpunkt */}
                             <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800">
                               {/* Sortier-Buttons */}
-                              {!isLocked && (
+                              {!isDisabled && (
                                 <div className="flex flex-col">
                                   <button
                                     type="button"
@@ -1853,7 +1858,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                               )}
 
                               {/* Aktionen */}
-                              {editingItemId !== item.id && !isLocked && (
+                              {editingItemId !== item.id && !isDisabled && (
                                 <div className="flex items-center gap-1">
                                   <button
                                     type="button"
@@ -1905,7 +1910,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                                     className="flex items-center gap-2 p-2 pl-10 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 last:border-b-0"
                                   >
                                     {/* Sortier-Buttons */}
-                                    {!isLocked && (
+                                    {!isDisabled && (
                                       <div className="flex flex-col">
                                         <button
                                           type="button"
@@ -1971,7 +1976,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                                     )}
 
                                     {/* Aktionen */}
-                                    {editingItemId !== subItem.id && !isLocked && (
+                                    {editingItemId !== subItem.id && !isDisabled && (
                                       <div className="flex items-center gap-1">
                                         <button
                                           type="button"
@@ -2134,7 +2139,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                               )}
 
                               {/* Aktionen */}
-                              {editingItemId !== item.id && !isLocked && (
+                              {editingItemId !== item.id && !isDisabled && (
                                 <div className="flex items-center gap-1">
                                   <button
                                     type="button"
@@ -2178,7 +2183,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                           <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(optional)</span>
                         </h3>
                         {/* Dropdown um Hinweis hinzuzufügen */}
-                        {!editingNotesItemId && !isLocked && (
+                        {!editingNotesItemId && !isDisabled && (
                           <Select
                             value=""
                             onValueChange={(value) => {
@@ -2745,7 +2750,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <Button type="button" onClick={handleSaveStep4} disabled={isSaving || isLocked} className={savedSteps.has(4) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
+                    <Button type="button" onClick={handleSaveStep4} disabled={isSaving || isDisabled} className={savedSteps.has(4) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
                       {isSaving ? (
                         <>
                           <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -2811,7 +2816,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     type="checkbox"
                     id="noFormsRequired"
                     checked={noFormsRequired}
-                    disabled={isLocked}
+                    disabled={isDisabled}
                     onChange={async (e) => {
                       const newValue = e.target.checked;
                       setNoFormsRequired(newValue);
@@ -2840,7 +2845,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                 {!noFormsRequired && (
                   <>
                     {/* Neues Formular hinzufügen */}
-                    {!isLocked && (
+                    {!isDisabled && (
                       <div className="flex gap-3">
                         <Input
                           value={newFormName}
@@ -2930,7 +2935,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                           standardFields={STANDARD_FIELDS}
                           knownEmails={knownEmails}
                           isSaving={isSaving}
-                          isLocked={isLocked}
+                          isDisabled={isDisabled}
                           onToggleExpand={() => setExpandedFormId(expandedFormId === form.id ? null : form.id)}
                           onStartEdit={() => handleStartEditForm(form)}
                           onSaveEdit={() => handleSaveForm(form.id)}
@@ -3321,7 +3326,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <Button type="button" onClick={handleSaveStep6} disabled={isSaving || isLocked} className={savedSteps.has(6) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
+                    <Button type="button" onClick={handleSaveStep6} disabled={isSaving || isDisabled} className={savedSteps.has(6) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
                       {isSaving ? (
                         <>
                           <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -3619,7 +3624,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                         type="checkbox"
                         checked={step7Data.materialNotesNeedsImages}
                         onChange={(e) => setStep7Data({ ...step7Data, materialNotesNeedsImages: e.target.checked })}
-                        disabled={isLocked}
+                        disabled={isDisabled}
                         className="w-5 h-5 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">Bilder benötigt</span>
@@ -3629,7 +3634,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                         type="checkbox"
                         checked={step7Data.materialNotesNeedsTexts}
                         onChange={(e) => setStep7Data({ ...step7Data, materialNotesNeedsTexts: e.target.checked })}
-                        disabled={isLocked}
+                        disabled={isDisabled}
                         className="w-5 h-5 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">{hasTextit ? "Stichpunkte" : "Texte"} benötigt</span>
@@ -3690,7 +3695,7 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                       </span>
                     )}
                   </div>
-                  <Button type="button" onClick={handleSaveStep7} disabled={isSaving || isLocked} className={savedSteps.has(7) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
+                  <Button type="button" onClick={handleSaveStep7} disabled={isSaving || isDisabled} className={savedSteps.has(7) ? "bg-green-600 hover:bg-green-700" : "bg-cyan-600 hover:bg-cyan-700"}>
                     {isSaving ? (
                       <>
                         <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -3802,48 +3807,52 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                     // Noch nicht übermittelt
                     <div className="space-y-4">
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Die Webdokumentation wurde noch nicht an den Kunden übermittelt. Nach der Übermittlung wird sie im Kundenportal sichtbar.
+                        Die Webdokumentation wurde noch nicht an den Kunden übermittelt.{canEdit && " Nach der Übermittlung wird sie im Kundenportal sichtbar."}
                       </p>
-                      <Button
-                        type="button"
-                        onClick={async () => {
-                          setIsReleasing(true);
-                          try {
-                            const result = await releaseWebDocumentationForCustomer(projectId);
-                            if (result.success && result.releasedAt && result.releasedByName) {
-                              setReleaseData({
-                                releasedAt: result.releasedAt,
-                                releasedByName: result.releasedByName,
-                              });
-                            }
-                          } finally {
-                            setIsReleasing(false);
-                          }
-                        }}
-                        disabled={isReleasing || !savedSteps.has(7)}
-                        className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
-                      >
-                        {isReleasing ? (
-                          <>
-                            <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            Wird übermittelt...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                            An Kunden übermitteln
-                          </>
-                        )}
-                      </Button>
-                      {!savedSteps.has(7) && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400">
-                          Bitte speichern Sie zuerst Schritt 7, bevor Sie die Webdokumentation übermitteln können.
-                        </p>
+                      {canEdit && (
+                        <>
+                          <Button
+                            type="button"
+                            onClick={async () => {
+                              setIsReleasing(true);
+                              try {
+                                const result = await releaseWebDocumentationForCustomer(projectId);
+                                if (result.success && result.releasedAt && result.releasedByName) {
+                                  setReleaseData({
+                                    releasedAt: result.releasedAt,
+                                    releasedByName: result.releasedByName,
+                                  });
+                                }
+                              } finally {
+                                setIsReleasing(false);
+                              }
+                            }}
+                            disabled={isReleasing || !savedSteps.has(7)}
+                            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
+                          >
+                            {isReleasing ? (
+                              <>
+                                <svg className="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Wird übermittelt...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                                An Kunden übermitteln
+                              </>
+                            )}
+                          </Button>
+                          {!savedSteps.has(7) && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400">
+                              Bitte speichern Sie zuerst Schritt 7, bevor Sie die Webdokumentation übermitteln können.
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
@@ -3939,7 +3948,7 @@ function FormCard({
   editingData,
   standardFields,
   isSaving,
-  isLocked,
+  isDisabled,
   onToggleExpand,
   onStartEdit,
   onSaveEdit,
@@ -3957,7 +3966,7 @@ function FormCard({
   standardFields: { type: WebDocuFormFieldType; label: string }[];
   knownEmails: { email: string; label: string }[];
   isSaving: boolean;
-  isLocked: boolean;
+  isDisabled: boolean;
   onToggleExpand: () => void;
   onStartEdit: () => void;
   onSaveEdit: () => void;
@@ -4110,7 +4119,7 @@ function FormCard({
           )}
         </div>
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          {!isEditing && !isLocked && (
+          {!isEditing && !isDisabled && (
             <>
               <button
                 onClick={onStartEdit}
@@ -4147,7 +4156,7 @@ function FormCard({
               <div className="flex-1 flex gap-2">
                 <Input
                   value={localEmail}
-                  disabled={isLocked}
+                  disabled={isDisabled}
                   onChange={(e) => {
                     setLocalEmail(e.target.value);
                     setEmailChanged(e.target.value !== (form.recipientEmail || ""));
@@ -4167,7 +4176,7 @@ function FormCard({
                   placeholder="empfaenger@firma.de"
                   className="flex-1"
                 />
-                {knownEmails.length > 0 && !isLocked && (
+                {knownEmails.length > 0 && !isDisabled && (
                   <select
                     value=""
                     onChange={(e) => {
@@ -4226,12 +4235,12 @@ function FormCard({
                     <input
                       type="checkbox"
                       checked={state.enabled}
-                      disabled={isLocked}
+                      disabled={isDisabled}
                       onChange={() => handleToggleField(field.type)}
                       className="w-4 h-4 text-cyan-600 rounded disabled:opacity-50"
                     />
                     <span className="text-sm flex-1">{field.label}</span>
-                    {state.enabled && !isLocked && (
+                    {state.enabled && !isDisabled && (
                       <button
                         onClick={() => handleToggleRequired(field.type)}
                         className={`text-xs px-1.5 py-0.5 rounded ${
@@ -4244,7 +4253,7 @@ function FormCard({
                         {state.isRequired ? "*" : "opt"}
                       </button>
                     )}
-                    {state.enabled && isLocked && (
+                    {state.enabled && isDisabled && (
                       <span className={`text-xs px-1.5 py-0.5 rounded ${
                         state.isRequired
                           ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
@@ -4275,7 +4284,7 @@ function FormCard({
                       {field.type === "CUSTOM_SELECT" && "Dropdown"}
                     </span>
                     <span className="text-sm flex-1">{field.label}</span>
-                    {!isLocked ? (
+                    {!isDisabled ? (
                       <>
                         <button
                           onClick={() => {
@@ -4313,7 +4322,7 @@ function FormCard({
                 ))}
               </div>
             )}
-            {!isLocked && (
+            {!isDisabled && (
               <div className="flex gap-2">
                 <select
                   value={newCustomFieldType}
@@ -4355,7 +4364,7 @@ function FormCard({
           <div className="flex justify-end pt-2 border-t border-gray-200 dark:border-gray-700">
             <Button
               onClick={handleSave}
-              disabled={isSaving || isLocked}
+              disabled={isSaving || isDisabled}
               className="bg-cyan-600 hover:bg-cyan-700"
             >
               {isSaving ? (

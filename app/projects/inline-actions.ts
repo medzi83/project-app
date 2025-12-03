@@ -284,6 +284,11 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
               demoDate: true,
               onlineDate: true,
               materialStatus: true,
+              webDocumentation: {
+                select: {
+                  confirmedAt: true,
+                },
+              },
             },
           },
         },
@@ -296,6 +301,7 @@ export async function updateInlineField(formData: FormData): Promise<{ emailTrig
           demoDate: project.website?.demoDate,
           onlineDate: project.website?.onlineDate,
           materialStatus: project.website?.materialStatus,
+          webDokuConfirmedAt: project.website?.webDocumentation?.confirmedAt,
         });
         if (project.status !== nextStatus) {
           await prisma.project.update({ where: { id }, data: { status: nextStatus } });

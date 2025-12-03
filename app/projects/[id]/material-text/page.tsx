@@ -14,11 +14,13 @@ export default async function MaterialTextPage({ params }: Props) {
   const session = await getAuthSession();
   if (!session) redirect("/login");
 
-  // Only Admins and Agents can access this page
+  // Only Admins, Agents, and Sales can access this page
   const role = session.user.role!;
-  if (role !== "ADMIN" && role !== "AGENT") {
+  if (role !== "ADMIN" && role !== "AGENT" && role !== "SALES") {
     notFound();
   }
+
+  const canEdit = role === "ADMIN" || role === "AGENT";
 
   const project = await prisma.project.findUnique({
     where: { id },
@@ -360,6 +362,7 @@ export default async function MaterialTextPage({ params }: Props) {
                       reviewedAt: item.textSubmission.reviewedAt,
                       reviewedByName: item.textSubmission.reviewedByName,
                     } : null}
+                    canEdit={canEdit}
                   />
                 </div>
               </div>
@@ -423,6 +426,7 @@ export default async function MaterialTextPage({ params }: Props) {
                         reviewedAt: child.textSubmission.reviewedAt,
                         reviewedByName: child.textSubmission.reviewedByName,
                       } : null}
+                      canEdit={canEdit}
                     />
                   </div>
                 </div>
@@ -503,6 +507,7 @@ export default async function MaterialTextPage({ params }: Props) {
                         reviewedAt: child.textSubmission.reviewedAt,
                         reviewedByName: child.textSubmission.reviewedByName,
                       } : null}
+                      canEdit={canEdit}
                     />
                   </div>
                 </div>
@@ -572,6 +577,7 @@ export default async function MaterialTextPage({ params }: Props) {
                   reviewedAt: generalTextSubmission.reviewedAt,
                   reviewedByName: generalTextSubmission.reviewedByName,
                 }}
+                canEdit={canEdit}
               />
             </div>
           </div>

@@ -189,7 +189,7 @@ function ToolbarButton({
       title={title}
       className={`p-1.5 rounded transition-colors ${
         active
-          ? "bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300"
+          ? "bg-cyan-100 dark:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300"
           : disabled
           ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
           : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200"

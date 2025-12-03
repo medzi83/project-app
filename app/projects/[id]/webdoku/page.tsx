@@ -7,7 +7,7 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function WebDokuPage({ params }: Props) {
   const { id } = await params;
-  const session = await requireRole(["ADMIN", "AGENT"]);
+  const session = await requireRole(["ADMIN", "AGENT", "SALES"]);
   if (!session) redirect("/login");
 
   const project = await prisma.project.findUnique({
@@ -200,6 +200,7 @@ export default async function WebDokuPage({ params }: Props) {
       projectDomain={project.website.domain}
       hasTextit={project.website?.textit != null && project.website?.textit !== "NEIN"}
       isAdmin={session.user.role === "ADMIN"}
+      canEdit={session.user.role === "ADMIN" || session.user.role === "AGENT"}
     />
   );
 }

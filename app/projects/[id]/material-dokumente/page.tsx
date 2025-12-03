@@ -21,11 +21,13 @@ export default async function MaterialDokumentePage({ params }: Props) {
   const session = await getAuthSession();
   if (!session) redirect("/login");
 
-  // Only Admins and Agents can access this page
+  // Only Admins, Agents, and Sales can access this page
   const role = session.user.role!;
-  if (role !== "ADMIN" && role !== "AGENT") {
+  if (role !== "ADMIN" && role !== "AGENT" && role !== "SALES") {
     notFound();
   }
+
+  const canEdit = role === "ADMIN" || role === "AGENT";
 
   const project = await prisma.project.findUnique({
     where: { id },
@@ -234,6 +236,7 @@ export default async function MaterialDokumentePage({ params }: Props) {
             reviewedAt: webDoku.generalImagesReviewedAt?.toISOString() ?? null,
             reviewedByName: webDoku.generalImagesReviewedByName,
           }}
+          canEdit={canEdit}
         />
       )}
     </div>

@@ -40,6 +40,7 @@ type Props = {
   materialNotes: string | null;
   logoReview: ReviewData;
   generalReview: ReviewData;
+  canEdit?: boolean;
 };
 
 // Funktion um einen sicheren Ordnernamen zu erstellen (gleiche Logik wie Kundenportal)
@@ -89,6 +90,7 @@ export default function MaterialDokumenteClient({
   materialNotes,
   logoReview,
   generalReview,
+  canEdit = true,
 }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -614,69 +616,73 @@ export default function MaterialDokumenteClient({
 
                   {/* Aktions-Buttons */}
                   <div className="flex items-center gap-1">
-                    {/* Vollständig-Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        saveReview(folder, true);
-                      }}
-                      disabled={isSaving || (review.complete === true && review.reviewedAt !== null)}
-                      className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
-                        review.complete === true && review.reviewedAt !== null
-                          ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                          : "text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
-                      }`}
-                      title="Als vollständig markieren"
-                    >
-                      {isSaving ? (
-                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                      ) : (
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </button>
+                    {canEdit && (
+                      <>
+                        {/* Vollständig-Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            saveReview(folder, true);
+                          }}
+                          disabled={isSaving || (review.complete === true && review.reviewedAt !== null)}
+                          className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
+                            review.complete === true && review.reviewedAt !== null
+                              ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                              : "text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          }`}
+                          title="Als vollständig markieren"
+                        >
+                          {isSaving ? (
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
 
-                    {/* Unvollständig-Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        saveReview(folder, false);
-                      }}
-                      disabled={isSaving || (review.complete === false && review.reviewedAt !== null)}
-                      className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
-                        review.complete === false && review.reviewedAt !== null
-                          ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
-                          : "text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      }`}
-                      title="Als unvollständig markieren"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                        {/* Unvollständig-Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            saveReview(folder, false);
+                          }}
+                          disabled={isSaving || (review.complete === false && review.reviewedAt !== null)}
+                          className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
+                            review.complete === false && review.reviewedAt !== null
+                              ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                              : "text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          }`}
+                          title="Als unvollständig markieren"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
 
-                    {/* Kommentar-Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingComment(isEditingThisComment ? null : reviewKey);
-                        setCommentDraft(review.comment || "");
-                      }}
-                      className={`p-1.5 rounded-lg transition-colors ${
-                        review.comment
-                          ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50"
-                          : "text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-                      }`}
-                      title="Hinweis für Kunden"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                      </svg>
-                    </button>
+                        {/* Kommentar-Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingComment(isEditingThisComment ? null : reviewKey);
+                            setCommentDraft(review.comment || "");
+                          }}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            review.comment
+                              ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50"
+                              : "text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                          }`}
+                          title="Hinweis für Kunden"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
 
                     {/* Refresh-Button */}
                     <button
@@ -706,7 +712,7 @@ export default function MaterialDokumenteClient({
                 </div>
 
                 {/* Kommentar-Editor */}
-                {isEditingThisComment && (
+                {canEdit && isEditingThisComment && (
                   <div
                     className="px-4 py-3 bg-amber-50 dark:bg-amber-900/10 border-t border-amber-200 dark:border-amber-800"
                     onClick={(e) => e.stopPropagation()}
@@ -757,8 +763,9 @@ export default function MaterialDokumenteClient({
                 {/* Bestehender Kommentar-Anzeige (wenn nicht editiert) */}
                 {review.comment && !isEditingThisComment && (
                   <div
-                    className="px-4 py-2 bg-amber-50 dark:bg-amber-900/10 border-t border-amber-200 dark:border-amber-800 cursor-pointer"
+                    className={`px-4 py-2 bg-amber-50 dark:bg-amber-900/10 border-t border-amber-200 dark:border-amber-800 ${canEdit ? "cursor-pointer" : ""}`}
                     onClick={(e) => {
+                      if (!canEdit) return;
                       e.stopPropagation();
                       setEditingComment(reviewKey);
                       setCommentDraft(review.comment || "");

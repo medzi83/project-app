@@ -21,9 +21,15 @@ async function syncProjectStatuses() {
         select: {
           pStatus: true,
           webDate: true,
+          webterminType: true,
           demoDate: true,
           onlineDate: true,
           materialStatus: true,
+          webDocumentation: {
+            select: {
+              confirmedAt: true,
+            },
+          },
         },
       },
     },
@@ -43,6 +49,7 @@ async function syncProjectStatuses() {
         demoDate: project.website?.demoDate,
         onlineDate: project.website?.onlineDate,
         materialStatus: project.website?.materialStatus,
+        webDokuConfirmedAt: project.website?.webDocumentation?.confirmedAt,
       });
 
       if (project.status !== derivedStatus) {

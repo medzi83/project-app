@@ -192,6 +192,7 @@ model ProjectWebsite {
   domainHistory    ProjectDomainHistory[]
   project          Project                @relation(fields: [projectId], references: [id])
   webDocumentation WebDocumentation?
+  texterstellung   Texterstellung?        // Texterstellung für dieses Projekt (wenn Textit im Umfang)
 }
 
 // Webdokumentation - Sammlung aller relevanten Informationen für die Webseitenerstellung
@@ -1195,4 +1196,120 @@ enum ContractService {
   SECURE_PLUS         // SecurePlus
   ADWORDS_ADLEIT      // Adwords (Adleit)
   SOCIAL_MEDIA        // Social-Media
+}
+
+// ============================================================================
+// TEXTERSTELLUNG
+// ============================================================================
+// Workflow:
+// 1. Kunde hat Textit im Umfang → reicht Stichpunkte pro Menüpunkt ein
+// 2. Agent prüft Stichpunkte → wenn alle vollständig, werden sie zur Texterstellung übertragen
+// 3. Agent erstellt Texte basierend auf Stichpunkten
+// 4. Texte werden dem Kunden übergeben (Version erstellt)
+// 5. Kunde bestätigt oder bittet um Korrektur mit Hinweisen
+// 6. Agent korrigiert und übergibt erneut (neue Version)
+// 7. Wiederholung bis Kunde alle Texte bestätigt hat
+
+// Haupt-Container für die Texterstellung eines Projekts
+model Texterstellung {
+  id                   String                   @id @default(cuid())
+  projectId            String                   @unique
+
+  // Status der gesamten Texterstellung
+  status               TexterstellungStatus     @default(PENDING)
+
+  // Zeitpunkte
+  startedAt            DateTime?                // Wann wurde die Texterstellung gestartet (Stichpunkte übertragen)
+  startedByUserId      String?                  // User-ID des Agenten der gestartet hat
+  startedByName        String?                  // Name des Agenten
+  completedAt          DateTime?                // Wann wurden alle Texte vom Kunden bestätigt
+
+  // Interne Notizen
+  internalNote         String?                  // Interner Vermerk für Agenten
+
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  project              ProjectWebsite           @relation(fields: [projectId], references: [projectId], onDelete: Cascade)
+  items                TexterstellungItem[]     // Die einzelnen Text-Items (pro Menüpunkt)
+}
+
+// Einzelnes Text-Item (entspricht einem Menüpunkt)
+model TexterstellungItem {
+  id                   String                   @id @default(cuid())
+  texterstellungId     String
+  menuItemId           String                   @unique // Referenz zum Original-Menüpunkt
+  menuItemName         String                   // Name des Menüpunkts (kopiert für Anzeige)
+
+  // Vom Kunden eingereichte Stichpunkte (kopiert von MaterialTextSubmission)
+  bulletPoints         String                   // Die Stichpunkte (kopiert bei Transfer)
+  bulletPointsCopiedAt DateTime                 // Zeitpunkt der Übernahme
+
+  // Status des einzelnen Items
+  status               TexterstellungItemStatus @default(PENDING)
+
+  // Info vom Texter (interne Notiz pro Menüpunkt)
+  texterNote           String?                  // Vermerk/Info vom Texter zu diesem Text
+
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  texterstellung       Texterstellung           @relation(fields: [texterstellungId], references: [id], onDelete: Cascade)
+  versions             TexterstellungVersion[]  // Alle Versionen des Textes
+
+  @@index([texterstellungId])
+  @@index([menuItemId])
+}
+
+// Versionen eines Textes (jede Übergabe an den Kunden = neue Version)
+model TexterstellungVersion {
+  id                   String                   @id @default(cuid())
+  itemId               String
+  versionNumber        Int                      // 1, 2, 3, ... (erhöht sich mit jeder Korrektur)
+
+  // Der erstellte Text
+  content              String                   // Der erstellte Text (RichText/HTML)
+
+  // Agent-Info (wer hat den Text geschrieben)
+  createdByUserId      String?                  // User-ID des Agenten
+  createdByName        String?                  // Name des Agenten
+  createdAt            DateTime                 @default(now())
+
+  // Kunden-Reaktion
+  customerDecision     TexterstellungDecision?  // APPROVED oder REVISION_REQUESTED
+  customerDecisionAt   DateTime?                // Zeitpunkt der Entscheidung
+  customerDecisionByName String?                // Name des Kunden (AuthorizedPerson)
+  customerDecisionByIp String?                  // IP-Adresse des Kunden
+
+  // Korrekturhinweise vom Kunden (wenn REVISION_REQUESTED)
+  revisionNote         String?                  // Hinweise des Kunden zur gewünschten Korrektur
+
+  item                 TexterstellungItem       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, versionNumber])
+  @@index([itemId])
+}
+
+// Status der gesamten Texterstellung
+enum TexterstellungStatus {
+  PENDING              // Warten auf Stichpunkte-Transfer
+  IN_PROGRESS          // Texterstellung läuft (mindestens ein Text in Bearbeitung)
+  AWAITING_REVIEW      // Texte warten auf Kunden-Review
+  REVISION_IN_PROGRESS // Korrekturen in Bearbeitung
+  COMPLETED            // Alle Texte vom Kunden bestätigt
+}
+
+// Status eines einzelnen Text-Items
+enum TexterstellungItemStatus {
+  PENDING              // Noch kein Text erstellt
+  DRAFT                // Text in Bearbeitung (Agent schreibt)
+  SUBMITTED            // Text an Kunden übergeben, wartet auf Reaktion
+  REVISION_REQUESTED   // Kunde hat Korrektur angefordert
+  APPROVED             // Kunde hat Text bestätigt
+}
+
+// Kunden-Entscheidung zu einer Version
+enum TexterstellungDecision {
+  APPROVED             // Text bestätigt
+  REVISION_REQUESTED   // Korrektur gewünscht
 }
