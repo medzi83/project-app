@@ -119,31 +119,26 @@ export async function updateFilmInlineField(formData: FormData): Promise<{ succe
   // Store old value for trigger comparison
   const oldValue = existingFilm?.[filmKey as keyof typeof existingFilm] ?? null;
   const updateData: Prisma.ProjectFilmUncheckedUpdateInput = {};
-  const createData: Prisma.ProjectFilmUncheckedCreateInput = { projectId: id };
 
   switch (filmKey) {
     case "scope": {
       const nextValue = (typeof parsedValue === "string" ? parsedValue : "FILM") as FilmScope;
       updateData.scope = nextValue;
-      createData.scope = nextValue;
       break;
     }
     case "priority": {
       const nextValue = (typeof parsedValue === "string" ? parsedValue : "NONE") as FilmPriority;
       updateData.priority = nextValue;
-      createData.priority = nextValue;
       break;
     }
     case "filmerId": {
       const nextValue = typeof parsedValue === "string" ? parsedValue : null;
       updateData.filmerId = nextValue;
-      createData.filmerId = nextValue;
       break;
     }
     case "cutterId": {
       const nextValue = typeof parsedValue === "string" ? parsedValue : null;
       updateData.cutterId = nextValue;
-      createData.cutterId = nextValue;
       break;
     }
     case "contractStart":
@@ -157,7 +152,6 @@ export async function updateFilmInlineField(formData: FormData): Promise<{ succe
     case "reminderAt": {
       const nextValue = parsedValue instanceof Date ? parsedValue : null;
       updateData[filmKey] = nextValue;
-      createData[filmKey] = nextValue;
       break;
     }
     case "finalToClient": {
@@ -167,14 +161,11 @@ export async function updateFilmInlineField(formData: FormData): Promise<{ succe
         return { success: false, error: "Bitte auch einen Finalversion-Link hinterlegen." };
       }
       updateData.finalToClient = nextValue;
-      createData.finalToClient = nextValue;
       if (incomingLink !== undefined) {
         updateData.finalLink = incomingLink ?? null;
-        createData.finalLink = incomingLink ?? undefined;
       }
       if (!nextValue && normalizedFinalLinkInput === null) {
         updateData.finalLink = null;
-        createData.finalLink = undefined;
       }
       if (nextValue) {
         const linkForOnline =
@@ -183,7 +174,6 @@ export async function updateFilmInlineField(formData: FormData): Promise<{ succe
             : existingFilm?.finalLink ?? existingFilm?.onlineLink ?? null;
         if (existingFilm?.onlineDate && linkForOnline) {
           updateData.onlineLink = linkForOnline;
-          createData.onlineLink = linkForOnline;
         }
       }
       break;
@@ -196,17 +186,14 @@ export async function updateFilmInlineField(formData: FormData): Promise<{ succe
             ? normalizedFinalLinkInput
             : null;
       updateData.finalLink = linkValue;
-      createData.finalLink = linkValue ?? undefined;
       if (existingFilm?.onlineDate) {
         updateData.onlineLink = linkValue;
-        createData.onlineLink = linkValue ?? undefined;
       }
       break;
     }
     case "onlineDate": {
       const nextValue = parsedValue instanceof Date ? parsedValue : null;
       updateData.onlineDate = nextValue;
-      createData.onlineDate = nextValue;
       if (nextValue) {
         const linkCandidate =
           normalizedOnlineLinkInput !== undefined
@@ -220,14 +207,11 @@ export async function updateFilmInlineField(formData: FormData): Promise<{ succe
           return { success: false, error: "Bitte den Finalversion-Link hinterlegen, bevor ein Online-Datum gesetzt wird." };
         }
         updateData.onlineLink = linkCandidate;
-        createData.onlineLink = linkCandidate;
       } else {
         if (normalizedOnlineLinkInput !== undefined) {
           updateData.onlineLink = normalizedOnlineLinkInput;
-          createData.onlineLink = normalizedOnlineLinkInput ?? undefined;
         } else {
           updateData.onlineLink = null;
-          createData.onlineLink = undefined;
         }
       }
       break;
@@ -240,27 +224,23 @@ export async function updateFilmInlineField(formData: FormData): Promise<{ succe
             ? normalizedOnlineLinkInput
             : null;
       updateData.onlineLink = linkValue;
-      createData.onlineLink = linkValue ?? undefined;
       break;
     }
     case "status": {
-      const nextValue = (typeof parsedValue === "string" ? parsedValue : "AKTIV") as FilmProjectStatus;
+      const nextValue = typeof parsedValue === "string" ? (parsedValue as FilmProjectStatus) : null;
       updateData.status = nextValue;
-      createData.status = nextValue;
       break;
     }
     case "note": {
       const nextValue = typeof parsedValue === "string" ? parsedValue : null;
       updateData.note = nextValue;
-      createData.note = nextValue ?? undefined;
       break;
     }
   }
 
-  await prisma.projectFilm.upsert({
+  await prisma.projectFilm.update({
     where: { projectId: id },
-    update: updateData,
-    create: createData,
+    data: updateData,
   });
 
   // Process email triggers for date changes (like finalToClient, onlineDate, etc.)

@@ -37,6 +37,7 @@ const PRIORITY_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
+  { value: "", label: "- keine Auswahl -" },
   { value: "AKTIV", label: "Aktiv" },
   { value: "BEENDET", label: "Beendet" },
   { value: "WARTEN", label: "Warten" },
@@ -134,7 +135,7 @@ export default async function EditFilmProjectPage({ params }: Props) {
               <label className="block text-sm font-medium mb-1">P-Status</label>
               <select
                 name="status"
-                defaultValue={film.status || "AKTIV"}
+                defaultValue={film.status || ""}
                 className="w-full rounded border p-2"
               >
                 {STATUS_OPTIONS.map((opt) => (

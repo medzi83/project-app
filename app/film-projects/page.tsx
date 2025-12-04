@@ -207,10 +207,13 @@ const PRIORITY_OPTIONS = (Object.keys(PRIORITY_LABELS) as FilmPriority[]).map((v
   label: PRIORITY_LABELS[value],
 }));
 
-const P_STATUS_OPTIONS = (Object.keys(P_STATUS_LABELS) as FilmProjectStatus[]).map((value) => ({
-  value,
-  label: P_STATUS_LABELS[value]!,
-}));
+const P_STATUS_OPTIONS: { value: FilmProjectStatus | ""; label: string }[] = [
+  { value: "", label: "- keine Auswahl -" },
+  ...(Object.keys(P_STATUS_LABELS) as FilmProjectStatus[]).map((value) => ({
+    value,
+    label: P_STATUS_LABELS[value]!,
+  })),
+];
 
 type FilmProjectRow = {
   id: string;

@@ -16,7 +16,8 @@ export async function updateFilmProject(formData: FormData) {
   const projectId = formData.get("projectId") as string;
   const scope = (formData.get("scope") as FilmScope) || null;
   const priority = (formData.get("priority") as FilmPriority) || "NONE";
-  const status = (formData.get("status") as FilmProjectStatus) || "AKTIV";
+  const statusRaw = formData.get("status") as string;
+  const status = statusRaw ? (statusRaw as FilmProjectStatus) : null;
   const filmerId = (formData.get("filmerId") as string) || null;
   const cutterId = (formData.get("cutterId") as string) || null;
   const reminderAt = formData.get("reminderAt") as string;
