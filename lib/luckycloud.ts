@@ -694,7 +694,10 @@ const SHARE_LINK_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 Stunden
  * Erstellt oder holt einen existierenden Share-Link für eine Datei
  * Share-Links sind permanente, öffentlich zugängliche URLs die direkt im Browser funktionieren
  *
- * @param forceDownload - Wenn true, wird dl=1 angehängt (erzwingt Download). Standard: false (Anzeige im Browser)
+ * Für Datei-Share-Links (path zeigt auf Datei):
+ * - Basis-URL: {baseUrl}/f/{token}/  (zeigt Vorschau-Seite)
+ * - Mit ?raw=1: Direkter Zugriff auf Datei-Inhalt (für img src)
+ * - Mit ?dl=1: Erzwingt Download
  */
 export async function getOrCreateShareLink(
   agency: LuckyCloudAgency,
@@ -707,12 +710,11 @@ export async function getOrCreateShareLink(
     throw new Error(`LuckyCloud ist für Agentur "${agency}" nicht konfiguriert`);
   }
 
-  const fileName = filePath.split('/').pop() || filePath;
-
   // Helper-Funktion um URL aus Token zu generieren
+  // Für Dateien: /f/{token}/?raw=1 für direkte Anzeige, ?dl=1 für Download
   const buildUrl = (shareToken: string) => {
-    const dlParam = forceDownload ? '&dl=1' : '';
-    return `${config.url}/d/${shareToken}/files/?p=${encodeURIComponent(fileName)}${dlParam}`;
+    const param = forceDownload ? '?dl=1' : '?raw=1';
+    return `${config.url}/f/${shareToken}/${param}`;
   };
 
   // Cache-Key aus allen Parametern (ohne forceDownload, da wir nur den Token cachen)
