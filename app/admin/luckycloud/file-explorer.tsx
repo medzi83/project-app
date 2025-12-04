@@ -264,6 +264,7 @@ function ImageThumbnail({
             <img
               src={imageUrl}
               alt={fileName}
+              referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
               onLoad={(e) => {
                 const img = e.currentTarget;
@@ -308,6 +309,7 @@ function ImageThumbnail({
               <img
                 src={imageUrl}
                 alt={fileName}
+                referrerPolicy="no-referrer"
                 className="w-full h-48 object-contain rounded bg-muted cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1597,6 +1599,7 @@ export function LuckyCloudFileExplorer({
                     <img
                       src={preview.url}
                       alt={preview.fileName}
+                      referrerPolicy="no-referrer"
                       className="max-w-full max-h-[60vh] object-contain rounded-lg"
                     />
                   </div>
