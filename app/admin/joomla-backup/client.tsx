@@ -11,7 +11,7 @@ type Props = {
   backupSize: number;
 };
 
-const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB chunks (safe for Next.js body limit)
+const CHUNK_SIZE = 4 * 1024 * 1024; // 4 MB chunks (Vercel limit is 4.5 MB)
 
 export default function JoomlaBackupClient({
   kickstartExists,
