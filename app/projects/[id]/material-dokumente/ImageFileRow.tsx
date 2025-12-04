@@ -81,7 +81,7 @@ export default function ImageFileRow({
   isUnsuitable = false,
 }: Props) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [error, setError] = useState(false);
   const [hasStartedLoading, setHasStartedLoading] = useState(false);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
@@ -98,13 +98,14 @@ export default function ImageFileRow({
   // Lightbox State
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
-  // Bild laden
+  // Bild laden - Download-Link von LuckyCloud API holen
   const loadImage = async () => {
-    if (imageUrl || loading || hasStartedLoading) return;
+    if (imageUrl || hasStartedLoading) return;
 
     setHasStartedLoading(true);
-    setLoading(true);
+
     try {
+      // Download-Link von der API holen
       const response = await fetch(
         `/api/admin/luckycloud/download?agency=${agency}&libraryId=${libraryId}&path=${encodeURIComponent(filePath)}`
       );
@@ -117,8 +118,6 @@ export default function ImageFileRow({
       }
     } catch {
       setError(true);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -264,25 +263,32 @@ export default function ImageFileRow({
           onClick={() => imageUrl && setIsLightboxOpen(true)}
         >
           {imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={imageUrl}
-              alt={fileName}
-              className="w-full h-full object-cover"
-              onLoad={(e) => {
-                const img = e.currentTarget;
-                if (img.naturalWidth && img.naturalHeight) {
-                  setDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-                }
-              }}
-            />
-          ) : loading ? (
-            <div className="w-full h-full flex items-center justify-center">
-              <svg className="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            </div>
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt={fileName}
+                referrerPolicy="no-referrer"
+                className={`w-full h-full object-cover ${imageLoaded ? '' : 'opacity-0'}`}
+                onLoad={(e) => {
+                  setImageLoaded(true);
+                  const img = e.currentTarget;
+                  if (img.naturalWidth && img.naturalHeight) {
+                    setDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+                  }
+                }}
+                onError={() => setError(true)}
+              />
+              {/* Ladeanimation während Bild lädt */}
+              {!imageLoaded && !error && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <svg className="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                </div>
+              )}
+            </>
           ) : error ? (
             <div className="w-full h-full flex items-center justify-center">
               <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -525,6 +531,7 @@ export default function ImageFileRow({
             <img
               src={imageUrl}
               alt={fileName}
+              referrerPolicy="no-referrer"
               className="max-w-full max-h-[85vh] object-contain rounded-lg"
             />
 
