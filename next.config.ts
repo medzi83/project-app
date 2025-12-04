@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '200mb',
     },
   },
+  // Increase body parser limit for API routes (for large JPA backup uploads)
+  // This is needed for self-hosted Next.js (not Vercel)
+  serverExternalPackages: ['ssh2', 'ssh2-sftp-client'],
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Exclude native binary modules from webpack bundling

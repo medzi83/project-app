@@ -6,10 +6,10 @@ import SftpClient from "ssh2-sftp-client";
 // Vercel Region Configuration: Run in Frankfurt, Germany
 export const preferredRegion = 'fra1';
 
-
-// Allow large file uploads (200 MB max)
-export const maxDuration = 300; // 5 minutes
+// Allow small file uploads (< 5 MB) - larger files use chunk upload
+export const maxDuration = 60; // 1 minute
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 const VAUTRON_6_IP = "109.235.60.55";
 const BACKUP_PATH = "/var/customers/basis-backup";
