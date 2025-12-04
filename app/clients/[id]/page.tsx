@@ -932,6 +932,12 @@ export default async function ClientDetailPage({ params }: Props) {
                                 } : null,
                               }))}
                               currentProjectId={installation.project?.id}
+                              assignedProjectIds={
+                                // Get all project IDs assigned to OTHER installations
+                                client.joomlaInstallations
+                                  .filter(inst => inst.id !== installation.id && inst.project?.id)
+                                  .map(inst => inst.project!.id)
+                              }
                             />
                           </div>
                         )}

@@ -22,6 +22,8 @@ type Props = {
   installationId: string;
   clientProjects: Project[];
   currentProjectId?: string | null;
+  /** Project IDs that are already assigned to OTHER installations (not this one) */
+  assignedProjectIds: string[];
 };
 
 // Helper functions from the main page
@@ -110,10 +112,22 @@ const formatDateOnly = (value?: Date | string | null) => {
   }
 };
 
+// Check if a project is "active" (not ended/finished)
+const isProjectActive = (project: Project): boolean => {
+  // If it's a website project, check the pStatus
+  if (project.website) {
+    const endedStatuses: ProductionStatus[] = ["BEENDET", "MMW", "VOLLST_A_K"];
+    return !endedStatuses.includes(project.website.pStatus);
+  }
+  // For non-website projects, consider them active (they don't have pStatus)
+  return true;
+};
+
 export function InstallationProjectAssignment({
   installationId,
   clientProjects,
   currentProjectId,
+  assignedProjectIds,
 }: Props) {
   const router = useRouter();
   const [selectedProjectId, setSelectedProjectId] = useState<string>(
@@ -210,6 +224,24 @@ export function InstallationProjectAssignment({
     );
   }
 
+  // Filter projects: only WEBSITE projects that are active and not assigned to OTHER installations
+  // (the current project assignment is always allowed)
+  const availableProjects = clientProjects.filter((project) => {
+    // Always include the currently assigned project
+    if (project.id === currentProjectId) return true;
+
+    // Only allow WEBSITE projects (Joomla installations are for websites only)
+    if (project.type !== "WEBSITE") return false;
+
+    // Exclude projects assigned to other installations
+    if (assignedProjectIds.includes(project.id)) return false;
+
+    // Exclude inactive/ended projects
+    if (!isProjectActive(project)) return false;
+
+    return true;
+  });
+
   // Show dropdown for assigning/changing project
   return (
     <div className="flex items-center gap-2">
@@ -220,7 +252,7 @@ export function InstallationProjectAssignment({
         disabled={saving}
       >
         <option value="">Kein Projekt zugeordnet</option>
-        {clientProjects.map((project) => {
+        {availableProjects.map((project) => {
           const derivedStatus = project.website
             ? deriveProjectStatus(project.website)
             : project.status;

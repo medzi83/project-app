@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EditAgentNoticeDialog, EditCustomerNoticeDialog } from "./EditNoticeDialog";
 
 const formatDateTime = (value: Date) =>
   new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(value);
@@ -302,6 +303,19 @@ export default async function AdminNoticesPage() {
                       </details>
 
                       <div className="flex flex-wrap items-center gap-3">
+                        <EditAgentNoticeDialog
+                          notice={{
+                            id: notice.id,
+                            title: notice.title,
+                            message: notice.message,
+                            visibility: notice.visibility,
+                            requireAcknowledgement: notice.requireAcknowledgement,
+                            isActive: notice.isActive,
+                            recipients: notice.recipients,
+                          }}
+                          agents={agents}
+                        />
+
                         <form
                           action={async () => {
                             "use server";
@@ -516,6 +530,21 @@ export default async function AdminNoticesPage() {
                     )}
 
                     <div className="flex flex-wrap items-center gap-3">
+                      <EditCustomerNoticeDialog
+                        notice={{
+                          id: notice.id,
+                          title: notice.title,
+                          message: notice.message,
+                          targetGroup: notice.targetGroup,
+                          agencyId: notice.agencyId,
+                          showOnDashboard: notice.showOnDashboard,
+                          isActive: notice.isActive,
+                          recipients: notice.recipients,
+                        }}
+                        agencies={agencies}
+                        clients={clients}
+                      />
+
                       <form
                         action={async () => {
                           "use server";

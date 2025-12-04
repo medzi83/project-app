@@ -142,7 +142,19 @@ export async function GET(request: NextRequest) {
       // Vollständigen Pfad für den Unterordner berechnen
       const fullPath = folderName ? `${basePath}/${folderName}` : basePath;
 
-      const entries = await listDirectory(agencyKey, libraryId, fullPath);
+      let entries: LuckyCloudDirEntry[];
+      try {
+        entries = await listDirectory(agencyKey, libraryId, fullPath);
+      } catch (listError) {
+        // Wenn der Ordner nicht existiert (404), leere Liste zurückgeben
+        // Das ist normal für optionale Unterordner wie "ungeeignet"
+        const errorMessage = listError instanceof Error ? listError.message : '';
+        if (errorMessage.includes('404') || errorMessage.includes('nicht gefunden')) {
+          return NextResponse.json({ success: true, entries: [] });
+        }
+        // Andere Fehler weiterwerfen
+        throw listError;
+      }
 
       // Thumbnails für Bilder hinzufügen
       const entriesWithThumbnails: (LuckyCloudDirEntry & { thumbnailUrl?: string })[] = [];

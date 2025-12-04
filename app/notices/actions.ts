@@ -141,6 +141,52 @@ export async function updateNoticeRecipients(noticeId: string, recipientIds: str
   await revalidateNotices();
 }
 
+export async function updateNotice(formData: FormData) {
+  await requireRole(["ADMIN"]);
+
+  const noticeId = String(formData.get("noticeId") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const message = String(formData.get("message") ?? "").trim();
+  const visibility = (formData.get("visibility") ?? "GLOBAL") as NoticeVisibility;
+  const requireAcknowledgement = formData.get("requireAcknowledgement") === "on";
+  const isActive = formData.has("isActive");
+  const recipientIds = formData.getAll("recipients").map((value) => String(value));
+
+  if (!noticeId) throw new Error("Hinweis-ID fehlt.");
+  if (!title) throw new Error("Titel darf nicht leer sein.");
+  if (!message) throw new Error("Nachricht darf nicht leer sein.");
+  if (visibility === "TARGETED" && recipientIds.length === 0) {
+    throw new Error("Bitte mindestens einen Agenten auswählen.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // Update notice
+    await tx.notice.update({
+      where: { id: noticeId },
+      data: {
+        title,
+        message,
+        visibility,
+        requireAcknowledgement,
+        isActive,
+      },
+    });
+
+    // Update recipients if targeted
+    if (visibility === "TARGETED") {
+      await tx.noticeRecipient.deleteMany({ where: { noticeId } });
+      await tx.noticeRecipient.createMany({
+        data: recipientIds.map((userId) => ({ noticeId, userId })),
+      });
+    } else {
+      // Remove all recipients for global notices
+      await tx.noticeRecipient.deleteMany({ where: { noticeId } });
+    }
+  });
+
+  await revalidateNotices();
+}
+
 export async function deleteNotice(noticeId: string) {
   await requireRole(["ADMIN"]);
 
@@ -210,6 +256,57 @@ export async function updateCustomerNoticeActiveState(noticeId: string, isActive
   await prisma.customerNotice.update({
     where: { id: noticeId },
     data: { isActive },
+  });
+
+  await revalidateNotices();
+}
+
+export async function updateCustomerNotice(formData: FormData) {
+  await requireRole(["ADMIN"]);
+
+  const noticeId = String(formData.get("noticeId") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const message = String(formData.get("message") ?? "").trim();
+  const targetGroup = (formData.get("targetGroup") ?? "ALL_CUSTOMERS") as CustomerNoticeTargetGroup;
+  const agencyId = formData.get("agencyId") as string | null;
+  const showOnDashboard = formData.has("showOnDashboard");
+  const isActive = formData.has("isActive");
+  const recipientIds = formData.getAll("recipients").map((value) => String(value));
+
+  if (!noticeId) throw new Error("Hinweis-ID fehlt.");
+  if (!title) throw new Error("Titel darf nicht leer sein.");
+  if (!message) throw new Error("Nachricht darf nicht leer sein.");
+  if (targetGroup === "AGENCY_CUSTOMERS" && !agencyId) {
+    throw new Error("Bitte eine Agentur auswählen.");
+  }
+  if (targetGroup === "SELECTED_CUSTOMERS" && recipientIds.length === 0) {
+    throw new Error("Bitte mindestens einen Kunden auswählen.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // Update notice
+    await tx.customerNotice.update({
+      where: { id: noticeId },
+      data: {
+        title,
+        message,
+        targetGroup,
+        agencyId: targetGroup === "AGENCY_CUSTOMERS" ? agencyId : null,
+        showOnDashboard,
+        isActive,
+      },
+    });
+
+    // Update recipients if selected customers
+    if (targetGroup === "SELECTED_CUSTOMERS") {
+      await tx.customerNoticeRecipient.deleteMany({ where: { noticeId } });
+      await tx.customerNoticeRecipient.createMany({
+        data: recipientIds.map((clientId) => ({ noticeId, clientId })),
+      });
+    } else {
+      // Remove all recipients for non-selected notices
+      await tx.customerNoticeRecipient.deleteMany({ where: { noticeId } });
+    }
   });
 
   await revalidateNotices();
