@@ -79,11 +79,11 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(await chunk.arrayBuffer());
       await sftp.put(buffer, remoteTempPath);
 
-      // If this is the last chunk, combine all chunks on the server
-      if (chunkIndex === totalChunks - 1) {
-        const finalFileName = type === "kickstart" ? "kickstart.php" : fileName;
-        const finalPath = `${BACKUP_PATH}/${finalFileName}`;
+      const finalFileName = type === "kickstart" ? "kickstart.php" : fileName;
+      const finalPath = `${BACKUP_PATH}/${finalFileName}`;
 
+      // Bei erstem Chunk: alte Backups löschen und leere Zieldatei erstellen
+      if (chunkIndex === 0) {
         // Delete old backup files if uploading a new backup
         if (type === "backup") {
           try {
@@ -92,74 +92,76 @@ export async function POST(request: NextRequest) {
               f.type === '-' && (f.name.endsWith(".jpa") || f.name.endsWith(".zip"))
             );
             for (const oldBackup of oldBackups) {
-              await sftp.delete(`${BACKUP_PATH}/${oldBackup.name}`);
+              if (oldBackup.name !== finalFileName) {
+                await sftp.delete(`${BACKUP_PATH}/${oldBackup.name}`);
+              }
             }
-          } catch (error) {
+          } catch {
             // Ignore if no old files exist
           }
         }
+      }
 
-        // Close SFTP before opening SSH (avoid connection conflicts)
-        await sftp.end();
+      // Chunk direkt an Zieldatei anhängen via SSH (schneller als cat am Ende)
+      await sftp.end();
 
-        // Combine chunks using SSH cat command (can take a while for large files)
-        const { Client } = await import("ssh2");
-        const sshClient = new Client();
+      const { Client } = await import("ssh2");
+      const sshClient = new Client();
 
-        await new Promise<void>((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            sshClient.end();
-            reject(new Error("SSH timeout - combining chunks took too long"));
-          }, 120000); // 2 minutes timeout for combining large files
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          sshClient.end();
+          reject(new Error("SSH timeout"));
+        }, 60000); // 1 minute timeout per chunk
 
-          sshClient
-            .on("ready", () => {
-              // Build cat command: cat file.part0 file.part1 ... > final_file
-              const partFiles = Array.from({ length: totalChunks }, (_, i) =>
-                `${BACKUP_PATH}/temp/${fileName}.part${i}`
-              ).join(' ');
+        sshClient
+          .on("ready", () => {
+            // Chunk an Zieldatei anhängen (>> für append)
+            const appendCommand = chunkIndex === 0
+              ? `cat ${remoteTempPath} > ${finalPath} && rm ${remoteTempPath}`
+              : `cat ${remoteTempPath} >> ${finalPath} && rm ${remoteTempPath}`;
 
-              const combineCommand = `cat ${partFiles} > ${finalPath} && rm -rf ${BACKUP_PATH}/temp`;
+            sshClient.exec(appendCommand, (err, stream) => {
+              if (err) {
+                clearTimeout(timeout);
+                sshClient.end();
+                reject(err);
+                return;
+              }
 
-              sshClient.exec(combineCommand, (err, stream) => {
-                if (err) {
+              let stderr = "";
+
+              stream
+                .on("close", (code: number) => {
                   clearTimeout(timeout);
                   sshClient.end();
-                  reject(err);
-                  return;
-                }
-
-                let stderr = "";
-
-                stream
-                  .on("close", (code: number) => {
-                    clearTimeout(timeout);
-                    sshClient.end();
-                    if (code !== 0) {
-                      reject(new Error(`Failed to combine chunks: ${stderr}`));
-                    } else {
-                      resolve();
-                    }
-                  })
-                  .stderr.on("data", (data: Buffer) => {
-                    stderr += data.toString();
-                  });
-              });
-            })
-            .on("error", (err) => {
-              clearTimeout(timeout);
-              reject(err);
-            })
-            .connect({
-              host: storageServer.sshHost!,
-              port: storageServer.sshPort || 22,
-              username: storageServer.sshUsername!,
-              password: storageServer.sshPassword!,
-              readyTimeout: 30000,
-              keepaliveInterval: 10000,
+                  if (code !== 0) {
+                    reject(new Error(`Failed to append chunk: ${stderr}`));
+                  } else {
+                    resolve();
+                  }
+                })
+                .stderr.on("data", (data: Buffer) => {
+                  stderr += data.toString();
+                });
             });
-        });
+          })
+          .on("error", (err) => {
+            clearTimeout(timeout);
+            reject(err);
+          })
+          .connect({
+            host: storageServer.sshHost!,
+            port: storageServer.sshPort || 22,
+            username: storageServer.sshUsername!,
+            password: storageServer.sshPassword!,
+            readyTimeout: 30000,
+            keepaliveInterval: 10000,
+          });
+      });
 
+      // If this is the last chunk, cleanup temp folder
+      if (chunkIndex === totalChunks - 1) {
         return NextResponse.json({
           success: true,
           message: `${type === "kickstart" ? "kickstart.php" : "Backup"} successfully uploaded to Vautron 6`,
@@ -167,8 +169,6 @@ export async function POST(request: NextRequest) {
           complete: true,
         });
       }
-
-      await sftp.end();
 
       // Not the last chunk, just acknowledge receipt
       return NextResponse.json({
