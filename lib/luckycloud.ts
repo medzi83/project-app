@@ -666,3 +666,195 @@ export async function getFileCommentCounts(
   const data = await response.json();
   return data || {};
 }
+
+/**
+ * Typen für Share-Links
+ */
+export type LuckyCloudShareLink = {
+  token: string;
+  link: string;
+  repo_id: string;
+  path: string;
+  username: string;
+  view_cnt: number;
+  ctime: string;
+  expire_date: string | null;
+  is_expired: boolean;
+  permissions: {
+    can_edit: boolean;
+    can_download: boolean;
+  };
+};
+
+// Cache für Share-Links (Token -> Link-Info)
+const shareLinkCache: Map<string, { link: string; expiresAt: number }> = new Map();
+const SHARE_LINK_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 Stunden
+
+/**
+ * Erstellt oder holt einen existierenden Share-Link für eine Datei
+ * Share-Links sind permanente, öffentlich zugängliche URLs die direkt im Browser funktionieren
+ */
+export async function getOrCreateShareLink(
+  agency: LuckyCloudAgency,
+  libraryId: string,
+  filePath: string
+): Promise<string> {
+  const config = getAgencyConfig(agency);
+  if (!config) {
+    throw new Error(`LuckyCloud ist für Agentur "${agency}" nicht konfiguriert`);
+  }
+
+  // Cache-Key aus allen Parametern
+  const cacheKey = `${agency}:${libraryId}:${filePath}`;
+  const cached = shareLinkCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.link;
+  }
+
+  const token = await getAuthToken(agency);
+
+  // Erst prüfen ob bereits ein Share-Link existiert
+  const existingLink = await findExistingShareLink(config.url, token, libraryId, filePath);
+  if (existingLink) {
+    // Cache aktualisieren
+    shareLinkCache.set(cacheKey, {
+      link: existingLink,
+      expiresAt: Date.now() + SHARE_LINK_CACHE_DURATION,
+    });
+    return existingLink;
+  }
+
+  // Neuen Share-Link erstellen
+  const createUrl = `${config.url}/api/v2.1/share-links/`;
+  const response = await fetch(createUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Token ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      repo_id: libraryId,
+      path: filePath,
+      permissions: {
+        can_edit: false,
+        can_download: true,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Share-Link konnte nicht erstellt werden: ${response.status} - ${text}`);
+  }
+
+  const data: LuckyCloudShareLink = await response.json();
+
+  // Direkten Download-Link aus dem Share-Link generieren
+  // Format: https://sync.luckycloud.de/d/{token}/files/?p={path}&dl=1
+  const directLink = `${config.url}/d/${data.token}/files/?p=${encodeURIComponent(filePath.split('/').pop() || filePath)}&dl=1`;
+
+  // Cache aktualisieren
+  shareLinkCache.set(cacheKey, {
+    link: directLink,
+    expiresAt: Date.now() + SHARE_LINK_CACHE_DURATION,
+  });
+
+  return directLink;
+}
+
+/**
+ * Sucht nach einem existierenden Share-Link für eine Datei
+ */
+async function findExistingShareLink(
+  baseUrl: string,
+  token: string,
+  libraryId: string,
+  filePath: string
+): Promise<string | null> {
+  try {
+    const url = new URL(`${baseUrl}/api/v2.1/share-links/`);
+    url.searchParams.set('repo_id', libraryId);
+    url.searchParams.set('path', filePath);
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Token ${token}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const links: LuckyCloudShareLink[] = await response.json();
+    if (links && links.length > 0) {
+      const link = links[0];
+      // Direkten Download-Link generieren
+      return `${baseUrl}/d/${link.token}/files/?p=${encodeURIComponent(filePath.split('/').pop() || filePath)}&dl=1`;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Holt einen Thumbnail-Link über Share-Link (direkt im Browser nutzbar)
+ * Seafile stellt Thumbnails auch für Share-Links bereit
+ */
+export async function getShareLinkThumbnail(
+  agency: LuckyCloudAgency,
+  libraryId: string,
+  filePath: string,
+  size: 48 | 96 | 192 | 256 = 96
+): Promise<string> {
+  const config = getAgencyConfig(agency);
+  if (!config) {
+    throw new Error(`LuckyCloud ist für Agentur "${agency}" nicht konfiguriert`);
+  }
+
+  const token = await getAuthToken(agency);
+
+  // Erst Share-Link holen/erstellen
+  const existingLink = await findExistingShareLink(config.url, token, libraryId, filePath);
+  let shareToken: string;
+
+  if (existingLink) {
+    // Token aus URL extrahieren
+    const match = existingLink.match(/\/d\/([^/]+)\//);
+    shareToken = match ? match[1] : '';
+  } else {
+    // Neuen Share-Link erstellen
+    const createUrl = `${config.url}/api/v2.1/share-links/`;
+    const response = await fetch(createUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Token ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        repo_id: libraryId,
+        path: filePath,
+        permissions: {
+          can_edit: false,
+          can_download: true,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Share-Link konnte nicht erstellt werden`);
+    }
+
+    const data: LuckyCloudShareLink = await response.json();
+    shareToken = data.token;
+  }
+
+  // Thumbnail-URL für Share-Link
+  const fileName = filePath.split('/').pop() || '';
+  return `${config.url}/thumbnail/${shareToken}/${size}/${encodeURIComponent(fileName)}`;
+}

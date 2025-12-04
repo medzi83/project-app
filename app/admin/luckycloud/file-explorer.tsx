@@ -199,16 +199,30 @@ function ImageThumbnail({
   const [hasStartedLoading, setHasStartedLoading] = useState(false);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
-  // Thumbnail über Proxy laden (klein, ~5-20KB, 24h Cache)
-  const loadImage = () => {
+  // Thumbnail über Share-Link laden (direkt von LuckyCloud, kein Vercel-Proxy)
+  const loadImage = async () => {
     if (imageUrl || loading || hasStartedLoading) return;
 
     setHasStartedLoading(true);
     setLoading(true);
-    // Thumbnail über Proxy laden (size=96 für kleine Vorschau)
-    const proxyUrl = `/api/admin/luckycloud/image?agency=${agency}&libraryId=${libraryId}&path=${encodeURIComponent(filePath)}&size=96`;
-    setImageUrl(proxyUrl);
-    setLoading(false);
+
+    try {
+      // Share-Link für Thumbnail von API holen
+      const response = await fetch(
+        `/api/admin/luckycloud/share-link?agency=${agency}&libraryId=${libraryId}&path=${encodeURIComponent(filePath)}&type=thumbnail&size=96`
+      );
+      const data = await response.json();
+
+      if (response.ok && data.success && data.url) {
+        setImageUrl(data.url);
+      } else {
+        setError(true);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -964,52 +978,40 @@ export function LuckyCloudFileExplorer({
     const filePath = getFilePath(item.name);
     const fileType = getFileType(item.name);
 
-    // Für Bilder: Vollbild-Proxy-URL verwenden (size=full für Originalqualität)
-    // Für PDFs: Download-Link holen (wird im iframe angezeigt)
-    if (fileType === 'image') {
-      const proxyUrl = `/api/admin/luckycloud/image?agency=${agency}&libraryId=${state.currentLibrary.id}&path=${encodeURIComponent(filePath)}&size=full`;
-      setPreview({
-        isOpen: true,
-        loading: false,
-        fileName: item.name,
-        fileType,
-        url: proxyUrl,
-      });
-    } else {
-      // Für PDFs und andere Dateien: Download-Link holen
-      setPreview({
-        isOpen: true,
-        loading: true,
-        fileName: item.name,
-        fileType,
-        url: null,
-      });
+    // Für alle Dateitypen: Share-Link holen (direkt von LuckyCloud, kein Vercel-Proxy)
+    setPreview({
+      isOpen: true,
+      loading: true,
+      fileName: item.name,
+      fileType,
+      url: null,
+    });
 
-      fetch(`/api/admin/luckycloud/download?agency=${agency}&libraryId=${state.currentLibrary.id}&path=${encodeURIComponent(filePath)}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            setPreview(prev => ({
-              ...prev,
-              loading: false,
-              url: data.downloadLink,
-            }));
-          } else {
-            setPreview(prev => ({
-              ...prev,
-              loading: false,
-              error: data.error || 'Fehler beim Laden der Datei',
-            }));
-          }
-        })
-        .catch(error => {
+    // Share-Link für Vollbild holen
+    fetch(`/api/admin/luckycloud/share-link?agency=${agency}&libraryId=${state.currentLibrary.id}&path=${encodeURIComponent(filePath)}&type=full`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.url) {
           setPreview(prev => ({
             ...prev,
             loading: false,
-            error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+            url: data.url,
           }));
-        });
-    }
+        } else {
+          setPreview(prev => ({
+            ...prev,
+            loading: false,
+            error: data.error || 'Fehler beim Laden der Datei',
+          }));
+        }
+      })
+      .catch(error => {
+        setPreview(prev => ({
+          ...prev,
+          loading: false,
+          error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+        }));
+      });
   };
 
   const downloadFile = async (item: FileItem) => {

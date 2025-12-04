@@ -100,25 +100,53 @@ export default function ImageFileRow({
 
   // Lightbox State
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isLoadingFullImage, setIsLoadingFullImage] = useState(false);
 
-  // Thumbnail laden (klein, ~5-20KB, 24h Cache)
-  const loadImage = () => {
+  // Thumbnail laden über Share-Link API (kein Vercel-Proxy, direkt von LuckyCloud)
+  const loadImage = async () => {
     if (thumbnailUrl || hasStartedLoading) return;
 
     setHasStartedLoading(true);
-    // Thumbnail über Proxy laden (size=96 für kleine Vorschau)
-    const proxyUrl = `/api/admin/luckycloud/image?agency=${agency}&libraryId=${libraryId}&path=${encodeURIComponent(filePath)}&size=96`;
-    setThumbnailUrl(proxyUrl);
+
+    try {
+      // Share-Link für Thumbnail von API holen
+      const response = await fetch(
+        `/api/admin/luckycloud/share-link?agency=${agency}&libraryId=${libraryId}&path=${encodeURIComponent(filePath)}&type=thumbnail&size=96`
+      );
+      const data = await response.json();
+
+      if (response.ok && data.success && data.url) {
+        setThumbnailUrl(data.url);
+      } else {
+        setError(true);
+      }
+    } catch {
+      setError(true);
+    }
   };
 
   // Vollbild laden wenn Lightbox geöffnet wird
-  const openLightbox = () => {
-    if (!fullImageUrl) {
-      // Vollbild-URL erst bei Bedarf setzen (size=full)
-      const fullUrl = `/api/admin/luckycloud/image?agency=${agency}&libraryId=${libraryId}&path=${encodeURIComponent(filePath)}&size=full`;
-      setFullImageUrl(fullUrl);
-    }
+  const openLightbox = async () => {
     setIsLightboxOpen(true);
+
+    if (!fullImageUrl && !isLoadingFullImage) {
+      setIsLoadingFullImage(true);
+      try {
+        // Share-Link für Vollbild von API holen
+        const response = await fetch(
+          `/api/admin/luckycloud/share-link?agency=${agency}&libraryId=${libraryId}&path=${encodeURIComponent(filePath)}&type=full`
+        );
+        const data = await response.json();
+
+        if (response.ok && data.success && data.url) {
+          setFullImageUrl(data.url);
+        }
+      } catch {
+        // Ignorieren - zeigt Ladeanimation
+      } finally {
+        setIsLoadingFullImage(false);
+      }
+    }
   };
 
   // Kommentare laden
