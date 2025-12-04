@@ -52,8 +52,14 @@ export default function JoomlaBackupClient({
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Upload fehlgeschlagen");
+        let errorMessage = "Upload fehlgeschlagen";
+        try {
+          const data = await res.json();
+          errorMessage = data.error || errorMessage;
+        } catch {
+          errorMessage = `Upload fehlgeschlagen: ${res.status} ${res.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       setUploadProgress(100);
@@ -80,8 +86,15 @@ export default function JoomlaBackupClient({
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || `Chunk ${chunkIndex + 1} fehlgeschlagen`);
+        // Versuche JSON zu parsen, falls nicht möglich, nutze Statustext
+        let errorMessage = `Chunk ${chunkIndex + 1} fehlgeschlagen`;
+        try {
+          const data = await res.json();
+          errorMessage = data.error || errorMessage;
+        } catch {
+          errorMessage = `Chunk ${chunkIndex + 1} fehlgeschlagen: ${res.status} ${res.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);

@@ -6,9 +6,9 @@ import SftpClient from "ssh2-sftp-client";
 // Vercel Region Configuration: Run in Frankfurt, Germany
 export const preferredRegion = 'fra1';
 
-
 export const maxDuration = 300; // 5 minutes
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 const VAUTRON_6_IP = "109.235.60.55";
 const BACKUP_PATH = "/var/customers/basis-backup";
