@@ -686,42 +686,53 @@ export type LuckyCloudShareLink = {
   };
 };
 
-// Cache für Share-Links (Token -> Link-Info)
-const shareLinkCache: Map<string, { link: string; expiresAt: number }> = new Map();
+// Cache für Share-Link-Tokens (nicht die volle URL, damit wir forceDownload dynamisch anwenden können)
+const shareLinkTokenCache: Map<string, { token: string; expiresAt: number }> = new Map();
 const SHARE_LINK_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 Stunden
 
 /**
  * Erstellt oder holt einen existierenden Share-Link für eine Datei
  * Share-Links sind permanente, öffentlich zugängliche URLs die direkt im Browser funktionieren
+ *
+ * @param forceDownload - Wenn true, wird dl=1 angehängt (erzwingt Download). Standard: false (Anzeige im Browser)
  */
 export async function getOrCreateShareLink(
   agency: LuckyCloudAgency,
   libraryId: string,
-  filePath: string
+  filePath: string,
+  forceDownload: boolean = false
 ): Promise<string> {
   const config = getAgencyConfig(agency);
   if (!config) {
     throw new Error(`LuckyCloud ist für Agentur "${agency}" nicht konfiguriert`);
   }
 
-  // Cache-Key aus allen Parametern
+  const fileName = filePath.split('/').pop() || filePath;
+
+  // Helper-Funktion um URL aus Token zu generieren
+  const buildUrl = (shareToken: string) => {
+    const dlParam = forceDownload ? '&dl=1' : '';
+    return `${config.url}/d/${shareToken}/files/?p=${encodeURIComponent(fileName)}${dlParam}`;
+  };
+
+  // Cache-Key aus allen Parametern (ohne forceDownload, da wir nur den Token cachen)
   const cacheKey = `${agency}:${libraryId}:${filePath}`;
-  const cached = shareLinkCache.get(cacheKey);
+  const cached = shareLinkTokenCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
-    return cached.link;
+    return buildUrl(cached.token);
   }
 
-  const token = await getAuthToken(agency);
+  const authToken = await getAuthToken(agency);
 
   // Erst prüfen ob bereits ein Share-Link existiert
-  const existingLink = await findExistingShareLink(config.url, token, libraryId, filePath);
-  if (existingLink) {
+  const existingToken = await findExistingShareLinkToken(config.url, authToken, libraryId, filePath);
+  if (existingToken) {
     // Cache aktualisieren
-    shareLinkCache.set(cacheKey, {
-      link: existingLink,
+    shareLinkTokenCache.set(cacheKey, {
+      token: existingToken,
       expiresAt: Date.now() + SHARE_LINK_CACHE_DURATION,
     });
-    return existingLink;
+    return buildUrl(existingToken);
   }
 
   // Neuen Share-Link erstellen
@@ -729,7 +740,7 @@ export async function getOrCreateShareLink(
   const response = await fetch(createUrl, {
     method: 'POST',
     headers: {
-      Authorization: `Token ${token}`,
+      Authorization: `Token ${authToken}`,
       'Content-Type': 'application/json',
       Accept: 'application/json',
     },
@@ -750,25 +761,21 @@ export async function getOrCreateShareLink(
 
   const data: LuckyCloudShareLink = await response.json();
 
-  // Direkten Download-Link aus dem Share-Link generieren
-  // Format: https://sync.luckycloud.de/d/{token}/files/?p={path}&dl=1
-  const directLink = `${config.url}/d/${data.token}/files/?p=${encodeURIComponent(filePath.split('/').pop() || filePath)}&dl=1`;
-
-  // Cache aktualisieren
-  shareLinkCache.set(cacheKey, {
-    link: directLink,
+  // Cache aktualisieren (nur Token speichern)
+  shareLinkTokenCache.set(cacheKey, {
+    token: data.token,
     expiresAt: Date.now() + SHARE_LINK_CACHE_DURATION,
   });
 
-  return directLink;
+  return buildUrl(data.token);
 }
 
 /**
- * Sucht nach einem existierenden Share-Link für eine Datei
+ * Sucht nach einem existierenden Share-Link für eine Datei und gibt den Token zurück
  */
-async function findExistingShareLink(
+async function findExistingShareLinkToken(
   baseUrl: string,
-  token: string,
+  authToken: string,
   libraryId: string,
   filePath: string
 ): Promise<string | null> {
@@ -779,7 +786,7 @@ async function findExistingShareLink(
 
     const response = await fetch(url.toString(), {
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Token ${authToken}`,
         Accept: 'application/json',
       },
     });
@@ -790,9 +797,7 @@ async function findExistingShareLink(
 
     const links: LuckyCloudShareLink[] = await response.json();
     if (links && links.length > 0) {
-      const link = links[0];
-      // Direkten Download-Link generieren
-      return `${baseUrl}/d/${link.token}/files/?p=${encodeURIComponent(filePath.split('/').pop() || filePath)}&dl=1`;
+      return links[0].token;
     }
 
     return null;
@@ -816,23 +821,27 @@ export async function getShareLinkThumbnail(
     throw new Error(`LuckyCloud ist für Agentur "${agency}" nicht konfiguriert`);
   }
 
-  const token = await getAuthToken(agency);
+  const fileName = filePath.split('/').pop() || '';
+  const cacheKey = `${agency}:${libraryId}:${filePath}`;
 
-  // Erst Share-Link holen/erstellen
-  const existingLink = await findExistingShareLink(config.url, token, libraryId, filePath);
-  let shareToken: string;
+  // Prüfe Cache
+  const cached = shareLinkTokenCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return `${config.url}/thumbnail/${cached.token}/${size}/${encodeURIComponent(fileName)}`;
+  }
 
-  if (existingLink) {
-    // Token aus URL extrahieren
-    const match = existingLink.match(/\/d\/([^/]+)\//);
-    shareToken = match ? match[1] : '';
-  } else {
+  const authToken = await getAuthToken(agency);
+
+  // Erst prüfen ob bereits ein Share-Link existiert
+  let shareToken = await findExistingShareLinkToken(config.url, authToken, libraryId, filePath);
+
+  if (!shareToken) {
     // Neuen Share-Link erstellen
     const createUrl = `${config.url}/api/v2.1/share-links/`;
     const response = await fetch(createUrl, {
       method: 'POST',
       headers: {
-        Authorization: `Token ${token}`,
+        Authorization: `Token ${authToken}`,
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
@@ -854,7 +863,12 @@ export async function getShareLinkThumbnail(
     shareToken = data.token;
   }
 
+  // Token cachen
+  shareLinkTokenCache.set(cacheKey, {
+    token: shareToken,
+    expiresAt: Date.now() + SHARE_LINK_CACHE_DURATION,
+  });
+
   // Thumbnail-URL für Share-Link
-  const fileName = filePath.split('/').pop() || '';
   return `${config.url}/thumbnail/${shareToken}/${size}/${encodeURIComponent(fileName)}`;
 }
