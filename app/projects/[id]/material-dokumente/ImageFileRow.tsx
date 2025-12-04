@@ -80,7 +80,10 @@ export default function ImageFileRow({
   mtime,
   isUnsuitable = false,
 }: Props) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  // Thumbnail für Listenansicht (klein, schnell, 24h Cache)
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  // Vollbild-URL für Lightbox (nur bei Bedarf geladen)
+  const [fullImageUrl, setFullImageUrl] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [error, setError] = useState(false);
   const [hasStartedLoading, setHasStartedLoading] = useState(false);
@@ -98,27 +101,24 @@ export default function ImageFileRow({
   // Lightbox State
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
-  // Bild laden - Download-Link von LuckyCloud API holen
-  const loadImage = async () => {
-    if (imageUrl || hasStartedLoading) return;
+  // Thumbnail laden (klein, ~5-20KB, 24h Cache)
+  const loadImage = () => {
+    if (thumbnailUrl || hasStartedLoading) return;
 
     setHasStartedLoading(true);
+    // Thumbnail über Proxy laden (size=96 für kleine Vorschau)
+    const proxyUrl = `/api/admin/luckycloud/image?agency=${agency}&libraryId=${libraryId}&path=${encodeURIComponent(filePath)}&size=96`;
+    setThumbnailUrl(proxyUrl);
+  };
 
-    try {
-      // Download-Link von der API holen
-      const response = await fetch(
-        `/api/admin/luckycloud/download?agency=${agency}&libraryId=${libraryId}&path=${encodeURIComponent(filePath)}`
-      );
-      const data = await response.json();
-
-      if (response.ok && data.success && data.downloadLink) {
-        setImageUrl(data.downloadLink);
-      } else {
-        setError(true);
-      }
-    } catch {
-      setError(true);
+  // Vollbild laden wenn Lightbox geöffnet wird
+  const openLightbox = () => {
+    if (!fullImageUrl) {
+      // Vollbild-URL erst bei Bedarf setzen (size=full)
+      const fullUrl = `/api/admin/luckycloud/image?agency=${agency}&libraryId=${libraryId}&path=${encodeURIComponent(filePath)}&size=full`;
+      setFullImageUrl(fullUrl);
     }
+    setIsLightboxOpen(true);
   };
 
   // Kommentare laden
@@ -260,15 +260,14 @@ export default function ImageFileRow({
         {/* Thumbnail */}
         <div
           className="relative w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer"
-          onClick={() => imageUrl && setIsLightboxOpen(true)}
+          onClick={() => thumbnailUrl && openLightbox()}
         >
-          {imageUrl ? (
+          {thumbnailUrl ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={imageUrl}
+                src={thumbnailUrl}
                 alt={fileName}
-                referrerPolicy="no-referrer"
                 className={`w-full h-full object-cover ${imageLoaded ? '' : 'opacity-0'}`}
                 onLoad={(e) => {
                   setImageLoaded(true);
@@ -304,7 +303,7 @@ export default function ImageFileRow({
           )}
 
           {/* Hover-Overlay für Vergrößern */}
-          {imageUrl && isHovering && (
+          {thumbnailUrl && isHovering && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
@@ -456,9 +455,9 @@ export default function ImageFileRow({
           </div>
 
           {/* Vorschau-Button */}
-          {imageUrl && (
+          {thumbnailUrl && (
             <button
-              onClick={() => setIsLightboxOpen(true)}
+              onClick={() => openLightbox()}
               className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors opacity-0 group-hover:opacity-100"
               title="Vorschau"
             >
@@ -471,8 +470,8 @@ export default function ImageFileRow({
         </div>
       </div>
 
-      {/* Lightbox */}
-      {isLightboxOpen && imageUrl && (
+      {/* Lightbox - lädt Vollbild nur bei Bedarf */}
+      {isLightboxOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
           onClick={() => setIsLightboxOpen(false)}
@@ -525,15 +524,25 @@ export default function ImageFileRow({
             </div>
           )}
 
-          {/* Bild */}
+          {/* Bild - Vollbild wird erst geladen wenn Lightbox geöffnet wird */}
           <div className="relative max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageUrl}
-              alt={fileName}
-              referrerPolicy="no-referrer"
-              className="max-w-full max-h-[85vh] object-contain rounded-lg"
-            />
+            {fullImageUrl ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={fullImageUrl}
+                  alt={fileName}
+                  className="max-w-full max-h-[85vh] object-contain rounded-lg"
+                />
+              </>
+            ) : (
+              <div className="w-64 h-64 flex items-center justify-center">
+                <svg className="w-8 h-8 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
+            )}
 
             {/* Info-Leiste unten */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 rounded-b-lg">

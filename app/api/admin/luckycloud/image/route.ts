@@ -2,14 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/authz';
 import {
   getDownloadLink,
+  getThumbnailLink,
   isAgencyConfigured,
   type LuckyCloudAgency
 } from '@/lib/luckycloud';
 
 /**
  * Image Proxy für LuckyCloud-Bilder
- * Lädt das Bild serverseitig und gibt es an den Client zurück.
- * Dies umgeht CORS/Referrer-Probleme, da der Server keine solchen Einschränkungen hat.
+ *
+ * Unterstützt zwei Modi:
+ * 1. Thumbnail-Modus (size=48|96|192|256): Lädt kleine Vorschaubilder (empfohlen für Listen)
+ * 2. Vollbild-Modus (size=full): Lädt das Originalbild (für Lightbox/Vollansicht)
+ *
+ * Seafile/LuckyCloud Download-Links sind IP-gebunden und funktionieren nur vom anfragenden Server.
+ * Dieser Proxy löst das Problem, indem er das Bild serverseitig lädt.
+ *
+ * Traffic-Optimierung:
+ * - Thumbnails sind ~5-20KB statt mehrerer MB für Originalbilder
+ * - Browser-Cache: 24h für Thumbnails, 1h für Vollbilder
+ * - Lazy Loading: Bilder werden erst geladen wenn sie sichtbar werden
  */
 export async function GET(request: NextRequest) {
   // Auth check
@@ -21,6 +32,7 @@ export async function GET(request: NextRequest) {
   const agency = request.nextUrl.searchParams.get('agency') as LuckyCloudAgency;
   const libraryId = request.nextUrl.searchParams.get('libraryId');
   const filePath = request.nextUrl.searchParams.get('path');
+  const sizeParam = request.nextUrl.searchParams.get('size') || '96';
 
   if (!agency || !['eventomaxx', 'vendoweb'].includes(agency)) {
     return NextResponse.json({ error: 'Ungültige Agentur' }, { status: 400 });
@@ -42,15 +54,31 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Download-Link von LuckyCloud holen
-    const downloadLink = await getDownloadLink(agency, libraryId, filePath);
+    let imageLink: string;
+    let cacheMaxAge: number;
 
-    // Bild serverseitig laden (kein CORS/Referrer-Problem)
-    const imageResponse = await fetch(downloadLink, {
-      headers: {
-        'Referer': '', // Leerer Referer
-      },
-    });
+    if (sizeParam === 'full') {
+      // Vollbild-Modus: Original-Datei laden
+      imageLink = await getDownloadLink(agency, libraryId, filePath);
+      cacheMaxAge = 3600; // 1 Stunde
+    } else {
+      // Thumbnail-Modus: Kleine Vorschau laden
+      const size = parseInt(sizeParam) as 48 | 96 | 192 | 256;
+      const validSizes = [48, 96, 192, 256];
+      const thumbnailSize = validSizes.includes(size) ? size : 96;
+
+      try {
+        imageLink = await getThumbnailLink(agency, libraryId, filePath, thumbnailSize as 48 | 96 | 192 | 256);
+        cacheMaxAge = 86400; // 24 Stunden für Thumbnails (ändern sich selten)
+      } catch {
+        // Fallback auf Vollbild wenn Thumbnail nicht verfügbar
+        imageLink = await getDownloadLink(agency, libraryId, filePath);
+        cacheMaxAge = 3600;
+      }
+    }
+
+    // Bild serverseitig laden
+    const imageResponse = await fetch(imageLink);
 
     if (!imageResponse.ok) {
       return NextResponse.json({
@@ -66,7 +94,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(imageBuffer, {
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': 'private, max-age=3600', // 1 Stunde cachen
+        'Cache-Control': `private, max-age=${cacheMaxAge}`,
       },
     });
   } catch (error) {
