@@ -606,12 +606,16 @@ export default function MaterialDokumenteClient({
                           Hinweis
                         </span>
                       )}
+                      {/* Webdoku-Hinweis Indikator */}
+                      {folder.notes && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" title={folder.notes}>
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Webdoku
+                        </span>
+                      )}
                     </div>
-                    {folder.notes && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {folder.notes}
-                      </p>
-                    )}
                   </div>
 
                   {/* Aktions-Buttons */}
@@ -776,6 +780,21 @@ export default function MaterialDokumenteClient({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                       </svg>
                       <p className="text-sm text-amber-700 dark:text-amber-400 flex-1">{review.comment}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Webdoku-Hinweis (wenn expandiert und vorhanden) */}
+                {isExpanded && folder.notes && (
+                  <div className="px-4 py-3 bg-blue-50 dark:bg-blue-900/10 border-t border-blue-200 dark:border-blue-800">
+                    <div className="flex items-start gap-2">
+                      <svg className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">Hinweis aus Webdoku:</p>
+                        <p className="text-sm text-blue-800 dark:text-blue-300">{folder.notes}</p>
+                      </div>
                     </div>
                   </div>
                 )}
