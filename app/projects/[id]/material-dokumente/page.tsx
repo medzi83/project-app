@@ -69,8 +69,7 @@ export default async function MaterialDokumentePage({ params }: Props) {
                 select: {
                   id: true,
                   name: true,
-                  notes: true, // Hinweise zu Menüpunkten (Step 3)
-                  materialNotes: true,
+                  materialNotes: true, // Hinweis aus Webdoku Step 7
                   imagesComplete: true,
                   imagesAgentComment: true,
                   imagesReviewedAt: true,
@@ -216,8 +215,7 @@ export default async function MaterialDokumentePage({ params }: Props) {
           menuItems={menuItems.map(m => ({
             id: m.id,
             name: m.name,
-            notes: m.notes, // Hinweise zu Menüpunkten (Step 3)
-            materialNotes: m.materialNotes,
+            materialNotes: m.materialNotes, // Hinweis aus Webdoku Step 7
             imagesComplete: m.imagesComplete,
             imagesAgentComment: m.imagesAgentComment,
             imagesReviewedAt: m.imagesReviewedAt?.toISOString() ?? null,
