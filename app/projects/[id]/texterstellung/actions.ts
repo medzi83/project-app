@@ -317,7 +317,8 @@ async function updateTexterstellungStatus(texterstellungId: string) {
     where: { texterstellungId },
   });
 
-  const allApproved = items.every((i) => i.status === "APPROVED");
+  // Mindestens ein Item muss existieren und alle müssen APPROVED sein
+  const allApproved = items.length > 0 && items.every((i) => i.status === "APPROVED");
   const anyDraft = items.some((i) => i.status === "DRAFT");
 
   let status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
@@ -335,8 +336,16 @@ async function updateTexterstellungStatus(texterstellungId: string) {
     updateData.completedAt = new Date();
   }
 
-  await prisma.texterstellung.update({
+  const texterstellung = await prisma.texterstellung.update({
     where: { id: texterstellungId },
     data: updateData,
   });
+
+  // Wenn Texterstellung abgeschlossen, automatisch Textit-Status auf JA_JA setzen
+  if (status === "COMPLETED") {
+    await prisma.projectWebsite.update({
+      where: { projectId: texterstellung.projectId },
+      data: { textit: "JA_JA" },
+    });
+  }
 }

@@ -83,11 +83,29 @@ export function LuckyCloudProjectFolderCard({
     ? getAgencyKey(client.agency.name)
     : null;
 
-  // Generiere Ordnernamen: [Jahr] - [Projekttitel oder "Webseite"]
-  const generateFolderName = () => {
+  // Generiere Basis-Ordnernamen: [Jahr] - [Projekttitel oder "Webseite"]
+  const generateBaseFolderName = () => {
     const year = new Date().getFullYear();
     const title = projectTitle?.trim() || 'Webseite';
     return `${year} - ${title}`;
+  };
+
+  // Generiere eindeutigen Ordnernamen (prüft auf existierende Ordner)
+  const generateUniqueFolderName = async (existingFolders: string[]): Promise<string> => {
+    const baseName = generateBaseFolderName();
+
+    // Prüfe ob der Basisname bereits existiert
+    if (!existingFolders.includes(baseName)) {
+      return baseName;
+    }
+
+    // Finde den nächsten freien Suffix (2), (3), etc.
+    let counter = 2;
+    while (existingFolders.includes(`${baseName} (${counter})`)) {
+      counter++;
+    }
+
+    return `${baseName} (${counter})`;
   };
 
   // Projektordner mit Unterordnern erstellen
@@ -98,8 +116,22 @@ export function LuckyCloudProjectFolderCard({
     setMessage(null);
 
     try {
-      const folderName = generateFolderName();
       const basePath = client.luckyCloudFolderPath;
+
+      // Existierende Ordner laden um Duplikate zu vermeiden
+      const listResponse = await fetch(
+        `/api/admin/luckycloud/files?agency=${clientAgency}&libraryId=${client.luckyCloudLibraryId}&path=${encodeURIComponent(basePath)}`
+      );
+      const listData = await listResponse.json();
+
+      const existingFolders: string[] = listData.success && listData.items
+        ? listData.items
+            .filter((item: { type: string }) => item.type === 'dir')
+            .map((item: { name: string }) => item.name)
+        : [];
+
+      // Eindeutigen Ordnernamen generieren
+      const folderName = await generateUniqueFolderName(existingFolders);
       const projectFolderPath = `${basePath}/${folderName}`;
 
       // 1. Hauptordner erstellen
@@ -303,7 +335,7 @@ export function LuckyCloudProjectFolderCard({
               )}
               {canEdit && (
                 <p className="text-xs text-muted-foreground">
-                  Ordnername: <span className="font-medium">{generateFolderName()}</span>
+                  Ordnername: <span className="font-medium">{generateBaseFolderName()}</span>
                 </p>
               )}
             </div>

@@ -707,6 +707,27 @@ export default async function ProjectDetail({ params }: Props) {
                 </div>
               </div>
               <div className="flex items-start gap-2">
+                <div className={`flex-shrink-0 w-2 h-2 mt-1.5 rounded-full ${website?.demoApprovedAt ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"}`}></div>
+                <div className="min-w-0">
+                  <dt className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Demo freigegeben</dt>
+                  <dd className="text-sm text-gray-900 dark:text-white">
+                    {website?.demoApprovedAt ? (
+                      <span className="flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        {fmtDate(website.demoApprovedAt)}
+                        {website.demoApprovedByName && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">({website.demoApprovedByName})</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 dark:text-gray-500">-</span>
+                    )}
+                  </dd>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
                 <div className="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full bg-green-500"></div>
                 <div className="min-w-0">
                   <dt className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Online</dt>
@@ -1396,6 +1417,35 @@ export default async function ProjectDetail({ params }: Props) {
                     </div>
                   ))}
                 </dd>
+              </div>
+            )}
+
+            {/* Demo-Freigabe durch Kunden */}
+            {website?.demoApprovedAt && (
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-800/50 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                      Demo vom Kunden freigegeben
+                    </p>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
+                      {fmtDateTime(website.demoApprovedAt)}
+                      {website.demoApprovedByName && (
+                        <span> von {website.demoApprovedByName}</span>
+                      )}
+                    </p>
+                    {website.demoApprovedByIp && (
+                      <p className="text-xs text-emerald-500 dark:text-emerald-500 mt-0.5">
+                        IP: {website.demoApprovedByIp}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 

@@ -189,6 +189,10 @@ model ProjectWebsite {
   isRelaunch       Boolean                @default(false)
   // LuckyCloud Material-Ordner (Unterordner im Kunden-Ordner)
   luckyCloudFolderPath  String?           // Relativer Pfad zum Material-Ordner (z.B. "/Inhalte")
+  // Demo-Freigabe durch Kunden
+  demoApprovedAt       DateTime?          // Zeitpunkt der Demo-Freigabe (naiv UTC)
+  demoApprovedByName   String?            // Name des Kunden der freigegeben hat
+  demoApprovedByIp     String?            // IP-Adresse des Kunden bei Freigabe
   domainHistory    ProjectDomainHistory[]
   project          Project                @relation(fields: [projectId], references: [id])
   webDocumentation WebDocumentation?
