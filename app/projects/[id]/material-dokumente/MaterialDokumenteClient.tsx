@@ -6,7 +6,8 @@ import ImageFileRow from "./ImageFileRow";
 type MenuItem = {
   id: string;
   name: string;
-  materialNotes: string | null;
+  notes: string | null; // Hinweise zu Menüpunkten (Step 3)
+  materialNotes: string | null; // Konkrete Material-Hinweise (Step 7)
   imagesComplete: boolean;
   imagesAgentComment: string | null;
   imagesReviewedAt: string | null;
@@ -129,7 +130,7 @@ export default function MaterialDokumenteClient({
     folders.push({
       name: sanitizeFolderName(item.name),
       displayName: item.name,
-      notes: item.materialNotes,
+      notes: item.notes, // Hinweise zu Menüpunkten (Step 3)
       type: "menuItem",
       id: item.id,
       review: {

@@ -69,6 +69,7 @@ export default async function MaterialDokumentePage({ params }: Props) {
                 select: {
                   id: true,
                   name: true,
+                  notes: true, // Hinweise zu Menüpunkten (Step 3)
                   materialNotes: true,
                   imagesComplete: true,
                   imagesAgentComment: true,
@@ -215,6 +216,7 @@ export default async function MaterialDokumentePage({ params }: Props) {
           menuItems={menuItems.map(m => ({
             id: m.id,
             name: m.name,
+            notes: m.notes, // Hinweise zu Menüpunkten (Step 3)
             materialNotes: m.materialNotes,
             imagesComplete: m.imagesComplete,
             imagesAgentComment: m.imagesAgentComment,
