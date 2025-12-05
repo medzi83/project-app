@@ -7,6 +7,8 @@ import {
   getThumbnailLink,
   getDownloadLink,
   getUploadLink,
+  getOrCreateShareLink,
+  getShareLinkThumbnail,
   type LuckyCloudAgency,
   type LuckyCloudDirEntry,
 } from '@/lib/luckycloud';
@@ -190,6 +192,21 @@ export async function GET(request: NextRequest) {
       const fullPath = folderName ? `${basePath}/${folderName}` : basePath;
       const uploadUrl = await getUploadLink(agencyKey, libraryId, fullPath);
       return NextResponse.json({ success: true, uploadUrl, targetPath: fullPath });
+    }
+
+    // Share-Link für direkte Bildanzeige im Browser (kein Vercel-Proxy nötig)
+    if (action === 'share-link' && filePath) {
+      const fullFilePath = `${basePath}/${filePath}`;
+      const type = searchParams.get('type') || 'full'; // 'full' oder 'thumbnail'
+
+      if (type === 'thumbnail') {
+        const url = await getShareLinkThumbnail(agencyKey, libraryId, fullFilePath, size);
+        return NextResponse.json({ success: true, url });
+      } else {
+        const forceDownload = searchParams.get('download') === '1';
+        const url = await getOrCreateShareLink(agencyKey, libraryId, fullFilePath, forceDownload);
+        return NextResponse.json({ success: true, url });
+      }
     }
 
     return NextResponse.json({ success: false, error: 'Unbekannte Aktion' }, { status: 400 });

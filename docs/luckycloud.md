@@ -33,8 +33,10 @@ projektverwaltung/
 │               ├── test-connection/route.ts  # Verbindungstest
 │               ├── libraries/route.ts        # Bibliotheken auflisten
 │               ├── files/route.ts            # Verzeichnisse auflisten
-│               ├── download/route.ts         # Download-Links
-│               ├── thumbnail/route.ts        # Thumbnail-Links
+│               ├── download/route.ts         # Download-Links (IP-gebunden, nur für Server)
+│               ├── thumbnail/route.ts        # Thumbnail-Links (IP-gebunden, nur für Server)
+│               ├── image/route.ts            # Image-Proxy (lädt Bilder server-seitig, Fallback)
+│               ├── share-link/route.ts       # Share-Links (öffentlich, für Browser)
 │               ├── delete/route.ts           # Dateien/Ordner löschen
 │               └── comments/route.ts         # Datei-Kommentare (GET/POST/DELETE)
 └── components/
@@ -96,6 +98,8 @@ Das Token wird im `Authorization: Token [API-KEY]` Header verwendet.
 | `addFileComment(agency, libraryId, filePath, comment)` | Fügt Kommentar hinzu |
 | `deleteFileComment(agency, libraryId, commentId)` | Löscht einen Kommentar |
 | `getFileCommentCounts(agency, libraryId, path)` | Anzahl Kommentare im Verzeichnis |
+| `getOrCreateShareLink(agency, libraryId, filePath, forceDownload?)` | Erstellt/holt Share-Link für Datei |
+| `getShareLinkThumbnail(agency, libraryId, filePath, size)` | Thumbnail-URL über Share-Link |
 
 ### Typen
 
@@ -139,6 +143,22 @@ type LuckyCloudComment = {
   updated_at: string;
   resolved: boolean;
 };
+
+type LuckyCloudShareLink = {
+  token: string;
+  link: string;
+  repo_id: string;
+  path: string;
+  username: string;
+  view_cnt: number;
+  ctime: string;
+  expire_date: string | null;
+  is_expired: boolean;
+  permissions: {
+    can_edit: boolean;
+    can_download: boolean;
+  };
+};
 ```
 
 ## LuckyCloud Web API
@@ -178,9 +198,155 @@ type LuckyCloudComment = {
 | `DELETE /api2/repos/{repo_id}/file/comments/{comment_id}/` | Kommentar löschen |
 | `GET /api2/repos/{repo_id}/file/comments/counts/?p=/path` | Anzahl Kommentare im Verzeichnis |
 
+### Share-Link-Endpunkte
+
+| Endpunkt | Beschreibung |
+|----------|--------------|
+| `GET /api/v2.1/share-links/?repo_id={id}&path={path}` | Existierende Share-Links für Datei abrufen |
+| `POST /api/v2.1/share-links/` | Neuen Share-Link erstellen |
+
+**Share-Link erstellen (POST Body):**
+```json
+{
+  "repo_id": "library-id",
+  "path": "/pfad/zur/datei.jpg",
+  "permissions": {
+    "can_edit": false,
+    "can_download": true
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "token": "68eb576b77314939a488",
+  "link": "https://sync.luckycloud.de/f/68eb576b77314939a488/",
+  "repo_id": "...",
+  "path": "/pfad/zur/datei.jpg",
+  ...
+}
+```
+
 ### Thumbnail-Größen
 
 Unterstützte Größen: `48`, `96`, `192`, `256` Pixel
+
+## URL-Formate für Share-Links (WICHTIG!)
+
+### Übersicht der URL-Typen
+
+Seafile/LuckyCloud verwendet unterschiedliche URL-Pfade für verschiedene Zwecke:
+
+| URL-Typ | Format | Verwendung |
+|---------|--------|------------|
+| **Datei Share-Link** | `/f/{token}/` | Einzelne Datei teilen |
+| **Ordner Share-Link** | `/d/{token}/` | Ordner teilen |
+| **Thumbnail** | `/thumbnail/{token}/{size}/{filename}` | Vorschaubilder |
+
+### Datei-Share-Link URLs (`/f/{token}/`)
+
+Für **einzelne Dateien** (Bilder, PDFs, etc.) wird das `/f/`-Format verwendet:
+
+```
+# Basis-URL (zeigt HTML-Vorschau-Seite)
+https://sync.luckycloud.de/f/{token}/
+
+# Direkte Bildanzeige im Browser (für <img src="...">)
+https://sync.luckycloud.de/f/{token}/?raw=1
+
+# Download erzwingen
+https://sync.luckycloud.de/f/{token}/?dl=1
+```
+
+**Beispiel:**
+```
+Token: 68eb576b77314939a488
+
+# Zeigt Bild direkt im Browser an:
+https://sync.luckycloud.de/f/68eb576b77314939a488/?raw=1
+
+# Erzwingt Download:
+https://sync.luckycloud.de/f/68eb576b77314939a488/?dl=1
+```
+
+### Ordner-Share-Link URLs (`/d/{token}/`)
+
+Für **Ordner** wird das `/d/`-Format verwendet:
+
+```
+# Basis-URL (zeigt Ordner-Inhalt)
+https://sync.luckycloud.de/d/{token}/
+
+# Datei im Ordner anzeigen (HTML-Seite, NICHT direktes Bild!)
+https://sync.luckycloud.de/d/{token}/files/?p={filename}
+
+# Download einer Datei im Ordner
+https://sync.luckycloud.de/d/{token}/files/?p={filename}&dl=1
+```
+
+⚠️ **ACHTUNG:** Das `/d/{token}/files/?p=...` Format zeigt eine HTML-Seite, NICHT das Bild direkt! Für direkte Bildanzeige muss ein **Datei-Share-Link** (`/f/`) erstellt werden.
+
+### Thumbnail URLs
+
+Thumbnails funktionieren sowohl für Datei- als auch für Ordner-Share-Links:
+
+```
+# Thumbnail-URL (funktioniert für beide Typen)
+https://sync.luckycloud.de/thumbnail/{token}/{size}/{filename}
+```
+
+**Unterstützte Größen:** `48`, `96`, `192`, `256` Pixel
+
+**Beispiel:**
+```
+https://sync.luckycloud.de/thumbnail/68eb576b77314939a488/96/micha.png
+```
+
+### Unterschied: Download-Link vs. Share-Link
+
+| Aspekt | Download-Link (`getDownloadLink`) | Share-Link (`getOrCreateShareLink`) |
+|--------|-----------------------------------|-------------------------------------|
+| **Gültigkeit** | Temporär, IP-gebunden | Permanent, öffentlich |
+| **Funktioniert im Browser** | ❌ Nein (403 Forbidden) | ✅ Ja |
+| **Vercel-Proxy nötig** | ✅ Ja | ❌ Nein |
+| **Traffic über Vercel** | 100% der Dateigröße | 0% (nur JSON-Request) |
+| **Verwendung** | Server-seitiges Laden | Client-seitiges Laden (img src) |
+
+### Warum Share-Links statt Download-Links?
+
+**Problem mit Download-Links:**
+1. Vercel-Server holt Download-Link von LuckyCloud
+2. Download-Link ist an die IP des Vercel-Servers gebunden
+3. Browser (andere IP) versucht, den Link zu öffnen → **403 Forbidden**
+
+**Lösung mit Share-Links:**
+1. Vercel-Server erstellt/holt Share-Link (einmalig, wird gecacht)
+2. Share-Link ist öffentlich und funktioniert von jeder IP
+3. Browser lädt Bild direkt von LuckyCloud → **Kein Vercel-Traffic!**
+
+### Implementierung in `lib/luckycloud.ts`
+
+```typescript
+// Share-Link für direkte Bildanzeige im Browser
+const url = await getOrCreateShareLink(agency, libraryId, filePath);
+// Ergebnis: https://sync.luckycloud.de/f/{token}/?raw=1
+
+// Share-Link für Download
+const downloadUrl = await getOrCreateShareLink(agency, libraryId, filePath, true);
+// Ergebnis: https://sync.luckycloud.de/f/{token}/?dl=1
+
+// Thumbnail über Share-Link
+const thumbnailUrl = await getShareLinkThumbnail(agency, libraryId, filePath, 96);
+// Ergebnis: https://sync.luckycloud.de/thumbnail/{token}/96/{filename}
+```
+
+### Token-Caching
+
+Share-Link-Tokens werden 24 Stunden im Server-Memory gecacht:
+- Reduziert API-Aufrufe an LuckyCloud
+- Gleicher Token für Thumbnail und Vollbild einer Datei
+- Cache-Key: `{agency}:{libraryId}:{filePath}`
 
 ## Admin-Oberfläche
 
