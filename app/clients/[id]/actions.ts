@@ -532,3 +532,82 @@ export async function deleteClientContract(clientId: string) {
     };
   }
 }
+
+// ==================== Domain Actions ====================
+
+export async function updateDomainSettings(formData: FormData) {
+  const session = await getAuthSession();
+
+  // Only admins can update domain settings
+  if (!session?.user || session.user.role !== "ADMIN") {
+    return { success: false, message: "Nicht autorisiert" };
+  }
+
+  const serverId = formData.get("serverId") as string;
+  const domainId = formData.get("domainId") as string;
+  const clientId = formData.get("clientId") as string;
+  const letsencrypt = formData.get("letsencrypt") as string;
+  const phpsettingid = formData.get("phpsettingid") as string;
+
+  if (!serverId || !domainId) {
+    return { success: false, message: "Fehlende Parameter" };
+  }
+
+  try {
+    const server = await prisma.server.findUnique({
+      where: { id: serverId },
+    });
+
+    if (!server) {
+      return { success: false, message: "Server nicht gefunden" };
+    }
+
+    const froxlorClient = createFroxlorClientFromServer(server);
+
+    if (!froxlorClient) {
+      return { success: false, message: "Froxlor-Konfiguration unvollständig" };
+    }
+
+    // Build update data - only include fields that were provided
+    const updateData: {
+      letsencrypt?: number;
+      ssl_redirect?: number;
+      phpsettingid?: number;
+      selectserveralias?: number;
+    } = {};
+
+    if (letsencrypt !== null && letsencrypt !== undefined) {
+      const leValue = parseInt(letsencrypt, 10);
+      updateData.letsencrypt = leValue;
+      // If enabling Let's Encrypt, also enable SSL redirect and set serveralias to "none"
+      // Froxlor can only validate non-wildcard domains via ACME HTTP
+      // selectserveralias: 0 = wildcard (*), 1 = www-alias, 2 = none
+      if (leValue === 1) {
+        updateData.ssl_redirect = 1;
+        updateData.selectserveralias = 2; // 2 = none (no alias)
+      }
+    }
+
+    if (phpsettingid) {
+      updateData.phpsettingid = parseInt(phpsettingid, 10);
+    }
+
+    const result = await froxlorClient.updateDomain(parseInt(domainId, 10), updateData);
+
+    if (result.success) {
+      // Revalidate the client page to show updated data
+      if (clientId) {
+        revalidatePath(`/clients/${clientId}`);
+      }
+      return { success: true, message: "Domain-Einstellungen erfolgreich aktualisiert" };
+    }
+
+    return { success: false, message: result.message };
+  } catch (error) {
+    console.error("Error updating domain settings:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Fehler beim Aktualisieren der Domain-Einstellungen"
+    };
+  }
+}

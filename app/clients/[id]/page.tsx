@@ -19,6 +19,7 @@ import { ClientDataEditor } from "./ClientDataEditor";
 import { ProjectDomainAssignment } from "./ProjectDomainAssignment";
 import { FtpPasswordEditor } from "./FtpPasswordEditor";
 import { DomainProjectAssignment } from "./DomainProjectAssignment";
+import { DomainEditor } from "./DomainEditor";
 import { DeleteInstallationButton } from "./DeleteInstallationButton";
 import { DeleteProjectButton } from "./DeleteProjectButton";
 import { DeleteDatabaseButton } from "./DeleteDatabaseButton";
@@ -1105,7 +1106,6 @@ export default async function ClientDetailPage({ params }: Props) {
                   const derivedPrintStatus = derivePrintDesignStatus({
                     status: project.printDesign.pStatus,
                     webtermin: project.printDesign.webtermin,
-                    implementation: project.printDesign.implementation,
                     designToClient: project.printDesign.designToClient,
                     designApproval: project.printDesign.designApproval,
                     finalVersionToClient: project.printDesign.finalVersionToClient,
@@ -1410,10 +1410,25 @@ export default async function ClientDetailPage({ params }: Props) {
                                 {!isStandard && (
                                   <div className="font-mono text-[11px] text-muted-foreground mb-0.5 break-all">{domain.documentroot}</div>
                                 )}
-                                <div className="flex gap-2.5 text-[11px] text-muted-foreground">
+                                <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground">
                                   <span>SSL: {domain.ssl_redirect === "1" ? "✓" : "✗"}</span>
                                   <span>LE: {domain.letsencrypt === "1" ? "✓" : "✗"}</span>
                                   <span>PHP: {serverData.phpConfigs[domain.phpsettingid] || domain.phpsettingid}</span>
+                                  {isAdmin && (
+                                    <DomainEditor
+                                      domain={{
+                                        id: domain.id,
+                                        domain: domain.domain,
+                                        letsencrypt: domain.letsencrypt,
+                                        phpsettingid: domain.phpsettingid,
+                                        ssl_redirect: domain.ssl_redirect,
+                                      }}
+                                      serverId={serverData.server.id}
+                                      clientId={client.id}
+                                      phpConfigs={serverData.phpConfigs}
+                                      isAdmin={isAdmin}
+                                    />
+                                  )}
                                 </div>
 
                                 {!isStandard && (

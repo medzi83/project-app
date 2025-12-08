@@ -138,7 +138,6 @@ type PrintDesignProjectRow = {
   agent: string;
   agentColor?: string | null;
   webtermin: string;
-  implementation: string;
   designToClient: string;
   designApproval: string;
   finalVersionToClient: string;
@@ -165,7 +164,6 @@ const buildRows = (
       ? derivePrintDesignStatus({
           status: printDesign.pStatus,
           webtermin: printDesign.webtermin,
-          implementation: printDesign.implementation,
           designToClient: printDesign.designToClient,
           designApproval: printDesign.designApproval,
           finalVersionToClient: printDesign.finalVersionToClient,
@@ -192,7 +190,6 @@ const buildRows = (
       agent: agentName && agentName.length > 0 ? agentName : "-",
       agentColor: project.agent?.color,
       webtermin: formatDateTime(printDesign?.webtermin ?? undefined),
-      implementation: formatDate(printDesign?.implementation ?? undefined),
       designToClient: formatDate(printDesign?.designToClient ?? undefined),
       designApproval: formatDate(printDesign?.designApproval ?? undefined),
       finalVersionToClient: formatDate(printDesign?.finalVersionToClient ?? undefined),
@@ -283,7 +280,6 @@ async function loadPrintDesignProjects(
       const derivedStatus = derivePrintDesignStatus({
         status: project.printDesign?.pStatus,
         webtermin: project.printDesign?.webtermin,
-        implementation: project.printDesign?.implementation,
         designToClient: project.printDesign?.designToClient,
         designApproval: project.printDesign?.designApproval,
         finalVersionToClient: project.printDesign?.finalVersionToClient,
@@ -319,7 +315,6 @@ function mapOrderBy(
         { printDesign: { finalVersionToClient: direction } },
         { printDesign: { designApproval: direction } },
         { printDesign: { designToClient: direction } },
-        { printDesign: { implementation: direction } },
         { printDesign: { webtermin: direction } },
         { updatedAt: direction },
       ];
@@ -333,8 +328,6 @@ function mapOrderBy(
       return [{ agent: { name: direction } }];
     case "webtermin":
       return [{ printDesign: { webtermin: direction } }];
-    case "implementation":
-      return [{ printDesign: { implementation: direction } }];
     case "designToClient":
       return [{ printDesign: { designToClient: direction } }];
     case "designApproval":
@@ -656,7 +649,6 @@ export default async function PrintDesignPage({ searchParams }: Props) {
                   <SortableHeader field="projectType">Art</SortableHeader>
                   <SortableHeader field="agent">Agent</SortableHeader>
                   <SortableHeader field="webtermin">Webtermin</SortableHeader>
-                  <SortableHeader field="implementation">Umsetzung</SortableHeader>
                   <SortableHeader field="designToClient">
                     Design an Kunden
                   </SortableHeader>
@@ -680,7 +672,7 @@ export default async function PrintDesignPage({ searchParams }: Props) {
               <TableBody>
                 {paginatedRows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={canEdit ? 18 : 17} className="text-center text-muted-foreground">
+                    <TableCell colSpan={canEdit ? 17 : 16} className="text-center text-muted-foreground">
                       Keine Projekte gefunden
                     </TableCell>
                   </TableRow>
@@ -766,17 +758,6 @@ export default async function PrintDesignPage({ searchParams }: Props) {
                           type="datetime"
                           display={row.webtermin}
                           value={printDesign.webtermin}
-                          canEdit={canEdit}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <PrintDesignInlineCell
-                          target="printDesign"
-                          id={project.id}
-                          name="implementation"
-                          type="date"
-                          display={row.implementation}
-                          value={printDesign.implementation}
                           canEdit={canEdit}
                         />
                       </TableCell>

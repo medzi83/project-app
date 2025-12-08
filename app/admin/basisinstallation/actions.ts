@@ -237,12 +237,27 @@ export async function updateStandardDomain(formData: FormData) {
     version: server.froxlorVersion || undefined,
   });
 
-  const result = await client.updateDomain(parseInt(domainId), {
+  // Build update data
+  const updateData: {
+    documentroot?: string;
+    ssl_redirect: number;
+    letsencrypt: number;
+    phpsettingid?: number;
+    selectserveralias?: number;
+  } = {
     documentroot: documentroot || undefined,
     ssl_redirect: ssl_redirect ? 1 : 0,
     letsencrypt: letsencrypt ? 1 : 0,
     phpsettingid: phpsettingid ? parseInt(phpsettingid) : undefined,
-  });
+  };
+
+  // If enabling Let's Encrypt, set serveralias to "none" to allow ACME HTTP validation
+  // selectserveralias: 0 = wildcard (*), 1 = www-alias, 2 = none
+  if (letsencrypt) {
+    updateData.selectserveralias = 2;
+  }
+
+  const result = await client.updateDomain(parseInt(domainId), updateData);
 
   return result;
 }

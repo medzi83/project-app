@@ -610,7 +610,6 @@ model ProjectPrintDesign {
   projectType            PrintDesignType?
   pStatus                ProductionStatus      @default(NONE)
   webtermin              DateTime?
-  implementation         DateTime?
   designToClient         DateTime?
   designApproval         DateTime?
   finalVersionToClient   DateTime?

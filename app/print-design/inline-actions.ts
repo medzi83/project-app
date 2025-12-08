@@ -18,7 +18,6 @@ const PrintDesignKey = z.enum([
   "projectType",
   "pStatus",
   "webtermin",
-  "implementation",
   "designToClient",
   "designApproval",
   "finalVersionToClient",
@@ -37,7 +36,6 @@ const FormSchema = z.object({
 });
 
 const dateKeys = new Set([
-  "implementation",
   "designToClient",
   "designApproval",
   "finalVersionToClient",
@@ -48,7 +46,6 @@ const boolKeys = new Set(["printRequired"]);
 const statusRelevantPrintDesignKeys = new Set([
   "pStatus",
   "webtermin",
-  "implementation",
   "designToClient",
   "designApproval",
   "finalVersionToClient",
@@ -139,12 +136,6 @@ export async function updatePrintDesignInlineField(
         createData.webtermin = nextValue;
         break;
       }
-      case "implementation": {
-        const nextValue = parsedValue instanceof Date ? parsedValue : null;
-        updateData.implementation = nextValue;
-        createData.implementation = nextValue;
-        break;
-      }
       case "designToClient": {
         const nextValue = parsedValue instanceof Date ? parsedValue : null;
         updateData.designToClient = nextValue;
@@ -221,7 +212,6 @@ export async function updatePrintDesignInlineField(
             select: {
               pStatus: true,
               webtermin: true,
-              implementation: true,
               designToClient: true,
               designApproval: true,
               finalVersionToClient: true,
@@ -235,7 +225,6 @@ export async function updatePrintDesignInlineField(
         const derivedStatus = derivePrintDesignStatus({
           status: project.printDesign.pStatus,
           webtermin: project.printDesign.webtermin,
-          implementation: project.printDesign.implementation,
           designToClient: project.printDesign.designToClient,
           designApproval: project.printDesign.designApproval,
           finalVersionToClient: project.printDesign.finalVersionToClient,

@@ -852,7 +852,6 @@ export default async function DashboardPage({
         select: {
           pStatus: true,
           webtermin: true,
-          implementation: true,
           designToClient: true,
           designApproval: true,
           finalVersionToClient: true,
@@ -878,7 +877,6 @@ export default async function DashboardPage({
     const status = derivePrintDesignStatus({
       status: printDesign?.pStatus,
       webtermin: printDesign?.webtermin,
-      implementation: printDesign?.implementation,
       designToClient: printDesign?.designToClient,
       designApproval: printDesign?.designApproval,
       finalVersionToClient: printDesign?.finalVersionToClient,
@@ -897,7 +895,6 @@ export default async function DashboardPage({
     // Determine relevant date for this status
     const relevantDate = getPrintDesignStatusDate(status, {
       webtermin: printDesign?.webtermin,
-      implementation: printDesign?.implementation,
       designToClient: printDesign?.designToClient,
       designApproval: printDesign?.designApproval,
       finalVersionToClient: printDesign?.finalVersionToClient,

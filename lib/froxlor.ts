@@ -726,6 +726,7 @@ export class FroxlorClient {
 
   /**
    * Update a domain's settings
+   * selectserveralias: 0 = wildcard (*), 1 = www-alias, 2 = none
    */
   async updateDomain(
     domainId: number,
@@ -736,6 +737,7 @@ export class FroxlorClient {
       phpsettingid: number;
       phpenabled: number;
       openbasedir: number;
+      selectserveralias: number;
     }>
   ): Promise<{ success: boolean; message: string; domain?: FroxlorDomain }> {
     try {

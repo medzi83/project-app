@@ -33,6 +33,7 @@ type Search = {
   dir?: "asc" | "desc";
   q?: string;
   status?: string[];
+  pStatus?: string[];
   priority?: string[];
   cms?: string[];
   agent?: string[];
@@ -46,6 +47,7 @@ type Search = {
 };
 
 const STATUSES = ["WEBTERMIN", "MATERIAL", "UMSETZUNG", "DEMO", "ONLINE"] as const;
+const P_STATUSES = ["NONE", "MMW", "VOLLST_A_K", "VOLLST_K_E_S", "BEENDET"] as const;
 const PRIORITIES = ["NONE", "PRIO_1", "PRIO_2", "PRIO_3"] as const;
 const CMS = ["SHOPWARE", "JOOMLA", "WORDPRESS", "CUSTOM", "OTHER"] as const;
 
@@ -276,6 +278,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
 
   // Parse URL parameters
   const statusParam = arr(spRaw.status);
+  const pStatusParam = arr(spRaw.pStatus);
   const priorityParam = arr(spRaw.priority);
   const cmsParam = arr(spRaw.cms);
   const agentParam = arr(spRaw.agent);
@@ -287,6 +290,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
   // 3. No other parameters present
   const hasAnyParams =
     statusParam.length > 0 ||
+    pStatusParam.length > 0 ||
     priorityParam.length > 0 ||
     cmsParam.length > 0 ||
     agentParam.length > 0 ||
@@ -301,6 +305,7 @@ export default async function ProjectsPage({ searchParams }: Props) {
     dir: (str(spRaw.dir) as "asc" | "desc") ?? "desc",
     q: resetFilters ? "" : (qParam ?? ""),
     status: resetFilters ? [] : (useSavedFilters ? savedStatusFilter : statusParam),
+    pStatus: resetFilters ? [] : pStatusParam,
     priority: resetFilters ? [] : (useSavedFilters ? savedPriorityFilter : priorityParam),
     cms: resetFilters ? [] : (useSavedFilters ? savedCmsFilter : cmsParam),
     agent: resetFilters ? [] : (useSavedFilters ? savedAgentFilter : agentParam),
@@ -526,6 +531,10 @@ export default async function ProjectsPage({ searchParams }: Props) {
     const vals = sp.cms.filter((c) => (CMS as readonly string[]).includes(c));
     if (vals.length > 0) websiteFilters.cms = { in: vals as PrismaCMS[] };
   }
+  if (sp.pStatus && sp.pStatus.length > 0) {
+    const vals = sp.pStatus.filter((p) => (P_STATUSES as readonly string[]).includes(p));
+    if (vals.length > 0) websiteFilters.pStatus = { in: vals as typeof P_STATUSES[number][] };
+  }
   if (Object.keys(websiteFilters).length > 0) where.website = { is: websiteFilters };
 
   if (sp.agent && sp.agent.length > 0) {
@@ -707,6 +716,14 @@ export default async function ProjectsPage({ searchParams }: Props) {
           ]}
           selected={sp.status ?? []}
           width="w-44"
+        />
+
+        <CheckboxFilterGroup
+          name="pStatus"
+          label="P-Status"
+          options={P_STATUSES.map((p) => ({ value: p, label: labelForProductionStatus(p) }))}
+          selected={sp.pStatus ?? []}
+          width="w-48"
         />
 
         <CheckboxFilterGroup
@@ -1075,6 +1092,7 @@ function makeSortHref({ current, key }: { current: Search; key: string }) {
   p.set("dir", nextDir);
   if (current.q) p.set("q", current.q);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
+  if (current.pStatus && current.pStatus.length) for (const v of current.pStatus) p.append("pStatus", v);
   if (current.priority && current.priority.length) for (const v of current.priority) p.append("priority", v);
   if (current.cms && current.cms.length) for (const v of current.cms) p.append("cms", v);
   if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);
@@ -1094,6 +1112,7 @@ function makePageHref({ current, page }: { current: Search; page: number }) {
   if (current.dir) p.set("dir", current.dir);
   if (current.q) p.set("q", current.q);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
+  if (current.pStatus && current.pStatus.length) for (const v of current.pStatus) p.append("pStatus", v);
   if (current.priority && current.priority.length) for (const v of current.priority) p.append("priority", v);
   if (current.cms && current.cms.length) for (const v of current.cms) p.append("cms", v);
   if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);
@@ -1113,6 +1132,7 @@ function makePageSizeHref({ current, size }: { current: Search; size: number }) 
   if (current.dir) p.set("dir", current.dir);
   if (current.q) p.set("q", current.q);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
+  if (current.pStatus && current.pStatus.length) for (const v of current.pStatus) p.append("pStatus", v);
   if (current.priority && current.priority.length) for (const v of current.priority) p.append("priority", v);
   if (current.cms && current.cms.length) for (const v of current.cms) p.append("cms", v);
   if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);
@@ -1132,6 +1152,7 @@ function makeShowBeendetHref({ current, show }: { current: Search; show: boolean
   if (current.dir) p.set("dir", current.dir);
   if (current.q) p.set("q", current.q);
   if (current.status && current.status.length) for (const v of current.status) p.append("status", v);
+  if (current.pStatus && current.pStatus.length) for (const v of current.pStatus) p.append("pStatus", v);
   if (current.priority && current.priority.length) for (const v of current.priority) p.append("priority", v);
   if (current.cms && current.cms.length) for (const v of current.cms) p.append("cms", v);
   if (current.agent && current.agent.length) for (const v of current.agent) p.append("agent", v);

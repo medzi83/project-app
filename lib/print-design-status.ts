@@ -72,7 +72,6 @@ const toDate = (value?: Date | string | null): Date | null => {
 export type PrintDesignStatusInput = {
   status?: ProjectStatus | string | null;
   webtermin?: Date | string | null;
-  implementation?: Date | string | null;
   designToClient?: Date | string | null;
   designApproval?: Date | string | null;
   finalVersionToClient?: Date | string | null;
@@ -103,8 +102,8 @@ export function derivePrintDesignStatus(
   // Design an Kunden - wenn Design an Kunden gesendet
   if (printDesign.designToClient) return "DESIGN_AN_KUNDEN";
 
-  // Umsetzung - wenn Webtermin in Vergangenheit oder Umsetzung begonnen
-  if (isInPast(printDesign.webtermin) || printDesign.implementation)
+  // Umsetzung - wenn Webtermin in der Vergangenheit liegt
+  if (isInPast(printDesign.webtermin))
     return "UMSETZUNG";
 
   // Webtermin - Standardzustand
@@ -118,7 +117,6 @@ export function getPrintDesignStatusDate(
   status: PrintDesignStatus,
   printDesign: {
     webtermin?: Date | string | null;
-    implementation?: Date | string | null;
     designToClient?: Date | string | null;
     designApproval?: Date | string | null;
     finalVersionToClient?: Date | string | null;
@@ -129,7 +127,7 @@ export function getPrintDesignStatusDate(
     case "WEBTERMIN":
       return toDate(printDesign.webtermin);
     case "UMSETZUNG":
-      return toDate(printDesign.implementation) ?? toDate(printDesign.webtermin);
+      return toDate(printDesign.webtermin);
     case "DESIGN_AN_KUNDEN":
       return toDate(printDesign.designToClient);
     case "DESIGNABNAHME":

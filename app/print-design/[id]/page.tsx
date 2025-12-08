@@ -259,7 +259,6 @@ export default async function PrintDesignDetailPage({ params }: Props) {
   const derivedStatus = derivePrintDesignStatus({
     status: printDesign.pStatus,
     webtermin: printDesign.webtermin,
-    implementation: printDesign.implementation,
     designToClient: printDesign.designToClient,
     designApproval: printDesign.designApproval,
     finalVersionToClient: printDesign.finalVersionToClient,
@@ -517,21 +516,6 @@ export default async function PrintDesignDetailPage({ params }: Props) {
                   type="datetime"
                   display={formatDateTime(printDesign.webtermin)}
                   value={printDesign.webtermin}
-                  canEdit={canEdit}
-                />
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-sm font-medium text-muted-foreground">Umsetzung</dt>
-              <dd className="text-sm">
-                <PrintDesignInlineCell
-                  target="printDesign"
-                  id={project.id}
-                  name="implementation"
-                  type="date"
-                  display={formatDate(printDesign.implementation)}
-                  value={printDesign.implementation}
                   canEdit={canEdit}
                 />
               </dd>
