@@ -35,6 +35,7 @@ import {
   updateFormFields,
   releaseWebDocumentationForCustomer,
   revokeWebDocumentationRelease,
+  updateDomainStatus,
 } from "./actions";
 // Typ für Formularfelder (wird nach Migration aus @prisma/client importiert)
 type WebDocuFormFieldType =
@@ -292,6 +293,15 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
     releasedByName: webDoc.releasedByName,
   });
 
+  // ==================== TEMPORÄR: Domain-Status nach Freigabe änderbar ====================
+  // Diese States ermöglichen das Ändern des Domain-Status auch nach Freigabe (für Testzwecke).
+  // RÜCKBAU: Diese 3 Zeilen entfernen und in actions.ts die Funktion updateDomainStatus löschen.
+  // Siehe Kommentar in actions.ts für vollständige Rückbau-Anleitung.
+  // =========================================================================================
+  const [currentDomainStatus, setCurrentDomainStatus] = useState(webDoc.domainStatus || "");
+  const [isSavingDomainStatus, setIsSavingDomainStatus] = useState(false);
+  const domainStatusChanged = currentDomainStatus !== (webDoc.domainStatus || "");
+
   // Webdoku ist gesperrt, wenn sie bereits an den Kunden freigegeben wurde
   const isLocked = !!releaseData.releasedAt;
 
@@ -467,6 +477,29 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
     });
     setMenuItemMaterials(map);
   }, [menuItems]);
+
+  // ==================== TEMPORÄR: Handler für Domain-Status ====================
+  // RÜCKBAU: Diesen gesamten Handler entfernen.
+  // Siehe Kommentar in actions.ts für vollständige Rückbau-Anleitung.
+  // ============================================================================
+  const handleSaveDomainStatus = async () => {
+    if (!currentDomainStatus) return;
+    setIsSavingDomainStatus(true);
+    setSaveMessage(null);
+    try {
+      const result = await updateDomainStatus(projectId, currentDomainStatus as "NEW" | "EXISTS_STAYS" | "EXISTS_TRANSFER" | "AT_AGENCY");
+      if (result.success) {
+        setSaveMessage({ type: "success", text: "Domain-Status aktualisiert!" });
+        setTimeout(() => setSaveMessage(null), 3000);
+      } else {
+        setSaveMessage({ type: "error", text: result.error || "Fehler beim Speichern" });
+      }
+    } catch {
+      setSaveMessage({ type: "error", text: "Ein unerwarteter Fehler ist aufgetreten" });
+    } finally {
+      setIsSavingDomainStatus(false);
+    }
+  };
 
   // Speichern-Handler für Schritt 1
   const handleSaveStep1 = async (formData: FormData) => {
@@ -1464,22 +1497,74 @@ export default function WebDokuClient({ projectId, webDoc, client, projectDomain
                       className="w-full"
                     />
                   </div>
+                  {/* ==================== TEMPORÄR: Domain-Status UI ====================
+                      RÜCKBAU: Diesen gesamten Block durch folgenden Code ersetzen:
+                      <div className="space-y-2">
+                        <label htmlFor="domainStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Domain-Status <span className="text-red-500">*</span>
+                        </label>
+                        <Select name="domainStatus" required defaultValue={webDoc.domainStatus || ""} disabled={isDisabled}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Status auswählen..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getDomainStatusOptions(client.agency).map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      Siehe Kommentar in actions.ts für vollständige Rückbau-Anleitung.
+                      ==================================================================== */}
                   <div className="space-y-2">
                     <label htmlFor="domainStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Domain-Status <span className="text-red-500">*</span>
+                      {isLocked && canEdit && (
+                        <span className="ml-2 text-xs font-normal text-amber-600 dark:text-amber-400">
+                          (auch nach Freigabe änderbar)
+                        </span>
+                      )}
                     </label>
-                    <Select name="domainStatus" required defaultValue={webDoc.domainStatus || ""} disabled={isDisabled}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Status auswählen..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getDomainStatusOptions(client.agency).map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                      <Select
+                        name="domainStatus"
+                        required
+                        value={currentDomainStatus}
+                        onValueChange={setCurrentDomainStatus}
+                        disabled={!canEdit}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Status auswählen..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getDomainStatusOptions(client.agency).map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {isLocked && canEdit && domainStatusChanged && (
+                        <Button
+                          type="button"
+                          onClick={handleSaveDomainStatus}
+                          disabled={isSavingDomainStatus}
+                          size="sm"
+                          className="bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap"
+                        >
+                          {isSavingDomainStatus ? (
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                          ) : (
+                            "Speichern"
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
 

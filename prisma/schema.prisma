@@ -197,6 +197,7 @@ model ProjectWebsite {
   project          Project                @relation(fields: [projectId], references: [id])
   webDocumentation WebDocumentation?
   texterstellung   Texterstellung?        // Texterstellung für dieses Projekt (wenn Textit im Umfang)
+  onlineCheck      OnlineCheck?           // Online-Check Checkliste für die Onlinestellung
 }
 
 // Webdokumentation - Sammlung aller relevanten Informationen für die Webseitenerstellung
@@ -210,6 +211,16 @@ model WebDocumentation {
   urgentNotes        String?                     // Dringend zu beachten (Textarea)
   websiteDomain      String?                     // Domain für die Website
   domainStatus       WebDocuDomainStatus?        // Status: neu, vorhanden, schon bei EM/VW
+
+  // Domain-Registrierung (nur relevant wenn domainStatus = NEW)
+  domainRegisteredAt     DateTime?               // Zeitpunkt der Domain-Registrierung
+  domainRegisteredById   String?                 // User-ID des Registrierenden
+  domainRegisteredByName String?                 // Name des Registrierenden
+
+  // DNS-Bestätigung durch Kunden (nur relevant wenn domainStatus = EXISTS_STAYS)
+  dnsConfirmedAt         DateTime?               // Zeitpunkt der DNS-Bestätigung durch Kunden
+  dnsConfirmedById       String?                 // User-ID des Bestätigenden
+  dnsConfirmedByName     String?                 // Name des Bestätigenden
 
   // ===== Schritt 2: Unternehmensschwerpunkte =====
   companyName        String?                     // Name des Unternehmens
@@ -1316,4 +1327,60 @@ enum TexterstellungItemStatus {
 enum TexterstellungDecision {
   APPROVED             // Text bestätigt
   REVISION_REQUESTED   // Korrektur gewünscht
+}
+
+// ============================================================================
+// Online-Check (QM Check) Checkliste
+// ============================================================================
+
+// Template-Item für die QM-Check Checkliste (Admin-konfigurierbar)
+// Es gibt nur ein globales Template - alle Projekte bekommen beim Erstellen
+// ihrer Checkliste eine Kopie der aktuellen Template-Items
+model OnlineCheckTemplateItem {
+  id          String    @id @default(cuid())
+  label       String    // Bezeichnung des Check-Punkts
+  description String?   // Optionale Beschreibung/Hilfetext
+  sortOrder   Int       // Reihenfolge in der Checkliste
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([sortOrder])
+}
+
+// Online-Check für ein Projekt (wird erstellt wenn Agent QM Check öffnet)
+model OnlineCheck {
+  projectId       String            @id    // 1:1 mit ProjectWebsite
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  completedAt     DateTime?                // Zeitpunkt wenn alle Items erledigt
+  completedById   String?                  // Agent der abgeschlossen hat
+  completedByName String?                  // Name des Agenten
+
+  website         ProjectWebsite    @relation(fields: [projectId], references: [projectId], onDelete: Cascade)
+  items           OnlineCheckItem[]
+
+  @@index([completedAt])
+}
+
+// Einzelnes Check-Item für ein Projekt (Kopie vom Template zum Erstellungszeitpunkt)
+model OnlineCheckItem {
+  id              String       @id @default(cuid())
+  onlineCheckId   String       // Referenz zum OnlineCheck (= projectId)
+  label           String       // Kopie vom Template
+  description     String?      // Kopie vom Template
+  sortOrder       Int          // Kopie vom Template
+
+  // Status
+  completed       Boolean      @default(false)
+  completedAt     DateTime?    // Wann erledigt
+  completedById   String?      // Wer hat erledigt (Agent ID)
+  completedByName String?      // Name des Agenten
+
+  // Bemerkung des Agenten zu diesem Item
+  note            String?
+
+  onlineCheck     OnlineCheck  @relation(fields: [onlineCheckId], references: [projectId], onDelete: Cascade)
+
+  @@index([onlineCheckId])
+  @@index([sortOrder])
 }

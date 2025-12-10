@@ -11,6 +11,8 @@ import DangerActionButton from "@/components/DangerActionButton";
 import { LuckyCloudProjectFolderCard } from "@/components/LuckyCloudProjectFolderCard";
 import SetMaterialCompleteButton from "./SetMaterialCompleteButton";
 import DeleteTexterstellungButton from "./DeleteTexterstellungButton";
+import ResetQMCheckButton from "./ResetQMCheckButton";
+import MarkDomainRegisteredButton from "./MarkDomainRegisteredButton";
 import type { WebsitePriority, ProductionStatus, MaterialStatus, SEOStatus, TextitStatus, CMS as PrismaCMS } from "@prisma/client";
 
 // Naive date/time formatting - extracts components directly from ISO string without timezone conversion
@@ -94,6 +96,13 @@ export default async function ProjectDetail({ params }: Props) {
                   },
                 },
               },
+            },
+          },
+          onlineCheck: {
+            select: {
+              projectId: true,
+              completedAt: true,
+              completedByName: true,
             },
           },
         },
@@ -842,6 +851,17 @@ export default async function ProjectDetail({ params }: Props) {
                             )}
                           </p>
                         )}
+                        {/* Domain-Registrierung (nur bei domainStatus = NEW) */}
+                        {website.webDocumentation.domainStatus === "NEW" && website.webDocumentation.websiteDomain && (
+                          <div className="mt-2">
+                            <MarkDomainRegisteredButton
+                              projectId={project.id}
+                              domain={website.webDocumentation.websiteDomain}
+                              registeredAt={website.webDocumentation.domainRegisteredAt}
+                              registeredByName={website.webDocumentation.domainRegisteredByName}
+                            />
+                          </div>
+                        )}
                       </>
                     ) : (
                       <>
@@ -1034,8 +1054,8 @@ export default async function ProjectDetail({ params }: Props) {
             }
           }
 
-          // Authcode
-          const authcodeNeeded = webDoku.materialAuthcodeNeeded;
+          // Authcode (nur relevant wenn Domain-Transfer geplant ist)
+          const authcodeNeeded = webDoku.materialAuthcodeNeeded && webDoku.domainStatus === "EXISTS_TRANSFER";
 
           // Prüfen ob überhaupt Material benötigt wird
           const hasMaterialRequirements = totalImagesNeeded > 0 || totalTextsNeeded > 0 || authcodeNeeded;
@@ -1378,17 +1398,9 @@ export default async function ProjectDetail({ params }: Props) {
             </h2>
           </div>
           <div className="p-6 space-y-3">
-            {/* Benutzerdefinierter Demo-Link */}
-            <div>
-              <dt className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Benutzerdefinierter Link</dt>
-              <dd className="text-sm text-gray-900 dark:text-gray-100">
-                <InlineCell target="website" id={project.id} name="demoLink" type="text" display={website?.demoLink || "-"} value={website?.demoLink ?? ""} canEdit={canEdit} displayClassName={website?.demoLink ? "text-blue-600 dark:text-blue-400" : "text-gray-400"} />
-              </dd>
-            </div>
-
             {/* Joomla Installationen */}
-            {project.joomlaInstallations && project.joomlaInstallations.length > 0 && (
-              <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
+            {project.joomlaInstallations && project.joomlaInstallations.length > 0 ? (
+              <div>
                 <dt className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   Joomla Installation{project.joomlaInstallations.length > 1 ? "en" : ""}
                 </dt>
@@ -1416,6 +1428,14 @@ export default async function ProjectDetail({ params }: Props) {
                       </a>
                     </div>
                   ))}
+                </dd>
+              </div>
+            ) : (
+              /* Benutzerdefinierter Demo-Link - nur wenn keine Joomla Installation */
+              <div>
+                <dt className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Benutzerdefinierter Link</dt>
+                <dd className="text-sm text-gray-900 dark:text-gray-100">
+                  <InlineCell target="website" id={project.id} name="demoLink" type="text" display={website?.demoLink || "-"} value={website?.demoLink ?? ""} canEdit={canEdit} displayClassName={website?.demoLink ? "text-blue-600 dark:text-blue-400" : "text-gray-400"} />
                 </dd>
               </div>
             )}
@@ -1449,6 +1469,39 @@ export default async function ProjectDetail({ params }: Props) {
               </div>
             )}
 
+            {/* QM Check - nur wenn Demo freigegeben */}
+            {website?.demoApprovedAt && (
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Link
+                    href={`/projects/${project.id}/online-check`}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 transition-all font-medium text-sm shadow-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    QM Check
+                  </Link>
+                  {/* Reset Button - Admin only, only when onlineCheck exists */}
+                  {session.user.role === "ADMIN" && website.onlineCheck && (
+                    <ResetQMCheckButton projectId={project.id} />
+                  )}
+                </div>
+                {/* QM Check completion info */}
+                {website.onlineCheck?.completedAt && (
+                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-sm">
+                      QM-Check abgeschlossen am {fmtDate(website.onlineCheck.completedAt)}
+                      {website.onlineCheck.completedByName && ` von ${website.onlineCheck.completedByName}`}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Demo installieren Button */}
             {canEdit && (
               <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
@@ -1465,6 +1518,78 @@ export default async function ProjectDetail({ params }: Props) {
             )}
           </div>
         </div>
+
+        {/* Onlinestellung Card - Only visible when QM-Check is completed */}
+        {website?.onlineCheck?.completedAt && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+              <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                Onlinestellung
+              </h2>
+            </div>
+            <div className="p-6 space-y-3">
+              {/* Domain-Status-Hinweise basierend auf domainStatus aus Webdoku */}
+              {website.webDocumentation?.domainStatus === "NEW" && website.webDocumentation.websiteDomain && (
+                website.webDocumentation.domainRegisteredAt ? (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700">
+                    <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-sm text-emerald-800 dark:text-emerald-200">
+                      Domain <strong>{website.webDocumentation.websiteDomain}</strong> wurde registriert am {fmtDate(website.webDocumentation.domainRegisteredAt)}
+                      {website.webDocumentation.domainRegisteredByName && ` von ${website.webDocumentation.domainRegisteredByName}`}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+                    <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span className="text-sm text-amber-800 dark:text-amber-200">
+                      Die Domain <strong>{website.webDocumentation.websiteDomain}</strong> muss noch registriert werden
+                    </span>
+                  </div>
+                )
+              )}
+
+              {website.webDocumentation?.domainStatus === "EXISTS_STAYS" && website.webDocumentation.websiteDomain && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700">
+                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm text-blue-800 dark:text-blue-200">
+                    Domain <strong>{website.webDocumentation.websiteDomain}</strong> verbleibt beim Kunden. Froxlor muss vorbereitet werden.
+                  </span>
+                </div>
+              )}
+
+              {website.webDocumentation?.domainStatus === "EXISTS_TRANSFER" && website.webDocumentation.websiteDomain && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700">
+                  <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                  <span className="text-sm text-purple-800 dark:text-purple-200">
+                    Authcode für Domain <strong>{website.webDocumentation.websiteDomain}</strong> wurde angefordert
+                  </span>
+                </div>
+              )}
+
+              {website.webDocumentation?.domainStatus === "AT_AGENCY" && website.webDocumentation.websiteDomain && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700">
+                  <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-emerald-800 dark:text-emerald-200">
+                    Domain <strong>{website.webDocumentation.websiteDomain}</strong> ist bereits bei uns
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* LuckyCloud Material-Ordner - Only for website projects with canEdit */}
         {canEdit && website && project.client && (

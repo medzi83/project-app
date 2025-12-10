@@ -1092,3 +1092,119 @@ export async function setMaterialStatusComplete(projectId: string) {
 
   return { success: true };
 }
+
+/**
+ * Markiert die Domain als registriert (nur relevant wenn domainStatus = NEW)
+ */
+export async function markDomainAsRegistered(projectId: string) {
+  const session = await requireRole(["ADMIN", "AGENT"]);
+
+  if (!projectId) {
+    return { success: false, error: "Projekt-ID fehlt" };
+  }
+
+  const webDoc = await prisma.webDocumentation.findUnique({
+    where: { projectId },
+    select: {
+      domainStatus: true,
+      websiteDomain: true,
+      domainRegisteredAt: true,
+    },
+  });
+
+  if (!webDoc) {
+    return { success: false, error: "Webdokumentation nicht gefunden" };
+  }
+
+  if (webDoc.domainStatus !== "NEW") {
+    return { success: false, error: "Domain-Status ist nicht 'Neu'" };
+  }
+
+  if (webDoc.domainRegisteredAt) {
+    return { success: false, error: "Domain wurde bereits als registriert markiert" };
+  }
+
+  // Vollständigen Namen aus der DB laden
+  const user = session.user.id
+    ? await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { fullName: true, name: true },
+      })
+    : null;
+
+  const now = new Date();
+  const registeredByName = user?.fullName || user?.name || session.user.name || session.user.email || "Unbekannt";
+
+  await prisma.webDocumentation.update({
+    where: { projectId },
+    data: {
+      domainRegisteredAt: now,
+      domainRegisteredById: session.user.id,
+      domainRegisteredByName: registeredByName,
+    },
+  });
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}/webdoku`);
+
+  return {
+    success: true,
+    domainRegisteredAt: now,
+    domainRegisteredByName: registeredByName,
+  };
+}
+
+/**
+ * Aktualisiert nur den Domain-Status (auch nach Freigabe bearbeitbar)
+ *
+ * ==================== TEMPORÄRE TEST-FUNKTION ====================
+ * Diese Funktion wurde hinzugefügt, um den Domain-Status auch nach
+ * Freigabe der WebDoku ändern zu können (für Testzwecke).
+ *
+ * RÜCKBAU: Diese gesamte Funktion kann gelöscht werden, wenn die
+ * Test-Funktionalität nicht mehr benötigt wird. Zusätzlich müssen
+ * folgende Änderungen in WebDokuClient.tsx rückgängig gemacht werden:
+ * - Import von `updateDomainStatus` entfernen
+ * - State `currentDomainStatus`, `isSavingDomainStatus`, `domainStatusChanged` entfernen
+ * - Handler `handleSaveDomainStatus` entfernen
+ * - Im Domain-Status Select: `value` und `onValueChange` entfernen,
+ *   zurück zu `defaultValue={webDoc.domainStatus || ""}` und `disabled={isDisabled}`
+ * - Hinweis "(auch nach Freigabe änderbar)" entfernen
+ * - Separaten Speichern-Button für Domain-Status entfernen
+ * =================================================================
+ */
+export async function updateDomainStatus(projectId: string, domainStatus: WebDocuDomainStatus) {
+  await requireRole(["ADMIN", "AGENT"]);
+
+  if (!projectId) {
+    return { success: false, error: "Projekt-ID fehlt" };
+  }
+
+  if (!domainStatus) {
+    return { success: false, error: "Domain-Status fehlt" };
+  }
+
+  const webDoc = await prisma.webDocumentation.findUnique({
+    where: { projectId },
+  });
+
+  if (!webDoc) {
+    return { success: false, error: "Webdokumentation nicht gefunden" };
+  }
+
+  await prisma.webDocumentation.update({
+    where: { projectId },
+    data: {
+      domainStatus,
+      // Reset der Domain-Registrierung wenn Status geändert wird
+      domainRegisteredAt: null,
+      domainRegisteredById: null,
+      domainRegisteredByName: null,
+    },
+  });
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}/webdoku`);
+
+  return { success: true, domainStatus };
+}
