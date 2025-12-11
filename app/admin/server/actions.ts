@@ -72,6 +72,7 @@ const UpdateServerSchema = z.object({
   sshPort: z.coerce.number().optional(),
   sshUsername: z.string().trim().optional().or(z.literal("")),
   sshPassword: z.string().trim().optional().or(z.literal("")),
+  isEmailServer: z.string().optional(),
 });
 
 export async function updateServer(formData: FormData) {
@@ -83,7 +84,7 @@ export async function updateServer(formData: FormData) {
     redirect(`/admin/server?error=${encodeURIComponent(msg)}`);
   }
 
-  const { id, name, ip, froxlorUrl, froxlorVersion, mysqlUrl, froxlorApiKey, froxlorApiSecret, sshHost, sshPort, sshUsername, sshPassword } = parsed.data;
+  const { id, name, ip, froxlorUrl, froxlorVersion, mysqlUrl, froxlorApiKey, froxlorApiSecret, sshHost, sshPort, sshUsername, sshPassword, isEmailServer } = parsed.data;
   await prisma.server.update({
     where: { id },
     data: {
@@ -98,6 +99,7 @@ export async function updateServer(formData: FormData) {
       sshPort: sshPort || null,
       sshUsername: sshUsername || null,
       sshPassword: sshPassword || null,
+      isEmailServer: isEmailServer === "on",
     },
   });
 

@@ -13,6 +13,7 @@ import SetMaterialCompleteButton from "./SetMaterialCompleteButton";
 import DeleteTexterstellungButton from "./DeleteTexterstellungButton";
 import ResetQMCheckButton from "./ResetQMCheckButton";
 import MarkDomainRegisteredButton from "./MarkDomainRegisteredButton";
+import SetOnlineButton from "./SetOnlineButton";
 import type { WebsitePriority, ProductionStatus, MaterialStatus, SEOStatus, TextitStatus, CMS as PrismaCMS } from "@prisma/client";
 
 // Naive date/time formatting - extracts components directly from ISO string without timezone conversion
@@ -112,6 +113,7 @@ export default async function ProjectDetail({ params }: Props) {
           server: {
             select: {
               name: true,
+              ip: true,
             },
           },
         },
@@ -393,7 +395,7 @@ export default async function ProjectDetail({ params }: Props) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
-                Zur Demo
+                {website?.onlineDate ? "Zur Webseite" : "Zur Demo"}
                 <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
@@ -495,7 +497,7 @@ export default async function ProjectDetail({ params }: Props) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
-                Zur Demo
+                {website?.onlineDate ? "Zur Webseite" : "Zur Demo"}
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
@@ -1213,24 +1215,78 @@ export default async function ProjectDetail({ params }: Props) {
                 )}
 
                 {/* Authcode-Status */}
-                {authcodeNeeded && (
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                      </svg>
+                {authcodeNeeded && (() => {
+                  const authcodeSubmitted = !!webDoku.authcodeSubmittedAt;
+                  const authcodeExpired = webDoku.authcodeExpiresAt && new Date(webDoku.authcodeExpiresAt) < new Date();
+
+                  return (
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        authcodeSubmitted
+                          ? authcodeExpired
+                            ? "bg-red-100 dark:bg-red-900/30"
+                            : "bg-green-100 dark:bg-green-900/30"
+                          : "bg-gray-100 dark:bg-gray-700"
+                      }`}>
+                        <svg className={`w-5 h-5 ${
+                          authcodeSubmitted
+                            ? authcodeExpired
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-green-600 dark:text-green-400"
+                            : "text-gray-600 dark:text-gray-400"
+                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">Authcode</p>
+                        {authcodeSubmitted ? (
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-gray-700 dark:text-gray-300 font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded inline-block">
+                              {webDoku.authcode}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {webDoku.authcodeNeverExpires
+                                ? "Läuft nicht ab"
+                                : webDoku.authcodeExpiresAt
+                                  ? `Gültig bis: ${fmtDate(webDoku.authcodeExpiresAt)}`
+                                  : ""
+                              }
+                              {authcodeExpired && (
+                                <span className="text-red-600 dark:text-red-400 font-medium ml-1">(abgelaufen!)</span>
+                              )}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Wird zum Zeitpunkt der Onlinestellung benötigt
+                          </p>
+                        )}
+                      </div>
+                      {authcodeSubmitted ? (
+                        authcodeExpired ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-700">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Abgelaufen
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Eingereicht
+                          </span>
+                        )
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
+                          Ausstehend
+                        </span>
+                      )}
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">Authcode</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Wird zum Zeitpunkt der Onlinestellung benötigt
-                      </p>
-                    </div>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
-                      Ausstehend
-                    </span>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Button zum Abschließen des Materials */}
                 {(() => {
@@ -1555,27 +1611,107 @@ export default async function ProjectDetail({ params }: Props) {
                 )
               )}
 
-              {website.webDocumentation?.domainStatus === "EXISTS_STAYS" && website.webDocumentation.websiteDomain && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700">
-                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-sm text-blue-800 dark:text-blue-200">
-                    Domain <strong>{website.webDocumentation.websiteDomain}</strong> verbleibt beim Kunden. Froxlor muss vorbereitet werden.
-                  </span>
-                </div>
-              )}
+              {website.webDocumentation?.domainStatus === "EXISTS_STAYS" && website.webDocumentation.websiteDomain && (() => {
+                const serverIp = project.joomlaInstallations?.[0]?.server?.ip;
+                return website.webDocumentation.dnsConfirmedAt ? (
+                  <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                        DNS-Einstellungen für <strong>{website.webDocumentation.websiteDomain}</strong> bestätigt
+                      </span>
+                    </div>
+                    <div className="ml-6 text-xs text-emerald-700 dark:text-emerald-300 space-y-1">
+                      <p>
+                        Bestätigt am {fmtDate(website.webDocumentation.dnsConfirmedAt)}
+                        {website.webDocumentation.dnsConfirmedByName && ` von ${website.webDocumentation.dnsConfirmedByName}`}
+                      </p>
+                      {serverIp && (
+                        <p className="font-mono bg-white dark:bg-gray-800 px-2 py-0.5 rounded border inline-block">
+                          Server-IP: {serverIp}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                        Domain <strong>{website.webDocumentation.websiteDomain}</strong> verbleibt beim Kunden
+                      </span>
+                    </div>
+                    <div className="ml-6 text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                      <p>DNS-Bestätigung vom Kunden ausstehend</p>
+                      {serverIp && (
+                        <p className="font-mono bg-white dark:bg-gray-800 px-2 py-0.5 rounded border inline-block">
+                          Server-IP: {serverIp}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
-              {website.webDocumentation?.domainStatus === "EXISTS_TRANSFER" && website.webDocumentation.websiteDomain && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700">
-                  <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                  </svg>
-                  <span className="text-sm text-purple-800 dark:text-purple-200">
-                    Authcode für Domain <strong>{website.webDocumentation.websiteDomain}</strong> wurde angefordert
-                  </span>
-                </div>
-              )}
+              {website.webDocumentation?.domainStatus === "EXISTS_TRANSFER" && website.webDocumentation.websiteDomain && (() => {
+                const webDoku = website.webDocumentation;
+                const authcodeSubmitted = !!webDoku.authcodeSubmittedAt;
+                const authcodeExpired = webDoku.authcodeExpiresAt && new Date(webDoku.authcodeExpiresAt) < new Date();
+
+                if (authcodeSubmitted) {
+                  return (
+                    <div className={`p-3 rounded-lg border ${
+                      authcodeExpired
+                        ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700"
+                        : "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700"
+                    }`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className={`w-4 h-4 ${authcodeExpired ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {authcodeExpired ? (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          ) : (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          )}
+                        </svg>
+                        <span className={`text-sm font-medium ${authcodeExpired ? "text-red-800 dark:text-red-200" : "text-emerald-800 dark:text-emerald-200"}`}>
+                          Authcode für <strong>{webDoku.websiteDomain}</strong> eingereicht
+                          {authcodeExpired && " (ABGELAUFEN)"}
+                        </span>
+                      </div>
+                      <div className={`ml-6 space-y-1 text-sm ${authcodeExpired ? "text-red-700 dark:text-red-300" : "text-emerald-700 dark:text-emerald-300"}`}>
+                        <p>
+                          <span className="font-mono bg-white dark:bg-gray-800 px-2 py-0.5 rounded border">{webDoku.authcode}</span>
+                        </p>
+                        <p className="text-xs">
+                          {webDoku.authcodeNeverExpires
+                            ? "Läuft nicht ab"
+                            : webDoku.authcodeExpiresAt
+                              ? `Gültig bis: ${fmtDate(webDoku.authcodeExpiresAt)}`
+                              : ""
+                          }
+                          {webDoku.authcodeSubmittedByName && ` • Eingereicht von ${webDoku.authcodeSubmittedByName}`}
+                          {webDoku.authcodeSubmittedAt && ` am ${fmtDate(webDoku.authcodeSubmittedAt)}`}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+                    <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span className="text-sm text-amber-800 dark:text-amber-200">
+                      Authcode für Domain <strong>{webDoku.websiteDomain}</strong> wurde angefordert. Warte auf Einreichung durch den Kunden.
+                    </span>
+                  </div>
+                );
+              })()}
 
               {website.webDocumentation?.domainStatus === "AT_AGENCY" && website.webDocumentation.websiteDomain && (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700">
@@ -1587,6 +1723,60 @@ export default async function ProjectDetail({ params }: Props) {
                   </span>
                 </div>
               )}
+
+              {/* "Webseite ist online" Button oder Hinweis */}
+              {(() => {
+                // Wenn bereits online: Hinweis anzeigen
+                if (website.onlineDate) {
+                  return (
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700">
+                        <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                        <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                          Onlinegestellt am {fmtDate(website.onlineDate)}{website.onlineSetByName && ` von ${website.onlineSetByName}`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const webDoku = website.webDocumentation;
+                const domainStatus = webDoku?.domainStatus;
+
+                // Prüfen ob alle Voraussetzungen für die Onlinestellung erfüllt sind
+                const canGoOnline = (() => {
+                  // Keine WebDoku oder kein Domain-Status -> Button anzeigen (Server prüft)
+                  if (!webDoku || !domainStatus) return true;
+
+                  // EXISTS_STAYS: DNS muss bestätigt sein
+                  if (domainStatus === "EXISTS_STAYS") {
+                    return !!webDoku.dnsConfirmedAt;
+                  }
+
+                  // EXISTS_TRANSFER: Authcode muss eingereicht sein
+                  if (domainStatus === "EXISTS_TRANSFER") {
+                    return !!webDoku.authcodeSubmittedAt;
+                  }
+
+                  // NEW: Domain muss registriert sein
+                  if (domainStatus === "NEW") {
+                    return !!webDoku.domainRegisteredAt;
+                  }
+
+                  // AT_AGENCY: Immer möglich
+                  return true;
+                })();
+
+                if (!canGoOnline) return null;
+
+                return (
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <SetOnlineButton projectId={project.id} />
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}

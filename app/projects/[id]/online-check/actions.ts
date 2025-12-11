@@ -188,3 +188,96 @@ export async function completeOnlineCheck(projectId: string) {
     completedByName: session.user.name,
   };
 }
+
+/**
+ * Setzt die Webseite als online (setzt onlineDate auf das aktuelle Datum).
+ * Nur möglich wenn:
+ * - QM-Check abgeschlossen ist
+ * - Bei EXISTS_STAYS: DNS-Bestätigung vom Kunden vorliegt
+ * - Bei EXISTS_TRANSFER: Authcode eingereicht wurde
+ * - Bei NEW: Domain registriert wurde
+ * - Bei AT_AGENCY: Keine zusätzliche Bedingung
+ */
+export async function setWebsiteOnline(projectId: string) {
+  const session = await requireRole(["ADMIN", "AGENT"]);
+
+  // Projekt mit allen relevanten Daten laden
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      type: true,
+      website: {
+        select: {
+          projectId: true,
+          onlineDate: true,
+          onlineCheck: {
+            select: {
+              completedAt: true,
+            },
+          },
+          webDocumentation: {
+            select: {
+              domainStatus: true,
+              dnsConfirmedAt: true,
+              authcodeSubmittedAt: true,
+              domainRegisteredAt: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    return { success: false, error: "Projekt nicht gefunden" };
+  }
+
+  if (project.type !== "WEBSITE" || !project.website) {
+    return { success: false, error: "Nur für Website-Projekte verfügbar" };
+  }
+
+  if (project.website.onlineDate) {
+    return { success: false, error: "Die Webseite ist bereits online" };
+  }
+
+  // QM-Check muss abgeschlossen sein
+  if (!project.website.onlineCheck?.completedAt) {
+    return { success: false, error: "Der QM-Check muss zuerst abgeschlossen werden" };
+  }
+
+  const webDoku = project.website.webDocumentation;
+  const domainStatus = webDoku?.domainStatus;
+
+  // Domain-Status-spezifische Prüfungen
+  if (domainStatus === "EXISTS_STAYS" && !webDoku?.dnsConfirmedAt) {
+    return { success: false, error: "Die DNS-Einstellungen müssen zuerst vom Kunden bestätigt werden" };
+  }
+
+  if (domainStatus === "EXISTS_TRANSFER" && !webDoku?.authcodeSubmittedAt) {
+    return { success: false, error: "Der Authcode muss zuerst vom Kunden eingereicht werden" };
+  }
+
+  if (domainStatus === "NEW" && !webDoku?.domainRegisteredAt) {
+    return { success: false, error: "Die Domain muss zuerst registriert werden" };
+  }
+
+  // onlineDate setzen
+  const now = new Date();
+
+  await prisma.projectWebsite.update({
+    where: { projectId },
+    data: {
+      onlineDate: now,
+      onlineSetById: session.user.id,
+      onlineSetByName: session.user.name,
+    },
+  });
+
+  revalidatePath(`/projects/${projectId}`);
+  return {
+    success: true,
+    onlineDate: now,
+    onlineSetByName: session.user.name,
+  };
+}

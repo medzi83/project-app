@@ -102,7 +102,11 @@ model Client {
   luckyCloudLibraryId   String?            // Seafile Library-ID
   luckyCloudLibraryName String?            // Library-Name (zur Anzeige)
   luckyCloudFolderPath  String?            // Ordnerpfad innerhalb der Library
+  // E-Mail-Server-Zuordnung
+  emailServerId         String?            // Server-ID für E-Mail-Verwaltung
+  emailCustomerNo       String?            // Kundennummer auf dem E-Mail-Server (falls abweichend)
   authorizedPersons   AuthorizedPerson[]
+  emailServer         Server?              @relation("ClientEmailServer", fields: [emailServerId], references: [id])
   agency              Agency?              @relation(fields: [agencyId], references: [id])
   server              Server?              @relation("ClientToServer", fields: [serverId], references: [id])
   clientServers       ClientServer[]
@@ -117,6 +121,7 @@ model Client {
   @@index([name])
   @@index([agencyId])
   @@index([serverId])
+  @@index([emailServerId])
 }
 
 model Agency {
@@ -175,6 +180,8 @@ model ProjectWebsite {
   webDate          DateTime?
   demoDate         DateTime?
   onlineDate       DateTime?
+  onlineSetById    String?                // User-ID des Agenten der online gestellt hat
+  onlineSetByName  String?                // Name des Agenten der online gestellt hat
   lastMaterialAt   DateTime?
   effortBuildMin   Int?
   effortDemoMin    Int?
@@ -221,6 +228,14 @@ model WebDocumentation {
   dnsConfirmedAt         DateTime?               // Zeitpunkt der DNS-Bestätigung durch Kunden
   dnsConfirmedById       String?                 // User-ID des Bestätigenden
   dnsConfirmedByName     String?                 // Name des Bestätigenden
+
+  // Authcode vom Kunden (nur relevant wenn domainStatus = EXISTS_TRANSFER)
+  authcode               String?                 // Der Authcode für den Domain-Transfer
+  authcodeExpiresAt      DateTime?               // Ablaufdatum des Authcodes (null = läuft nicht ab)
+  authcodeNeverExpires   Boolean?                // true = Authcode läuft nicht ab
+  authcodeSubmittedAt    DateTime?               // Zeitpunkt der Einreichung
+  authcodeSubmittedById  String?                 // User-ID des Einreichenden
+  authcodeSubmittedByName String?                // Name des Einreichenden
 
   // ===== Schritt 2: Unternehmensschwerpunkte =====
   companyName        String?                     // Name des Unternehmens
@@ -659,7 +674,9 @@ model Server {
   sshPort             Int?                 @default(22)
   sshUsername         String?
   froxlorVersion      String?              @default("2.0+")
+  isEmailServer       Boolean              @default(false)
   clients             Client[]             @relation("ClientToServer")
+  emailClients        Client[]             @relation("ClientEmailServer")
   clientServers       ClientServer[]
   databaseServers     DatabaseServer[]
   joomlaInstallations JoomlaInstallation[]

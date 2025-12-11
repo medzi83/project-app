@@ -28,6 +28,9 @@ import { AuthorizedPersons } from "./AuthorizedPersons";
 import { ClientPortalCard } from "./ClientPortalCard";
 import { ContractDataEditor } from "./ContractDataEditor";
 import { LuckyCloudClientCard } from "@/components/LuckyCloudClientCard";
+import { EmailServerCard } from "./EmailServerCard";
+import { EmailAddressesCard } from "./EmailAddressesCard";
+import { DomainsCard } from "./DomainsCard";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -120,6 +123,7 @@ export default async function ClientDetailPage({ params }: Props) {
       include: {
         server: true,
         agency: true,
+        emailServer: true,
         clientServers: {
           include: {
             server: true,
@@ -655,6 +659,65 @@ export default async function ClientDetailPage({ params }: Props) {
     }
   }
 
+  // Fetch E-Mail-Server Froxlor data (if email server is configured)
+  type EmailServerData = {
+    server: { id: string; name: string; ip: string } | null;
+    customerNo: string | null;
+    customer: FroxlorCustomer | null;
+    error: string | null;
+  };
+
+  let emailServerData: EmailServerData = {
+    server: null,
+    customerNo: null,
+    customer: null,
+    error: null,
+  };
+
+  if (client.emailServerId && client.emailServer) {
+    const emailServer = client.emailServer;
+    // Kundennummer: emailCustomerNo oder customerNo als Fallback
+    const emailCustomerNo = client.emailCustomerNo || client.customerNo;
+
+    emailServerData.server = {
+      id: emailServer.id,
+      name: emailServer.name,
+      ip: emailServer.ip,
+    };
+    emailServerData.customerNo = emailCustomerNo;
+
+    if (!emailCustomerNo) {
+      emailServerData.error = "Keine Kundennummer hinterlegt";
+    } else if (!emailServer.froxlorUrl || !emailServer.froxlorApiKey || !emailServer.froxlorApiSecret) {
+      emailServerData.error = "Froxlor nicht konfiguriert auf diesem Server";
+    } else if (!canFetchFroxlor) {
+      emailServerData.error = "Froxlor-API-Zugriff deaktiviert";
+    } else {
+      try {
+        const froxlorClient = new FroxlorClient({
+          url: emailServer.froxlorUrl,
+          apiKey: emailServer.froxlorApiKey,
+          apiSecret: emailServer.froxlorApiSecret,
+        });
+        const customer = await froxlorClient.findCustomerByNumber(emailCustomerNo);
+        if (customer) {
+          // Transformiere die Froxlor API Felder (imap/pop3) zu den erwarteten Feldern (email_imap/email_pop3)
+          const transformedCustomer = {
+            ...customer,
+            // Konvertiere imap/pop3 Strings zu Numbers für email_imap/email_pop3
+            email_imap: customer.imap === 1 || customer.imap === "1" ? 1 : 0,
+            email_pop3: customer.pop3 === 1 || customer.pop3 === "1" ? 1 : 0,
+          };
+          emailServerData.customer = transformedCustomer;
+        } else {
+          emailServerData.error = `Kunde "${emailCustomerNo}" nicht auf Server gefunden`;
+        }
+      } catch (error) {
+        emailServerData.error = error instanceof Error ? error.message : "Unbekannter Fehler";
+      }
+    }
+  }
+
   const role = session.user.role!;
   const isAdmin = role === "ADMIN";
   const isSales = role === "SALES";
@@ -709,7 +772,7 @@ export default async function ClientDetailPage({ params }: Props) {
 
       {/* Haupt-Navigation Tabs */}
       <Tabs defaultValue="basisdaten" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className="grid w-full grid-cols-5 mb-6">
           <TabsTrigger value="basisdaten" className="flex items-center gap-2">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -729,9 +792,15 @@ export default async function ClientDetailPage({ params }: Props) {
             </svg>
             <span className="hidden sm:inline">Server-Daten</span>
           </TabsTrigger>
-          <TabsTrigger value="kommunikation" className="flex items-center gap-2">
+          <TabsTrigger value="email" className="flex items-center gap-2">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span className="hidden sm:inline">E-Mail-Konten</span>
+          </TabsTrigger>
+          <TabsTrigger value="kommunikation" className="flex items-center gap-2">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
             <span className="hidden sm:inline">Kommunikation</span>
             <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{allEmailLogs.length + generalEmails.length}</span>
@@ -1279,22 +1348,25 @@ export default async function ClientDetailPage({ params }: Props) {
 
         {/* Tab: Server-Daten */}
         <TabsContent value="server" className="space-y-4">
-          {serverDataList.length === 0 ? (
-            <div className="rounded-lg border border-border bg-card p-8 text-center">
-              <p className="text-muted-foreground">Keine Server-Daten verfügbar</p>
-            </div>
-          ) : (
-            // Always use tabs for consistent display
-            <Tabs defaultValue={client.serverId || serverDataList[0].server.id} className="w-full">
-              <TabsList className="grid" style={{ gridTemplateColumns: `repeat(${serverDataList.length}, minmax(0, 1fr))`, maxWidth: '500px' }}>
-                {serverDataList.map((serverData) => (
-                  <TabsTrigger key={serverData.server.id} value={serverData.server.id} className="text-sm">
-                    {serverData.server.name}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+          {/* Filter out email servers - they should only appear in E-Mail-Konten tab */}
+          {(() => {
+            const regularServerDataList = serverDataList.filter(sd => !sd.server.isEmailServer);
+            return regularServerDataList.length === 0 ? (
+              <div className="rounded-lg border border-border bg-card p-8 text-center">
+                <p className="text-muted-foreground">Keine Server-Daten verfügbar</p>
+              </div>
+            ) : (
+              // Always use tabs for consistent display
+              <Tabs defaultValue={client.serverId || regularServerDataList[0].server.id} className="w-full">
+                <TabsList className="grid" style={{ gridTemplateColumns: `repeat(${regularServerDataList.length}, minmax(0, 1fr))`, maxWidth: '500px' }}>
+                  {regularServerDataList.map((serverData) => (
+                    <TabsTrigger key={serverData.server.id} value={serverData.server.id} className="text-sm">
+                      {serverData.server.name}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
 
-              {serverDataList.map((serverData) => (
+              {regularServerDataList.map((serverData) => (
                 <TabsContent key={serverData.server.id} value={serverData.server.id} className="space-y-3 mt-4">
                   {/* Server Info */}
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -1528,7 +1600,48 @@ export default async function ClientDetailPage({ params }: Props) {
                 </TabsContent>
               ))}
             </Tabs>
-          )}
+            );
+          })()}
+        </TabsContent>
+
+        {/* Tab: E-Mail-Konten */}
+        <TabsContent value="email" className="space-y-4">
+          {/* 3-Spalten Layout: Server | Domains | E-Mail-Adressen */}
+          <div className="grid gap-4 lg:grid-cols-3">
+            {/* E-Mail-Server Zuordnung */}
+            <section className="rounded-lg border border-border bg-card p-4">
+              <EmailServerCard
+                clientId={client.id}
+                clientName={client.name}
+                clientFirstname={client.firstname}
+                clientLastname={client.lastname}
+                clientCustomerNo={client.customerNo}
+                emailServerId={client.emailServerId}
+                servers={servers
+                  .filter(s => s.isEmailServer)
+                  .map(s => ({ id: s.id, name: s.name, ip: s.ip, isEmailServer: s.isEmailServer }))}
+                preloadedEmailServerData={emailServerData}
+              />
+            </section>
+
+            {/* Domains */}
+            <section className="rounded-lg border border-border bg-card p-4">
+              <DomainsCard
+                serverId={client.emailServerId}
+                customerId={emailServerData.customer?.customerid || null}
+                customerLoginname={emailServerData.customer?.loginname || null}
+              />
+            </section>
+
+            {/* E-Mail-Adressen */}
+            <section className="rounded-lg border border-border bg-card p-4">
+              <EmailAddressesCard
+                serverId={client.emailServerId}
+                customerNo={client.emailCustomerNo || client.customerNo}
+                preloadedCustomer={emailServerData.customer}
+              />
+            </section>
+          </div>
         </TabsContent>
 
         {/* Tab: Kommunikation */}

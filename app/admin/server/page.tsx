@@ -113,6 +113,7 @@ export default async function ServerAdminPage({ searchParams }: Props) {
               <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
                 <th>Name</th>
                 <th>IP</th>
+                <th>Typ</th>
                 <th>Froxlor</th>
                 <th>MySQL</th>
                 <th>Zugangsdaten</th>
@@ -131,6 +132,18 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                     </td>
                     <td>
                       <input form={formId} name="ip" defaultValue={server.ip} className="w-full rounded border p-1" />
+                    </td>
+                    <td>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          form={formId}
+                          type="checkbox"
+                          name="isEmailServer"
+                          defaultChecked={server.isEmailServer}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <span className="text-xs">E-Mail-Server</span>
+                      </label>
                     </td>
                     <td>
                       <div className="space-y-1">
@@ -252,7 +265,7 @@ export default async function ServerAdminPage({ searchParams }: Props) {
                 );
               })}
               {servers.length === 0 && (
-                <tr><td colSpan={8} className="py-8 text-center text-sm text-gray-500">Noch keine Server hinterlegt.</td></tr>
+                <tr><td colSpan={9} className="py-8 text-center text-sm text-gray-500">Noch keine Server hinterlegt.</td></tr>
               )}
             </tbody>
           </table>

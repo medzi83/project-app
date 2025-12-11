@@ -60,6 +60,10 @@ export type FroxlorCustomer = {
   allowed_phpconfigs?: string;
   allowed_mysqlserver?: number[]; // Froxlor 2.x: Array of allowed MySQL server IDs
   leregistered?: number;
+  imap?: number | string;  // IMAP erlaubt (0 oder 1)
+  pop3?: number | string;  // POP3 erlaubt (0 oder 1)
+  email_imap?: number;  // Alias für Update-Requests
+  email_pop3?: number;  // Alias für Update-Requests
   // Add more fields as needed
 };
 
@@ -99,6 +103,8 @@ export type FroxlorDomain = {
   ssl_enabled: string;
   deactivated?: string;
   loginname?: string;
+  isemaildomain?: string | number;
+  iswildcarddomain?: string | number;
   // Add more fields as needed
 };
 
@@ -178,6 +184,8 @@ export type FroxlorCustomerCreateInput = {
   email_accounts?: number;
   email_forwarders?: number;
   email_quota?: number;
+  email_imap?: number;  // IMAP erlauben (0 oder 1)
+  email_pop3?: number;  // POP3 erlauben (0 oder 1)
   subdomains?: number;
   deactivated: number;
   documentroot?: string;
@@ -384,14 +392,11 @@ export class FroxlorClient {
           return false;
         });
 
-        if (customer && debug) {
-          console.log('=== FROXLOR CUSTOMER DATA ===');
-          console.log(JSON.stringify(customer, null, 2));
-          console.log('=== END CUSTOMER DATA ===');
-        }
-
         if (customer) {
-          return customer;
+          // Listing gibt nicht alle Felder zurück (z.B. imap, pop3)
+          // Daher laden wir die vollständigen Kundendaten mit Customers.get
+          const fullCustomer = await this.getCustomer(customer.customerid);
+          return fullCustomer || customer;
         }
       }
 
@@ -465,6 +470,9 @@ export class FroxlorClient {
         email_forwarders_ul: data.email_forwarders !== undefined ? 0 : 1,
         email_quota: data.email_quota ?? -1,
         email_quota_ul: data.email_quota !== undefined ? 0 : 1,
+        // IMAP/POP3 Berechtigung
+        email_imap: data.email_imap ?? 1,  // Standard: IMAP erlaubt
+        email_pop3: data.email_pop3 ?? 1,  // Standard: POP3 erlaubt
         ftps: data.ftps,
         ftps_ul: 0,
         mysqls: data.mysqls,
@@ -892,4 +900,613 @@ export class FroxlorClient {
       };
     }
   }
+
+  /**
+   * Get all email addresses for a customer
+   * Uses Emails.listing API endpoint
+   */
+  async getCustomerEmailAddresses(customerId: number): Promise<FroxlorEmailAddress[]> {
+    try {
+      const result = await this.request<FroxlorListingPayload<FroxlorEmailAddress>>('Emails.listing', {
+        customerid: customerId,
+      });
+
+      if (!result.data) {
+        return [];
+      }
+
+      return normalizeFroxlorList(result.data);
+    } catch (error) {
+      console.error('Error fetching email addresses:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all email forwarders for a customer
+   * Uses EmailForwarders.listing API endpoint
+   */
+  async getCustomerEmailForwarders(customerId: number): Promise<FroxlorEmailForwarder[]> {
+    try {
+      const result = await this.request<FroxlorListingPayload<FroxlorEmailForwarder>>('EmailForwarders.listing', {
+        customerid: customerId,
+      });
+
+      if (!result.data) {
+        return [];
+      }
+
+      return normalizeFroxlorList(result.data);
+    } catch (error) {
+      console.error('Error fetching email forwarders:', error);
+      return [];
+    }
+  }
+
+  // ============================================
+  // E-Mail Management Methods
+  // ============================================
+
+  /**
+   * Create a new email address
+   * This creates the email address entry, but not a mailbox yet
+   */
+  async createEmailAddress(data: FroxlorEmailAddInput): Promise<{ success: boolean; message: string; email?: FroxlorEmailAddress }> {
+    try {
+      const result = await this.request<FroxlorEmailAddress>('Emails.add', {
+        email_part: data.email_part,
+        domain: data.domain,
+        customerid: data.customerid,
+        loginname: data.loginname,
+        iscatchall: data.iscatchall ?? 0,
+        description: data.description ?? '',
+      });
+
+      if (result.data) {
+        return {
+          success: true,
+          message: 'E-Mail-Adresse erfolgreich angelegt',
+          email: result.data,
+        };
+      }
+
+      return {
+        success: false,
+        message: result.status_message || 'Fehler beim Anlegen der E-Mail-Adresse',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Anlegen der E-Mail-Adresse',
+      };
+    }
+  }
+
+  /**
+   * Get a specific email address by ID or email string
+   */
+  async getEmailAddress(emailIdOrAddress: number | string, customerId?: number): Promise<FroxlorEmailAddress | null> {
+    try {
+      const params: Record<string, unknown> = typeof emailIdOrAddress === 'number'
+        ? { id: emailIdOrAddress }
+        : { emailaddr: emailIdOrAddress };
+
+      if (customerId) {
+        params.customerid = customerId;
+      }
+
+      const result = await this.request<FroxlorEmailAddress>('Emails.get', params);
+
+      if (result.data) {
+        return result.data;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error getting email address:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update an email address settings
+   */
+  async updateEmailAddress(
+    emailIdOrAddress: number | string,
+    customerId: number,
+    data: {
+      iscatchall?: number;
+      description?: string;
+      spam_tag_level?: number;
+      spam_kill_level?: number;
+      bypass_spam?: number;
+      policy_greylist?: number;
+    }
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const params: Record<string, unknown> = typeof emailIdOrAddress === 'number'
+        ? { id: emailIdOrAddress }
+        : { emailaddr: emailIdOrAddress };
+
+      params.customerid = customerId;
+      Object.assign(params, data);
+
+      const result = await this.request('Emails.update', params);
+
+      if (result.data !== undefined) {
+        return {
+          success: true,
+          message: 'E-Mail-Adresse erfolgreich aktualisiert',
+        };
+      }
+
+      return {
+        success: false,
+        message: result.status_message || 'Fehler beim Aktualisieren der E-Mail-Adresse',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Aktualisieren der E-Mail-Adresse',
+      };
+    }
+  }
+
+  /**
+   * Delete an email address
+   */
+  async deleteEmailAddress(
+    emailIdOrAddress: number | string,
+    customerId: number,
+    deleteData: boolean = false
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const params: Record<string, unknown> = typeof emailIdOrAddress === 'number'
+        ? { id: emailIdOrAddress }
+        : { emailaddr: emailIdOrAddress };
+
+      params.customerid = customerId;
+      params.delete_userfiles = deleteData ? 1 : 0;
+
+      const result = await this.request('Emails.delete', params);
+
+      if (result.data !== undefined) {
+        return {
+          success: true,
+          message: 'E-Mail-Adresse erfolgreich gelöscht',
+        };
+      }
+
+      return {
+        success: false,
+        message: result.status_message || 'Fehler beim Löschen der E-Mail-Adresse',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Löschen der E-Mail-Adresse',
+      };
+    }
+  }
+
+  // ============================================
+  // E-Mail Account (Mailbox) Methods
+  // ============================================
+
+  /**
+   * Create a mailbox for an email address
+   * The email address must exist first (created via createEmailAddress)
+   */
+  async createEmailAccount(data: FroxlorEmailAccountAddInput): Promise<{ success: boolean; message: string }> {
+    try {
+      // Nur die erforderlichen Parameter senden
+      // email_quota: 0 = unlimited, > 0 = quota in MB
+      const params: Record<string, unknown> = {
+        emailaddr: data.emailaddr,
+        email_password: data.email_password,
+      };
+
+      // Optionale Parameter nur hinzufügen wenn gesetzt
+      if (data.customerid !== undefined) {
+        params.customerid = data.customerid;
+      }
+      if (data.loginname) {
+        params.loginname = data.loginname;
+      }
+      if (data.email_quota !== undefined && data.email_quota > 0) {
+        params.email_quota = data.email_quota;
+      }
+      if (data.alternative_email) {
+        params.alternative_email = data.alternative_email;
+      }
+      if (data.sendinfomail) {
+        params.sendinfomail = data.sendinfomail;
+      }
+
+      const result = await this.request('EmailAccounts.add', params);
+
+      if (result.data !== undefined) {
+        return {
+          success: true,
+          message: 'E-Mail-Konto erfolgreich angelegt',
+        };
+      }
+
+      return {
+        success: false,
+        message: result.status_message || 'Fehler beim Anlegen des E-Mail-Kontos',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Anlegen des E-Mail-Kontos',
+      };
+    }
+  }
+
+  /**
+   * Update an email account (change password, quota)
+   */
+  async updateEmailAccount(
+    emailIdOrAddress: number | string,
+    customerId: number,
+    data: {
+      email_password?: string;
+      email_quota?: number;
+    }
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const params: Record<string, unknown> = typeof emailIdOrAddress === 'number'
+        ? { id: emailIdOrAddress }
+        : { emailaddr: emailIdOrAddress };
+
+      params.customerid = customerId;
+
+      if (data.email_password) {
+        params.email_password = data.email_password;
+      }
+      if (data.email_quota !== undefined) {
+        params.email_quota = data.email_quota;
+      }
+
+      const result = await this.request('EmailAccounts.update', params);
+
+      if (result.data !== undefined) {
+        return {
+          success: true,
+          message: 'E-Mail-Konto erfolgreich aktualisiert',
+        };
+      }
+
+      return {
+        success: false,
+        message: result.status_message || 'Fehler beim Aktualisieren des E-Mail-Kontos',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Aktualisieren des E-Mail-Kontos',
+      };
+    }
+  }
+
+  /**
+   * Delete a mailbox from an email address
+   * This removes the mailbox but keeps the email address
+   */
+  async deleteEmailAccount(
+    emailIdOrAddress: number | string,
+    customerId: number,
+    deleteData: boolean = false
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const params: Record<string, unknown> = typeof emailIdOrAddress === 'number'
+        ? { id: emailIdOrAddress }
+        : { emailaddr: emailIdOrAddress };
+
+      params.customerid = customerId;
+      params.delete_userfiles = deleteData ? 1 : 0;
+
+      const result = await this.request('EmailAccounts.delete', params);
+
+      if (result.data !== undefined) {
+        return {
+          success: true,
+          message: 'E-Mail-Konto erfolgreich gelöscht',
+        };
+      }
+
+      return {
+        success: false,
+        message: result.status_message || 'Fehler beim Löschen des E-Mail-Kontos',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Löschen des E-Mail-Kontos',
+      };
+    }
+  }
+
+  // ============================================
+  // E-Mail Forwarder Methods
+  // ============================================
+
+  /**
+   * Add a forwarder to an email address
+   */
+  async createEmailForwarder(data: FroxlorEmailForwarderAddInput): Promise<{ success: boolean; message: string }> {
+    try {
+      const result = await this.request('EmailForwarders.add', {
+        emailaddr: data.emailaddr,
+        destination: data.destination,
+        customerid: data.customerid,
+        loginname: data.loginname,
+      });
+
+      if (result.data !== undefined) {
+        return {
+          success: true,
+          message: 'Weiterleitung erfolgreich angelegt',
+        };
+      }
+
+      return {
+        success: false,
+        message: result.status_message || 'Fehler beim Anlegen der Weiterleitung',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Anlegen der Weiterleitung',
+      };
+    }
+  }
+
+  /**
+   * Delete a forwarder from an email address
+   */
+  async deleteEmailForwarder(
+    forwarderId: number,
+    emailIdOrAddress: number | string,
+    customerId: number
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const params: Record<string, unknown> = {
+        id: forwarderId,
+        customerid: customerId,
+      };
+
+      if (typeof emailIdOrAddress === 'number') {
+        params.email_id = emailIdOrAddress;
+      } else {
+        params.emailaddr = emailIdOrAddress;
+      }
+
+      const result = await this.request('EmailForwarders.delete', params);
+
+      if (result.data !== undefined) {
+        return {
+          success: true,
+          message: 'Weiterleitung erfolgreich gelöscht',
+        };
+      }
+
+      return {
+        success: false,
+        message: result.status_message || 'Fehler beim Löschen der Weiterleitung',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Löschen der Weiterleitung',
+      };
+    }
+  }
+
+  // ============================================
+  // Domain Management Methods (Extended)
+  // ============================================
+
+  /**
+   * Add a new domain to a customer
+   */
+  async addDomain(data: FroxlorDomainAddInput): Promise<{ success: boolean; message: string; domain?: FroxlorDomain }> {
+    try {
+      const params: Record<string, unknown> = {
+        domain: data.domain,
+        isemaildomain: data.isemaildomain ?? 1,
+        iswildcarddomain: data.iswildcarddomain ?? 0,
+        subcanemaildomain: data.subcanemaildomain ?? 0,
+        letsencrypt: data.letsencrypt ?? 1,
+        ssl_redirect: data.ssl_redirect ?? 1,
+        hsts: data.hsts ?? 0,
+        phpenabled: data.phpenabled ?? 1,
+        openbasedir: data.openbasedir ?? 1,
+      };
+
+      if (data.customerid) {
+        params.customerid = data.customerid;
+      }
+      if (data.loginname) {
+        params.loginname = data.loginname;
+      }
+      if (data.documentroot) {
+        params.documentroot = data.documentroot;
+      }
+      if (data.phpsettingid) {
+        params.phpsettingid = data.phpsettingid;
+      }
+      if (data.specialsettings) {
+        params.specialsettings = data.specialsettings;
+      }
+
+      const result = await this.request<FroxlorDomain>('Domains.add', params);
+
+      if (result.data) {
+        return {
+          success: true,
+          message: 'Domain erfolgreich angelegt',
+          domain: result.data,
+        };
+      }
+
+      return {
+        success: false,
+        message: result.status_message || 'Fehler beim Anlegen der Domain',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Anlegen der Domain',
+      };
+    }
+  }
+
+  /**
+   * Delete a domain
+   */
+  async deleteDomain(domainIdOrName: number | string): Promise<{ success: boolean; message: string }> {
+    try {
+      const params: Record<string, unknown> = typeof domainIdOrName === 'number'
+        ? { id: domainIdOrName }
+        : { domainname: domainIdOrName };
+
+      const result = await this.request('Domains.delete', params);
+
+      if (result.data !== undefined) {
+        return {
+          success: true,
+          message: 'Domain erfolgreich gelöscht',
+        };
+      }
+
+      return {
+        success: false,
+        message: result.status_message || 'Fehler beim Löschen der Domain',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Löschen der Domain',
+      };
+    }
+  }
+
+  /**
+   * Get a domain by ID or name
+   */
+  async getDomain(domainIdOrName: number | string): Promise<FroxlorDomain | null> {
+    try {
+      const params: Record<string, unknown> = typeof domainIdOrName === 'number'
+        ? { id: domainIdOrName }
+        : { domainname: domainIdOrName };
+
+      const result = await this.request<FroxlorDomain>('Domains.get', params);
+
+      if (result.data) {
+        return result.data;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error getting domain:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all domains that can be used for email (isemaildomain = 1)
+   */
+  async getCustomerEmailDomains(customerId: number): Promise<FroxlorDomain[]> {
+    try {
+      const domains = await this.getCustomerDomains(customerId);
+      return domains.filter(d => d.isemaildomain === '1' || d.isemaildomain === 1);
+    } catch (error) {
+      console.error('Error getting email domains:', error);
+      return [];
+    }
+  }
 }
+
+export type FroxlorEmailAddress = {
+  id: number;
+  customerid: number;
+  domainid: number;
+  email: string;
+  email_full: string;
+  destination: string;
+  iscatchall: number;
+  popaccountid: number;
+  domain?: string;
+};
+
+export type FroxlorEmailForwarder = {
+  id: number;
+  customerid: number;
+  domainid: number;
+  email: string;
+  email_full: string;
+  destination: string;
+  domain?: string;
+};
+
+export type FroxlorEmailAccount = {
+  id: number;
+  customerid: number;
+  email: string;
+  email_full: string;
+  username: string;
+  quota: number;
+  quota_used: number;
+  imap: number;
+  pop3: number;
+  domainid: number;
+};
+
+export type FroxlorEmailAddInput = {
+  email_part: string;  // The local part (before @)
+  domain: string;      // Domain name or domain ID
+  customerid?: number;
+  loginname?: string;
+  spam_tag_level?: number;
+  spam_kill_level?: number;
+  bypass_spam?: number;
+  policy_greylist?: number;
+  iscatchall?: number;
+  description?: string;
+};
+
+export type FroxlorEmailAccountAddInput = {
+  emailaddr: string;   // Full email address or email ID
+  email_password: string;
+  customerid?: number;
+  loginname?: string;
+  email_quota?: number;  // Quota in MB
+  alternative_email?: string;
+  sendinfomail?: number;
+};
+
+export type FroxlorEmailForwarderAddInput = {
+  emailaddr: string;   // Full email address or email ID
+  destination: string; // Destination email address
+  customerid?: number;
+  loginname?: string;
+};
+
+export type FroxlorDomainAddInput = {
+  domain: string;
+  customerid?: number;
+  loginname?: string;
+  isemaildomain?: number;
+  iswildcarddomain?: number;
+  subcanemaildomain?: number;
+  letsencrypt?: number;
+  ssl_redirect?: number;
+  hsts?: number;
+  phpenabled?: number;
+  openbasedir?: number;
+  documentroot?: string;
+  phpsettingid?: number;
+  specialsettings?: string;
+};
